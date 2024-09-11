@@ -6,8 +6,10 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "ext-imagick": "*",
         "filament/filament": "^3.2",
         "hasnayeen/themes": "^3.0",
+        "intervention/image": "^3.8",
         "laravel/framework": "^11.9",
         "laravel/tinker": "^2.9"
     },
