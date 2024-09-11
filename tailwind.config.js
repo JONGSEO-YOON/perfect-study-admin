@@ -5,6 +5,10 @@ export default {
     content: [
         "./app/Filament/**/*.php",
         "./resources/views/filament/**/*.blade.php",
+        "./resources/**/*.js",
+        "./resources/**/*.blade.php",
+        "./resources/js/**/*.vue",
+        "./resources/**/*.vue",
         // './resources/views/filament/**/*.blade.php',
         "./vendor/filament/**/*.blade.php",
     ],

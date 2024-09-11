@@ -23,6 +23,5 @@ class SelectPages extends Page
     public function mount($id)
     {
         $this->id = $id;
-        dd($this->id);
     }
 }
