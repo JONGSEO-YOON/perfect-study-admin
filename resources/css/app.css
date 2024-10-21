@@ -1,3 +1,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+#data\.attachment > div.h-full.w-full > div {
+  height: 12rem !important;
+}
+
+#data\.attachment > div.h-full.w-full > div > div.filepond--drop-label {
+  height: 12rem !important;
+}

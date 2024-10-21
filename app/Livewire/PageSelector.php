@@ -47,4 +47,9 @@ class PageSelector extends Component implements HasMingles
     {
         return $amount * 2;
     }
+
+    public function onQuestionClicked($data)
+    {
+        $this->dispatch('questionSelected', $data);
+    }
 }

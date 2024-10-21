@@ -10,6 +10,7 @@ use Filament\Pages\Page;
 
 use \Imagick;
 use \ImagickPixel;
+use Livewire\Attributes\Computed;
 
 class UploadTest extends Page implements HasForms
 {
@@ -19,12 +20,15 @@ class UploadTest extends Page implements HasForms
 
     protected static ?string $navigationLabel = '문제 등록';
 
-    //title
     protected static ?string $title = '문제 등록';
 
     protected static string $view = 'filament.pages.upload-test';
 
     protected ?string $maxContentWidth = '4xl';
+
+    public bool $isUploading = false;
+
+    public int $progress = 0;
 
     public ?array $data = [
         'attachment' => []
@@ -43,6 +47,8 @@ class UploadTest extends Page implements HasForms
 
     public function create(): void
     {
+        $this->isUploading = true;
+        $this->progress = 0;
         $attachment = $this->form->getState()['attachment'];
         if ($attachment) {
             $attachmentParts = explode('.', $attachment);
@@ -54,6 +60,8 @@ class UploadTest extends Page implements HasForms
             $attachmentPath = storage_path('app/public/' . $attachment);
             $this->convertPdfToImages($attachmentPath, $outputDir);
         }
+        $this->isUploading = false;
+        redirect('/admin/select-pages/' . $attachmentName);
     }
 
     public function convertPdfToImages($pdfPath, $outputDir)
@@ -84,8 +92,17 @@ class UploadTest extends Page implements HasForms
             $image->setImageFormat('jpg');
             $image->writeImage($outputDir . "/page_" . ($i + 1) . ".jpg");
             $image->clear();
+
+            // $this->progress = ($i + 1) / $numPages * 100;
+            // $this->dispatch('progressUpdated');
         }
 
         $imagick->clear();
+    }
+
+    #[Computed()]
+    public function showProgressBar(): bool
+    {
+        return $this->isUploading;
     }
 }
