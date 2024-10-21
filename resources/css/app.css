@@ -1,3 +1,6 @@
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
+
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -9,4 +12,8 @@
 
 #data\.attachment > div.h-full.w-full > div > div.filepond--drop-label {
   height: 12rem !important;
+}
+
+.fi-logo {
+  height: 2.5rem !important;
 }

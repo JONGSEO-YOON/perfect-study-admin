@@ -14,4 +14,7 @@ class Dashboard extends Page
 
     //title
     protected static ?string $title = '대시보드';
+
+    //shouldRegisterNavigation
+    protected static bool $shouldRegisterNavigation = false;
 }

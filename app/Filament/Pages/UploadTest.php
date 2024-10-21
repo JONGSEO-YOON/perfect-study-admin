@@ -28,6 +28,8 @@ class UploadTest extends Page implements HasForms
 
     public bool $isUploading = false;
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public int $progress = 0;
 
     public ?array $data = [
