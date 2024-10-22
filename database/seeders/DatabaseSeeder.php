@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
 use Database\Factories\StudentFactory;
@@ -15,6 +16,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+
+        $this->call([
+            SchoolSeeder::class,
+            GradeSystemSeeder::class,
+        ]);
         // User::factory(10)->create();
 
         User::factory()->create([
@@ -23,5 +29,6 @@ class DatabaseSeeder extends Seeder
         ]);
 
         Teacher::factory(12)->create();
+        Student::factory(20)->create();
     }
 }

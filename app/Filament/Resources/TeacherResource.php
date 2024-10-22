@@ -4,6 +4,8 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\TeacherResource\Pages;
 use App\Filament\Resources\TeacherResource\RelationManagers;
+use App\Forms\Components\AddressInput;
+use App\Forms\Components\PhoneInput;
 use App\Models\Teacher;
 use Filament\Forms;
 use Filament\Forms\Components\Checkbox;
@@ -11,6 +13,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -63,25 +66,6 @@ class TeacherResource extends Resource
                         DatePicker::make('birthed_at')
                             ->label('생년월일')
                             ->required(),
-                        TextInput::make('username')
-                            ->label('계정')
-                            ->readOnly(fn($record) => $record?->id)
-                            ->required(),
-                        TextInput::make('phone')
-                            ->label('전화번호')
-                            ->required(),
-                        TextInput::make('password')
-                            ->confirmed()
-                            ->password()
-                            ->label('비밀번호')
-                            ->dehydrateStateUsing(fn(string $state): string => Hash::make($state))
-                            ->dehydrated(fn(?string $state): bool => filled($state))
-                            ->required(fn(string $operation): bool => $operation === 'create'),
-                        TextInput::make('password_confirmation')
-                            ->password()
-                            ->dehydrated(false)
-                            ->label('비밀번호 확인')
-                            ->required(fn(string $operation): bool => $operation === 'create'),
                         Grid::make(2)
                             ->schema([
                                 Radio::make('gender')
@@ -94,6 +78,34 @@ class TeacherResource extends Resource
                                         '여' => '여',
                                     ]),
                             ]),
+                        Hidden::make('address'),
+                        Hidden::make('postal_code'),
+                        AddressInput::make('address-input')
+                            ->label('주소')
+                            ->required()
+                            ->columnSpanFull(),
+                        TextInput::make('username')
+                            ->label('계정')
+                            ->readOnly(fn($record) => $record?->id)
+                            ->required(),
+
+                        PhoneInput::make('phone')
+                            ->label('전화번호')
+                            ->required(),
+
+                        TextInput::make('password')
+                            ->confirmed()
+                            ->password()
+                            ->label('비밀번호')
+                            ->dehydrateStateUsing(fn(string $state): string => Hash::make($state))
+                            ->dehydrated(fn(?string $state): bool => filled($state))
+                            ->required(fn(string $operation): bool => $operation === 'create'),
+                        TextInput::make('password_confirmation')
+                            ->password()
+                            ->dehydrated(false)
+                            ->label('비밀번호 확인')
+                            ->required(fn(string $operation): bool => $operation === 'create'),
+
                         Grid::make(2)
                             ->schema([
                                 Checkbox::make('is_admin')
@@ -122,6 +134,7 @@ class TeacherResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('created_at', 'desc')
             ->columns([
                 TextColumn::make('id')
                     ->label('No')

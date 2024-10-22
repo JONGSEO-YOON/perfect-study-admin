@@ -13,9 +13,29 @@ return new class extends Migration
     {
         Schema::create('students', function (Blueprint $table) {
             $table->id();
-            $table->string('grade');
+            $table->string('phone_father')->nullable();
+            $table->string('phone_mother')->nullable();
+
+            $table->boolean('sms_agree')->default(true);
+            $table->json('sms_targets')->nullable();
+
+            $table->enum('cash_receipt_type', [
+                '개인',
+                '사업자',
+            ])->nullable();
+
+            $table->string('cash_receipt_no')->nullable();
+
+            $table->date('initially_attended_at')->nullable();
+
             $table->unsignedBigInteger('classroom_id')->nullable();
+            $table->unsignedBigInteger('grade_system_id')->nullable();
+            $table->unsignedBigInteger('school_id')->nullable();
+
+            $table->foreign('school_id')->references('id')->on('schools')->onDelete('set null');
             $table->foreign('classroom_id')->references('id')->on('classrooms')->onDelete('set null');
+            $table->foreign('grade_system_id')->references('id')->on('grade_systems')->onDelete('set null');
+
             $table->timestamps();
         });
     }

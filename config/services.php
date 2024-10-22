@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'juso' => [
+        'key' => env('JUSO_API_KEY'),
+    ],
+
 ];

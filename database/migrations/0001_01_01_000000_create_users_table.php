@@ -21,6 +21,11 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('phone')->nullable();
+
+            $table->string('postal_code')->nullable();
+            $table->string('address')->nullable();
+
+            $table->string('landline')->nullable();
             $table->string('gender')->nullable();
             $table->date('birthed_at')->nullable();
             $table->text('remark')->nullable();
