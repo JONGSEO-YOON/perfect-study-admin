@@ -10,7 +10,9 @@ class Student extends Model
     use HasFactory;
 
     protected $casts = [
-        'sms_targets' => 'array'
+        'sms_targets' => 'array',
+        'initially_attended_at' => 'date',
+        'sms_agree' => 'boolean',
     ];
 
     public function gradeSystem()

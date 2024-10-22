@@ -28,21 +28,22 @@ class PhoneInput extends Field
             return $state;
         });
 
-        $this->formatStateUsing(function ($state) {
-            if (!$state) return ['010', '', ''];
+        $this->afterStateHydrated(function ($state) {
+            if (!$state) {
+                $this->state(['010', '', '']);
+                return;
+            }
 
-            // Convert string to array by splitting on hyphens
-            $parts = explode('-', $state);
-            return [
-                $parts[0] ?? '',
-                $parts[1] ?? '',
-                $parts[2] ?? '',
-            ];
+            if (is_string($state)) {
+                $parts = explode('-', $state);
+                $this->state([
+                    $parts[0] ?? '010',
+                    $parts[1] ?? '',
+                    $parts[2] ?? '',
+                ]);
+            }
         });
 
-        $this->rules([
-            'required',
-            // 'regex:/^(010|011|016|017|018|019|02|031|032|033|041|042|043|044|051|052|053|054|055|061|062|063|064)-\d{3,4}-\d{4}$/'
-        ]);
+        $this->default(['010', '', '']);
     }
 }

@@ -6,6 +6,7 @@ use AddressInfo;
 use App\Filament\Resources\StudentResource\Pages;
 use App\Filament\Resources\StudentResource\RelationManagers;
 use App\Forms\Components\AddressInput;
+use App\Forms\Components\PhoneInput;
 use App\Models\GradeSystem;
 use App\Models\School;
 use App\Models\Student;
@@ -120,16 +121,16 @@ class StudentResource extends Resource
                             ->label('이메일'),
                         Grid::make(2)
                             ->schema([
-                                TextInput::make('phone')
+                                PhoneInput::make('phone')
                                     ->label('전화번호 (본인)'),
-                                TextInput::make('phone')
-                                    ->label('전화번호 (집)'),
+                                PhoneInput::make('landline')
+                                    ->label('전화번호 (자택)'),
                             ]),
                         Grid::make(2)
                             ->schema([
-                                TextInput::make('mother_phone')
+                                PhoneInput::make('phone_mother')
                                     ->label('전화번호 (모)'),
-                                TextInput::make('father_phone')
+                                PhoneInput::make('phone_father')
                                     ->label('전화번호 (부)'),
                                 Toggle::make('sms_agree')
                                     ->label('SMS 수신 여부')
@@ -141,7 +142,6 @@ class StudentResource extends Resource
                                     ->label('SMS 수신 대상')
                                     ->inlineLabel()
                                     ->columnSpanFull()
-                                    ->default('self')
                                     ->options([
                                         'self' => '본인',
                                         'father' => '부',
@@ -226,7 +226,9 @@ class StudentResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->modalHeading('학생 수정하기')
+                    ->modalWidth('xl'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
