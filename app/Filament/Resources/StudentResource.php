@@ -165,6 +165,19 @@ class StudentResource extends Resource
                             ->dehydrated(false)
                             ->label('비밀번호 확인')
                             ->required(fn(string $operation): bool => $operation === 'create'),
+                        Grid::make(4)
+                            ->schema([
+                                Select::make('cash_receipt_type')
+                                    ->label('현금영수증 종류')
+                                    ->options([
+                                        '개인' => '개인',
+                                        '사업자' => '사업자',
+                                    ]),
+                                TextInput::make('cash_receipt_no')
+                                    ->label('현금영수증 번호')
+                                    ->columnSpan(3),
+                            ])
+                            ->relationship('userable'),
                         Grid::make(2)
                             ->schema([
                                 DatePicker::make('initially_attended_at')
