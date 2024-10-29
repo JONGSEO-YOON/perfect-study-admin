@@ -21,9 +21,7 @@ class PhoneInput extends Field
                 $middle = $state[1] ?? '';
                 $last = $state[2] ?? '';
 
-                if ($areaCode && $middle && $last) {
-                    return "{$areaCode}-{$middle}-{$last}";
-                }
+                return "{$areaCode}-{$middle}-{$last}";
             }
             return $state;
         });

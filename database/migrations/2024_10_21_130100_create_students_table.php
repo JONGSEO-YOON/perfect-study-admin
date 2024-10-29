@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('phone_mother')->nullable();
 
             $table->boolean('sms_agree')->default(true);
-            $table->json('sms_targets')->nullable();
+            $table->string('sms_targets')->nullable()->default('[]');
 
             $table->enum('cash_receipt_type', [
                 '개인',

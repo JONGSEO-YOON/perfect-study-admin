@@ -147,6 +147,7 @@ class StudentResource extends Resource
                                         'father' => '부',
                                         'mother' => '모',
                                     ])
+                                    // ->default(fn() => ['self'])
                                     ->columns(3),
                             ])->relationship('userable'),
                         TextInput::make('username')

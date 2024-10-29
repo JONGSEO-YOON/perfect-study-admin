@@ -10,11 +10,19 @@ class Student extends Model
 {
     use HasFactory;
 
-    protected $casts = [
-        'sms_targets' => 'array',
-        'initially_attended_at' => 'date',
-        'sms_agree' => 'boolean',
-    ];
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'sms_targets' => 'array',
+            'initially_attended_at' => 'date',
+            'sms_agree' => 'boolean',
+        ];
+    }
 
     public function gradeSystem()
     {
