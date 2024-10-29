@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Student extends Model
 {
@@ -28,5 +29,15 @@ class Student extends Model
     public function user()
     {
         return $this->morphOne(User::class, 'userable');
+    }
+
+
+    /**
+     * Get the classrooms that the student belongs to.
+     */
+    public function classrooms(): BelongsToMany
+    {
+        return $this->belongsToMany(Classroom::class)
+            ->withTimestamps();
     }
 }

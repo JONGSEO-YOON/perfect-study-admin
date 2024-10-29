@@ -4,16 +4,29 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Classroom extends Model
 {
+    protected function casts(): array
+    {
+        return [
+            'attachments' => 'array',
+            'timetable' => 'array',
+        ];
+    }
+
     public function teacher()
     {
         return $this->belongsTo(Teacher::class);
     }
 
-    public function students()
+    /**
+     * Get the students that belong to the classroom.
+     */
+    public function students(): BelongsToMany
     {
-        return $this->hasMany(Student::class);
+        return $this->belongsToMany(Student::class)
+            ->withTimestamps();
     }
 }

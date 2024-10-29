@@ -15,5 +15,19 @@
 }
 
 .fi-logo {
-  height: 2.5rem !important;
+  height: 3rem !important;
+}
+
+
+.fi-simple-layout {
+background: rgb(132,116,178);
+background: linear-gradient(90deg, rgba(132,116,178,0.6797093837535014) 0%, rgba(37,150,190,0.7357317927170868) 100%);
+}
+.fi-simple-main {
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25) !important;
+
+}
+
+div:has(.modal-content-classroom-students){
+  padding: 0 !important;
 }

@@ -16,9 +16,7 @@ class TeacherFactory extends Factory
 
     public function definition()
     {
-        return [
-            'is_admin' => $this->faker->boolean(),
-        ];
+        return [];
     }
 
     public function configure()

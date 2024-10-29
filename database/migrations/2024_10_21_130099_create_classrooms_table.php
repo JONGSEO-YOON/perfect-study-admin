@@ -15,6 +15,14 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->unsignedBigInteger('teacher_id')->nullable();
+            $table->text('remark')->nullable();
+            $table->json('attachments')->nullable();
+
+            $table->date('started_at')->nullable();
+            $table->date('ended_at')->nullable();
+
+            $table->json('timetable')->nullable();
+
             $table->timestamps();
             $table->foreign('teacher_id')->references('id')->on('teachers')->onDelete('set null');
         });

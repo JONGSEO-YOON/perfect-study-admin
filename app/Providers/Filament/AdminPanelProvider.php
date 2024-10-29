@@ -29,7 +29,18 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login(Login::class)
             ->colors([
-                'primary' => Color::Blue,
+
+                'primary' => [
+                    100 => '211, 251, 251',
+                    200 => '168, 244, 248',
+                    300 => '121, 221, 235',
+                    400 => '85, 191, 216',
+                    500 => '37, 150, 190',
+                    600 => '27, 118, 163',
+                    700 => '18, 89, 136',
+                    800 => '11, 63, 110',
+                    900 => '7, 45, 91'
+                ],
             ])
             ->plugins(
                 [

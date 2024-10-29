@@ -106,13 +106,13 @@ class TeacherResource extends Resource
                             ->label('비밀번호 확인')
                             ->required(fn(string $operation): bool => $operation === 'create'),
 
-                        Grid::make(2)
-                            ->schema([
-                                Checkbox::make('is_admin')
-                                    ->label('관리자')
-                                    ->inlineLabel(),
-                            ])
-                            ->relationship('userable'),
+                        // Grid::make(2)
+                        //     ->schema([
+                        //         Checkbox::make('is_admin')
+                        //             ->label('관리자')
+                        //             ->inlineLabel(),
+                        //     ])
+                        //     ->relationship('userable'),
 
                         TextInput::make('email')
                             ->label('이메일'),
@@ -151,8 +151,8 @@ class TeacherResource extends Resource
                     ->label('전화번호')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('is_admin')
-                    ->label('담당 반'),
+                // TextColumn::make('is_admin')
+                //     ->label('담당 반'),
                 TextColumn::make('user.birthed_at')
                     ->date('Y-m-d')
                     ->label('생년월일')
