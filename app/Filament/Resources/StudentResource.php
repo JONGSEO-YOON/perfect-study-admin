@@ -87,7 +87,6 @@ class StudentResource extends Resource
                         Hidden::make('postal_code'),
                         AddressInput::make('address-input')
                             ->label('주소')
-                            ->required()
                             ->columnSpanFull(),
                         Grid::make(2)
                             ->schema([
@@ -243,6 +242,15 @@ class StudentResource extends Resource
                 Tables\Actions\EditAction::make()
                     ->modalHeading('학생 수정하기')
                     ->modalWidth('xl'),
+                Tables\Actions\Action::make('view-report-card')
+                    ->label('성적표')
+                    ->icon('heroicon-m-newspaper')
+                    ->modalHeading('성적표 조회')
+                    ->modalSubmitAction(false)
+                    ->modalContent(fn($record) => view('filament.components.modals.student-report-card', [
+                        'record' => $record,
+                    ]))
+                    ->modalWidth('7xl'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

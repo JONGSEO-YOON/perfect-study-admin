@@ -82,7 +82,6 @@ class TeacherResource extends Resource
                         Hidden::make('postal_code'),
                         AddressInput::make('address-input')
                             ->label('주소')
-                            ->required()
                             ->columnSpanFull(),
                         TextInput::make('username')
                             ->label('계정')

@@ -31,3 +31,8 @@ background: linear-gradient(90deg, rgba(132,116,178,0.6797093837535014) 0%, rgba
 div:has(.modal-content-classroom-students){
   padding: 0 !important;
 }
+
+
+.modal-content-student-report-card .fi-fo-tabs-tab {
+  padding: 0rem !important;
+}
