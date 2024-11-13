@@ -18,6 +18,9 @@ return new class extends Migration
             $table->text('remark')->nullable();
             $table->json('attachments')->nullable();
 
+            $table->json('target_grades')->nullable()->comment('대상 학년들');
+            $table->string('target_level')->comment('대상 레벨');
+
             $table->date('started_at')->nullable();
             $table->date('ended_at')->nullable();
 

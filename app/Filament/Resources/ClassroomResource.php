@@ -6,6 +6,7 @@ use App\Filament\Resources\ClassroomResource\Pages;
 use App\Filament\Resources\ClassroomResource\RelationManagers;
 use App\Forms\Components\TimeTableInput;
 use App\Models\Classroom;
+use App\Models\GradeSystem;
 use App\Models\Teacher;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
@@ -59,6 +60,26 @@ class ClassroomResource extends Resource
                             ->preload()
                             ->searchable()
                             ->required(),
+                        Select::make('target_grades')
+                            ->label('학년')
+                            ->multiple()
+                            ->required()
+                            ->options(function () {
+                                return GradeSystem::query()
+                                    ->orderBy('sequential_order')
+                                    ->pluck(
+                                        'display_name',
+                                        'id',
+                                    );
+                            }),
+                        Select::make('target_level')
+                            ->label('레벨')
+                            ->required()
+                            ->options([
+                                'A' => 'A',
+                                'M' => 'M',
+                                'S' => 'S',
+                            ]),
                         DatePicker::make('started_at')
                             ->label('개설일'),
                         DatePicker::make('ended_at')
@@ -87,6 +108,7 @@ class ClassroomResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->emptyStateHeading('반을 추가해주세요.')
             ->columns([
                 //
                 TextColumn::make('id')
@@ -100,6 +122,15 @@ class ClassroomResource extends Resource
                     ->label('강사')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('target_grades')
+                    ->label('학년')
+                    ->formatStateUsing(function ($record) {
+                        return GradeSystem::query()
+                            ->whereIn('id', $record->target_grades ?? [])
+                            ->orderBy('sequential_order')
+                            ->pluck('display_name')
+                            ->join(', ');
+                    }),
                 TextColumn::make('students_count')
                     ->counts('students')
                     ->label('학생 수')

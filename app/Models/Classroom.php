@@ -13,6 +13,7 @@ class Classroom extends Model
         return [
             'attachments' => 'array',
             'timetable' => 'array',
+            'target_grades' => 'array',
         ];
     }
 
