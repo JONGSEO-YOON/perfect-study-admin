@@ -142,7 +142,8 @@ class ClassroomResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->modalHeading('반 삭제'),
                 ]),
             ]);
     }

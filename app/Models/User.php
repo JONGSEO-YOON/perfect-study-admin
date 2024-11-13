@@ -44,6 +44,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'birthed_at' => 'date',
             'attachments' => 'array',
+            'meta' => 'array',
             'password' => 'hashed',
         ];
     }
@@ -67,11 +68,16 @@ class User extends Authenticatable
                 $query->where('name', 'like', "%{$search}%");
             })
             ->where('userable_type', Student::class)
-            ->whereHas('userable', function (Builder $query) use ($classroomId) {
+            ->whereHasMorph('userable', [Student::class], function (Builder $query) use ($classroomId) {
                 $query->whereDoesntHave('classrooms', function (Builder $q) use ($classroomId) {
                     $q->where('classrooms.id', $classroomId);
                 });
             })
+            // ->whereHas('userable', function (Builder $query) use ($classroomId) {
+            //     $query->whereDoesntHave('classrooms', function (Builder $q) use ($classroomId) {
+            //         $q->where('classrooms.id', $classroomId);
+            //     });
+            // })
             ->with('userable')
             ->get()
             ->mapWithKeys(function ($user) {

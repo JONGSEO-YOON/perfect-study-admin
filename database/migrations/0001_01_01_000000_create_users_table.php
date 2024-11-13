@@ -30,6 +30,7 @@ return new class extends Migration
             $table->date('birthed_at')->nullable();
             $table->text('remark')->nullable();
             $table->json('attachments')->nullable();
+            $table->json('meta')->nullable();
 
             $table->rememberToken();
             $table->timestamps();

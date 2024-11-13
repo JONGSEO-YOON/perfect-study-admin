@@ -42,6 +42,11 @@ class StudentFactory extends Factory
                 'email_verified_at' => now(),
                 'password' => bcrypt('password'), // 기본 비밀번호 설정
                 'remember_token' => Str::random(10),
+                'meta' => [
+                    '과목별 내신 등급' => '',
+                    '모의고사 등급' => '',
+                    '수강료 할인유형' => '',
+                ]
             ]);
 
             $teacher->user()->save($user);

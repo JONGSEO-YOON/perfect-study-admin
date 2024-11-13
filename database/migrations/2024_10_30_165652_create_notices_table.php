@@ -17,7 +17,8 @@ return new class extends Migration
             $table->text('content');
             $table->json('attachments')->nullable();
             $table->string('target_groups')->nullable()->default('[]');
-            $table->foreignId('author_id')->constrained('users');
+            $table->foreignId('author_id')->constrained('users')
+                ->onDelete('cascade');
             $table->timestamp('pinned_at')->nullable();
             $table->timestamps();
         });

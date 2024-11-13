@@ -7,6 +7,7 @@ use App\Filament\Resources\StudentResource\Pages;
 use App\Filament\Resources\StudentResource\RelationManagers;
 use App\Forms\Components\AddressInput;
 use App\Forms\Components\PhoneInput;
+use App\Models\Classroom;
 use App\Models\GradeSystem;
 use App\Models\School;
 use App\Models\Student;
@@ -17,6 +18,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -26,6 +28,8 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -184,6 +188,16 @@ class StudentResource extends Resource
                                     ->label('최초 수강일')
                             ])
                             ->relationship('userable'),
+                        KeyValue::make('meta')
+                            ->keyLabel('정보')
+                            ->valueLabel('입력')
+                            ->label('추가 정보')
+                            ->default([
+                                '과목별 내신 등급' => '',
+                                '모의고사 등급' => '',
+                                '수강료 할인유형' => '',
+                            ])
+                            ->columnSpanFull(),
                         Textarea::make('remark')
                             ->label('비고')
                             ->columnSpanFull(),
@@ -236,8 +250,23 @@ class StudentResource extends Resource
                     ->sortable(),
             ])
             ->filters([
-                //
-            ])
+                SelectFilter::make('classroom_id')
+                    ->label('반')
+                    ->options(function () {
+                        return Classroom::query()
+                            ->orderBy('name')
+                            ->pluck('name', 'id');
+                    })
+                    ->query(function (Builder $query, $data) {
+                        $classroomId = $data["value"] ?? null;
+                        $query
+                            ->when($classroomId, function ($query, $classroomId) {
+                                $query->whereHas('classrooms', function ($q) use ($classroomId) {
+                                    $q->where('classrooms.id', $classroomId);
+                                });
+                            });
+                    }),
+            ], layout: FiltersLayout::AboveContent)
             ->actions([
                 Tables\Actions\EditAction::make()
                     ->modalHeading('학생 수정하기')
@@ -252,11 +281,13 @@ class StudentResource extends Resource
                     ]))
                     ->modalWidth('7xl'),
             ])
+            ->hiddenFilterIndicators(true)
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->emptyStateHeading('학생이 없습니다.');
     }
 
     public static function getRelations(): array

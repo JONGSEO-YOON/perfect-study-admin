@@ -201,6 +201,10 @@ class CounselingResource extends Resource
                 //
                 TextColumn::make('id')
                     ->label('No')
+                    ->html()
+                    ->formatStateUsing(fn($record, $state) =>
+                    !$record->confirmed ?
+                        '<span class="text-red-500 text-xl">&#x2022;</span>' . $state : $state)
                     ->rowIndex(),
 
                 TextColumn::make('student.user.name')
@@ -261,7 +265,9 @@ class CounselingResource extends Resource
                         ->modalHeading('상담 삭제'),
                 ]),
             ])
-            ->defaultSort('created_at', 'desc');
+            ->defaultSort('created_at', 'desc')
+            ->emptyStateHeading('상담이 없습니다.')
+            ->emptyStateDescription('상담을 추가하려면 상담 기록하기 버튼을 눌러주세요.');
     }
 
     public static function getRelations(): array

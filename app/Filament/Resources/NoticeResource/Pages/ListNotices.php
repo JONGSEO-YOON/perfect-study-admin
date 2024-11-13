@@ -20,7 +20,8 @@ class ListNotices extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()->icon('heroicon-m-plus-circle')
+            Actions\CreateAction::make()
+                ->icon('heroicon-m-plus-circle')
                 ->label('공지 추가하기')
                 ->modalHeading('공지 추가하기')
                 ->modalWidth('4xl')

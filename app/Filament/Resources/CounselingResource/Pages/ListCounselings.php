@@ -37,6 +37,13 @@ class ListCounselings extends ListRecords
                 ->createAnother(false)
                 ->modalSubmitActionLabel('저장')
                 ->modalWidth('xl'),
+            Actions\Action::make('manage-counselors')
+                ->icon('heroicon-m-cog-8-tooth')
+                ->color('gray')
+                ->url('/admin/counselors')
+                ->label('상담실 계정 관리')
+                ->modalHeading('상담실 계정 관리')
+                ->modalWidth('xl'),
         ];
     }
 }
