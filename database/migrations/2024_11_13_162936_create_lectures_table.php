@@ -36,6 +36,7 @@ return new class extends Migration
             $table->text('description')->nullable()->comment('강의 설명');
             $table->json('lecture_info')->nullable()->comment('강의 세부 정보 (교재, 난이도, 강의 자료 등)');
             $table->json('attachments')->nullable()->comment('첨부 파일');
+            $table->json('scopes')->nullable()->comment('범위');
 
             $table->timestamps();
             $table->softDeletes();

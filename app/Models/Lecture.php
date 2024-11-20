@@ -19,6 +19,7 @@ class Lecture extends Model
         'target_students' => 'array',
         'lecture_info' => 'array',
         'attachments' => 'array',
+        'scopes' => 'array',
     ];
 
     // 강의를 등록한 사용자와의 관계
