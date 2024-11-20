@@ -71,7 +71,7 @@ const initializePlayer = (videoSrc) => {
         player = videojs(video, {
             controls: true,
             autoplay: false,
-            preload: "none",
+            preload: "auto",
             responsive: true,
             sources: [
                 {

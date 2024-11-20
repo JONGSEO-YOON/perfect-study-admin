@@ -16,7 +16,7 @@ class TestSheetManagement extends Page
 
     protected static ?string $title = '문제지 관리';
 
-    protected static bool $shouldRegisterNavigation = true;
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $navigationGroup = '교실 관리';
 }

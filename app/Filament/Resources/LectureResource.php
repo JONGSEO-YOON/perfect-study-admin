@@ -86,7 +86,7 @@ class LectureResource extends Resource
                                                 'id',
                                             );
                                     })
-                                    ->visible(fn(Get $get) => $get('target_group') === 'grade'),
+                                    ->visible(fn(Get $get) => $get('target_group') === 'grade' || $get('target_group') === 'level'),
                                 Select::make('target_levels')
                                     ->label('레벨')
                                     ->multiple()
@@ -117,7 +117,7 @@ class LectureResource extends Resource
                                             ->pluck('id');
                                         return Student::query()
                                             ->whereHas('classrooms', function ($q) use ($classroomIds) {
-                                                $q->where('classrooms.id', $classroomIds);
+                                                $q->whereIn('classrooms.id', $classroomIds);
                                             })
                                             ->get()
                                             ->mapWithKeys(fn($student) => [$student->user->id => $student->user->name]);

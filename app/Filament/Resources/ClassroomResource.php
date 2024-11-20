@@ -10,6 +10,7 @@ use App\Models\GradeSystem;
 use App\Models\Teacher;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Select;
@@ -19,6 +20,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -152,6 +154,7 @@ class ClassroomResource extends Resource
             ])
             ->filters([
                 //
+
             ])
             ->actions([
                 Tables\Actions\Action::make('edit-students')
@@ -161,7 +164,6 @@ class ClassroomResource extends Resource
                     ->modalContent(fn($record) => view('filament.components.modals.classroom-students', [
                         'record' => $record,
                     ]))
-
                     ->modalCancelAction(false)
                     ->modalCancelActionLabel('닫기')
                     ->modalSubmitActionLabel('저장')
