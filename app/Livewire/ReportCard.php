@@ -2,6 +2,10 @@
 
 namespace App\Livewire;
 
+use Filament\Actions\Action;
+use Filament\Actions\Concerns\InteractsWithActions;
+use Filament\Actions\Contracts\HasActions;
+use Filament\Forms\Components\Actions\Action as ActionsAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Grid;
@@ -14,9 +18,10 @@ use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Livewire\Component;
 
-class ReportCard extends Component implements HasForms
+class ReportCard extends Component implements HasForms, HasActions
 {
   use InteractsWithForms;
+  use InteractsWithActions;
 
   public $data = [
     'date' => null,
@@ -81,4 +86,24 @@ class ReportCard extends Component implements HasForms
           ])
       ]);
   }
+
+
+  public function sendAction(): Action
+  {
+    return Action::make('send')
+      ->label('SMS / 카톡 발송')
+      ->icon('heroicon-m-envelope')
+      ->requiresConfirmation();
+    // ->action(fn() => dd('adsf'));
+  }
+  public function printAction(): Action
+  {
+    return Action::make('print')
+      ->label('엑셀 출력')
+      ->icon('heroicon-m-table-cells')
+      ->requiresConfirmation();
+    // ->action(fn() => dd('adsf'));
+  }
+
+  public function initAction() {}
 }
