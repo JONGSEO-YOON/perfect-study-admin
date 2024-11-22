@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
         User::factory()->create([
             'name' => '관리자',
             'username' => 'admin',
+            'phone' => '010-1234-5678',
         ]);
 
         Teacher::factory(12)->create();

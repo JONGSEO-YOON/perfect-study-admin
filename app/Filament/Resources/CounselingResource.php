@@ -278,7 +278,7 @@ class CounselingResource extends Resource
                     })
                     ->searchable()
                     ->preload()
-                    ->label('상태'),
+                    ->label('학생'),
             ], FiltersLayout::AboveContent)
             ->actions([
                 Tables\Actions\EditAction::make()

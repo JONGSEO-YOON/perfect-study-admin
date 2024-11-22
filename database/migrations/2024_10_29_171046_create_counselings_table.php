@@ -24,14 +24,16 @@ return new class extends Migration
             $table->string('type')->nullable();
             $table->string('target')->nullable();
 
-            $table->foreignId('classroom_id')
-                ->nullable()
-                ->constrained('classrooms');
+            // $table->foreignId('classroom_id')
+            //     ->nullable()
+            //     ->constrained('classrooms');
             $table->foreignId('counselor_id')
+                ->cascadeOnDelete()
                 ->constrained('users');
             $table->foreignId('student_id')
                 ->nullable()
-                ->constrained('students');
+                ->constrained('students')
+                ->cascadeOnDelete();
 
             // $table->foreignId('creator_id')
             //     ->constrained('users')

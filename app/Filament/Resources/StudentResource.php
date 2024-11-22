@@ -471,6 +471,7 @@ class StudentResource extends Resource
                         }
                         Notification::make()
                             ->title('계정이 성공적으로 업데이트되었습니다.')
+                            ->success()
                             ->send();
                     }),
                 Tables\Actions\Action::make('manage-counseling')

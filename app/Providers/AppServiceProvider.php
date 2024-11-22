@@ -36,6 +36,9 @@ class AppServiceProvider extends ServiceProvider
                 NavigationGroup::make()
                     ->label('자료실')
                     ->icon('heroicon-m-archive-box'),
+                NavigationGroup::make()
+                    ->label('설정')
+                    ->icon('heroicon-m-cog-6-tooth'),
             ]);
         });
     }
