@@ -164,7 +164,8 @@ class TestSheetResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->modalHeading('시험지 삭제')
                 ]),
             ])
             ->emptyStateHeading('출제된 시험이 없습니다.');

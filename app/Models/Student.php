@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasUser;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Student extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUser;
 
     /**
      * Get the attributes that should be cast.
@@ -33,12 +34,6 @@ class Student extends Model
     {
         return $this->belongsTo(School::class);
     }
-
-    public function user()
-    {
-        return $this->morphOne(User::class, 'userable');
-    }
-
 
     /**
      * Get the classrooms that the student belongs to.

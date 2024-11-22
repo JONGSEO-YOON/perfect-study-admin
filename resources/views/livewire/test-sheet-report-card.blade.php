@@ -1,4 +1,4 @@
-<div class="w-full">
+<div class="w-full" wire:init="initAction()">
     <div class="overflow-x-auto flex flex-col items-start gap-y-4">
         <table class="w-full bg-white border-x border-t border-collapse">
             <thead>

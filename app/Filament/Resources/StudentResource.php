@@ -25,6 +25,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
@@ -53,164 +54,298 @@ class StudentResource extends Resource
         return '';
     }
 
+    public static function _form(bool $simplified = false): array
+    {
+        return [
+            //
+            Grid::make(2)
+                ->schema([
+                    FileUpload::make('profile_photo_path')
+                        ->extraAttributes([
+                            'class' => '!items-center'
+                        ])
+                        ->label('사진')
+                        ->image()
+                        ->avatar()
+                        ->placeholder('사진 업로드')
+                        ->hidden($simplified)
+                        ->columnSpanFull(),
+                    TextInput::make('name')
+                        ->label('이름')
+                        ->required(),
+                    DatePicker::make('birthed_at')
+                        ->label('생년월일')
+                        ->required(),
+                    Grid::make(2)
+                        ->schema([
+                            Radio::make('gender')
+                                ->label('성별')
+                                ->inlineLabel()
+                                ->inline()
+                                ->required()
+                                ->options([
+                                    '남' => '남',
+                                    '여' => '여',
+                                ]),
+                        ]),
+                    Hidden::make('address'),
+                    Hidden::make('postal_code'),
+                    AddressInput::make('address-input')
+                        ->label('주소')
+                        ->columnSpanFull(),
+                    Grid::make(2)
+                        ->schema([
+                            Select::make('school_id')
+                                ->label('학교')
+                                ->nullable()
+                                ->getSearchResultsUsing(fn(string $search): array => School::where('name', 'like', "%{$search}%")->limit(10)
+                                    ->get()
+                                    ->map(function ($school) {
+                                        return [
+                                            'id' => $school->id,
+                                            'name' => $school->name . ' - ' . $school->province
+                                        ];
+                                    })
+                                    ->pluck('name', 'id')->toArray())
+                                ->searchable()
+                                ->preload(10),
+                            Select::make('grade_system_id')
+                                ->label('학년')
+                                ->required()
+                                ->options(function () {
+                                    return GradeSystem::query()
+                                        ->orderBy('sequential_order')
+                                        ->pluck(
+                                            'display_name',
+                                            'id',
+                                        );
+                                }),
+                        ])->relationship('userable'),
+                    TextInput::make('email')
+                        ->label('이메일'),
+                    Grid::make(2)
+                        ->schema([
+                            PhoneInput::make('phone')
+                                ->label('전화번호 (본인)'),
+                            PhoneInput::make('landline')
+                                ->label('전화번호 (자택)'),
+                        ]),
+                    Grid::make(2)
+                        ->schema([
+                            PhoneInput::make('phone_mother')
+                                ->label('전화번호 (모)'),
+                            PhoneInput::make('phone_father')
+                                ->label('전화번호 (부)'),
+                            Toggle::make('sms_agree')
+                                ->label('SMS 수신 여부')
+                                ->inlineLabel()
+                                ->inline()
+                                ->columnSpanFull()
+                                ->default(true),
+                            CheckboxList::make('sms_targets')
+                                ->label('SMS 수신 대상')
+                                ->inlineLabel()
+                                ->columnSpanFull()
+                                ->options([
+                                    'self' => '본인',
+                                    'father' => '부',
+                                    'mother' => '모',
+                                ])
+                                // ->default(fn() => ['self'])
+                                ->columns(3),
+                        ])->relationship('userable'),
+
+                    Grid::make(4)
+                        ->schema([
+                            Select::make('cash_receipt_type')
+                                ->label('현금영수증 종류')
+                                ->options([
+                                    '개인' => '개인',
+                                    '사업자' => '사업자',
+                                ]),
+                            TextInput::make('cash_receipt_no')
+                                ->label('현금영수증 번호')
+                                ->columnSpan(3),
+                        ])
+                        ->relationship('userable'),
+                    Grid::make(2)
+                        ->schema([
+                            DatePicker::make('initially_attended_at')
+                                ->label('최초 수강일')
+                        ])
+                        ->relationship('userable'),
+                    KeyValue::make('meta')
+                        ->keyLabel('정보')
+                        ->valueLabel('입력')
+                        ->label('추가 정보')
+                        ->default([
+                            '과목별 내신 등급' => '',
+                            '모의고사 등급' => '',
+                            '수강료 할인유형' => '',
+                        ])
+                        ->columnSpanFull(),
+                    Textarea::make('remark')
+                        ->label('비고')
+                        ->columnSpanFull(),
+                    FileUpload::make('attachments')
+                        ->label('첨부 파일')
+                        ->multiple()
+                        ->placeholder('클릭하거나 파일을 드래그하여 업로드')
+                        ->previewable(false)
+                        ->downloadable(true)
+                        ->columnSpanFull()
+                ])
+                ->relationship('user')
+        ];
+    }
+
     public static function form(Form $form): Form
     {
-        return $form
-            ->schema([
-                //
-                Grid::make(2)
-                    ->schema([
-                        FileUpload::make('profile_photo_path')
-                            ->extraAttributes([
-                                'class' => '!items-center'
-                            ])
-                            ->label('사진')
-                            ->image()
-                            ->avatar()
-                            ->placeholder('사진 업로드')
-                            ->columnSpanFull(),
-                        TextInput::make('name')
-                            ->label('이름')
-                            ->required(),
-                        DatePicker::make('birthed_at')
-                            ->label('생년월일')
-                            ->required(),
-                        Grid::make(2)
-                            ->schema([
-                                Radio::make('gender')
-                                    ->label('성별')
-                                    ->inlineLabel()
-                                    ->inline()
-                                    ->required()
-                                    ->options([
-                                        '남' => '남',
-                                        '여' => '여',
-                                    ]),
-                            ]),
-                        Hidden::make('address'),
-                        Hidden::make('postal_code'),
-                        AddressInput::make('address-input')
-                            ->label('주소')
-                            ->columnSpanFull(),
-                        Grid::make(2)
-                            ->schema([
-                                Select::make('school_id')
-                                    ->label('학교')
-                                    ->nullable()
-                                    ->getSearchResultsUsing(fn(string $search): array => School::where('name', 'like', "%{$search}%")->limit(10)
-                                        ->get()
-                                        ->map(function ($school) {
-                                            return [
-                                                'id' => $school->id,
-                                                'name' => $school->name . ' - ' . $school->province
-                                            ];
-                                        })
-                                        ->pluck('name', 'id')->toArray())
-                                    ->searchable()
-                                    ->preload(10),
-                                Select::make('grade_system_id')
-                                    ->label('학년')
-                                    ->required()
-                                    ->options(function () {
-                                        return GradeSystem::query()
-                                            ->orderBy('sequential_order')
-                                            ->pluck(
-                                                'display_name',
-                                                'id',
-                                            );
-                                    }),
-                            ])->relationship('userable'),
-                        TextInput::make('email')
-                            ->label('이메일'),
-                        Grid::make(2)
-                            ->schema([
-                                PhoneInput::make('phone')
-                                    ->label('전화번호 (본인)'),
-                                PhoneInput::make('landline')
-                                    ->label('전화번호 (자택)'),
-                            ]),
-                        Grid::make(2)
-                            ->schema([
-                                PhoneInput::make('phone_mother')
-                                    ->label('전화번호 (모)'),
-                                PhoneInput::make('phone_father')
-                                    ->label('전화번호 (부)'),
-                                Toggle::make('sms_agree')
-                                    ->label('SMS 수신 여부')
-                                    ->inlineLabel()
-                                    ->inline()
-                                    ->columnSpanFull()
-                                    ->default(true),
-                                CheckboxList::make('sms_targets')
-                                    ->label('SMS 수신 대상')
-                                    ->inlineLabel()
-                                    ->columnSpanFull()
-                                    ->options([
-                                        'self' => '본인',
-                                        'father' => '부',
-                                        'mother' => '모',
-                                    ])
-                                    // ->default(fn() => ['self'])
-                                    ->columns(3),
-                            ])->relationship('userable'),
-                        TextInput::make('username')
-                            ->label('계정')
-                            ->readOnly(fn($record) => $record?->id)
-                            ->required(),
-                        TextInput::make('password')
-                            ->confirmed()
-                            ->password()
-                            ->label('비밀번호')
-                            ->dehydrateStateUsing(fn(string $state): string => Hash::make($state))
-                            ->dehydrated(fn(?string $state): bool => filled($state))
-                            ->required(fn(string $operation): bool => $operation === 'create'),
-                        TextInput::make('password_confirmation')
-                            ->password()
-                            ->dehydrated(false)
-                            ->label('비밀번호 확인')
-                            ->required(fn(string $operation): bool => $operation === 'create'),
-                        Grid::make(4)
-                            ->schema([
-                                Select::make('cash_receipt_type')
-                                    ->label('현금영수증 종류')
-                                    ->options([
-                                        '개인' => '개인',
-                                        '사업자' => '사업자',
-                                    ]),
-                                TextInput::make('cash_receipt_no')
-                                    ->label('현금영수증 번호')
-                                    ->columnSpan(3),
-                            ])
-                            ->relationship('userable'),
-                        Grid::make(2)
-                            ->schema([
-                                DatePicker::make('initially_attended_at')
-                                    ->label('최초 수강일')
-                            ])
-                            ->relationship('userable'),
-                        KeyValue::make('meta')
-                            ->keyLabel('정보')
-                            ->valueLabel('입력')
-                            ->label('추가 정보')
-                            ->default([
-                                '과목별 내신 등급' => '',
-                                '모의고사 등급' => '',
-                                '수강료 할인유형' => '',
-                            ])
-                            ->columnSpanFull(),
-                        Textarea::make('remark')
-                            ->label('비고')
-                            ->columnSpanFull(),
-                        FileUpload::make('attachments')
-                            ->label('첨부 파일')
-                            ->multiple()
-                            ->placeholder('클릭하거나 파일을 드래그하여 업로드')
-                            ->previewable(false)
-                            ->downloadable(true)
-                            ->columnSpanFull()
-                    ])
-                    ->relationship('user')
-            ]);
+        return
+            $form
+            ->schema(self::_form(false));
+        // return $form
+        //     ->schema([
+        //         //
+        //         Grid::make(2)
+        //             ->schema([
+        //                 FileUpload::make('profile_photo_path')
+        //                     ->extraAttributes([
+        //                         'class' => '!items-center'
+        //                     ])
+        //                     ->label('사진')
+        //                     ->image()
+        //                     ->avatar()
+        //                     ->placeholder('사진 업로드')
+        //                     ->columnSpanFull(),
+        //                 TextInput::make('name')
+        //                     ->label('이름')
+        //                     ->required(),
+        //                 DatePicker::make('birthed_at')
+        //                     ->label('생년월일')
+        //                     ->required(),
+        //                 Grid::make(2)
+        //                     ->schema([
+        //                         Radio::make('gender')
+        //                             ->label('성별')
+        //                             ->inlineLabel()
+        //                             ->inline()
+        //                             ->required()
+        //                             ->options([
+        //                                 '남' => '남',
+        //                                 '여' => '여',
+        //                             ]),
+        //                     ]),
+        //                 Hidden::make('address'),
+        //                 Hidden::make('postal_code'),
+        //                 AddressInput::make('address-input')
+        //                     ->label('주소')
+        //                     ->columnSpanFull(),
+        //                 Grid::make(2)
+        //                     ->schema([
+        //                         Select::make('school_id')
+        //                             ->label('학교')
+        //                             ->nullable()
+        //                             ->getSearchResultsUsing(fn(string $search): array => School::where('name', 'like', "%{$search}%")->limit(10)
+        //                                 ->get()
+        //                                 ->map(function ($school) {
+        //                                     return [
+        //                                         'id' => $school->id,
+        //                                         'name' => $school->name . ' - ' . $school->province
+        //                                     ];
+        //                                 })
+        //                                 ->pluck('name', 'id')->toArray())
+        //                             ->searchable()
+        //                             ->preload(10),
+        //                         Select::make('grade_system_id')
+        //                             ->label('학년')
+        //                             ->required()
+        //                             ->options(function () {
+        //                                 return GradeSystem::query()
+        //                                     ->orderBy('sequential_order')
+        //                                     ->pluck(
+        //                                         'display_name',
+        //                                         'id',
+        //                                     );
+        //                             }),
+        //                     ])->relationship('userable'),
+        //                 TextInput::make('email')
+        //                     ->label('이메일'),
+        //                 Grid::make(2)
+        //                     ->schema([
+        //                         PhoneInput::make('phone')
+        //                             ->label('전화번호 (본인)'),
+        //                         PhoneInput::make('landline')
+        //                             ->label('전화번호 (자택)'),
+        //                     ]),
+        //                 Grid::make(2)
+        //                     ->schema([
+        //                         PhoneInput::make('phone_mother')
+        //                             ->label('전화번호 (모)'),
+        //                         PhoneInput::make('phone_father')
+        //                             ->label('전화번호 (부)'),
+        //                         Toggle::make('sms_agree')
+        //                             ->label('SMS 수신 여부')
+        //                             ->inlineLabel()
+        //                             ->inline()
+        //                             ->columnSpanFull()
+        //                             ->default(true),
+        //                         CheckboxList::make('sms_targets')
+        //                             ->label('SMS 수신 대상')
+        //                             ->inlineLabel()
+        //                             ->columnSpanFull()
+        //                             ->options([
+        //                                 'self' => '본인',
+        //                                 'father' => '부',
+        //                                 'mother' => '모',
+        //                             ])
+        //                             // ->default(fn() => ['self'])
+        //                             ->columns(3),
+        //                     ])->relationship('userable'),
+
+        //                 Grid::make(4)
+        //                     ->schema([
+        //                         Select::make('cash_receipt_type')
+        //                             ->label('현금영수증 종류')
+        //                             ->options([
+        //                                 '개인' => '개인',
+        //                                 '사업자' => '사업자',
+        //                             ]),
+        //                         TextInput::make('cash_receipt_no')
+        //                             ->label('현금영수증 번호')
+        //                             ->columnSpan(3),
+        //                     ])
+        //                     ->relationship('userable'),
+        //                 Grid::make(2)
+        //                     ->schema([
+        //                         DatePicker::make('initially_attended_at')
+        //                             ->label('최초 수강일')
+        //                     ])
+        //                     ->relationship('userable'),
+        //                 KeyValue::make('meta')
+        //                     ->keyLabel('정보')
+        //                     ->valueLabel('입력')
+        //                     ->label('추가 정보')
+        //                     ->default([
+        //                         '과목별 내신 등급' => '',
+        //                         '모의고사 등급' => '',
+        //                         '수강료 할인유형' => '',
+        //                     ])
+        //                     ->columnSpanFull(),
+        //                 Textarea::make('remark')
+        //                     ->label('비고')
+        //                     ->columnSpanFull(),
+        //                 FileUpload::make('attachments')
+        //                     ->label('첨부 파일')
+        //                     ->multiple()
+        //                     ->placeholder('클릭하거나 파일을 드래그하여 업로드')
+        //                     ->previewable(false)
+        //                     ->downloadable(true)
+        //                     ->columnSpanFull()
+        //             ])
+        //             ->relationship('user')
+        //     ]);
+
     }
 
     public static function table(Table $table): Table
@@ -268,9 +403,6 @@ class StudentResource extends Resource
                     }),
             ], layout: FiltersLayout::AboveContent)
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->modalHeading('학생 수정하기')
-                    ->modalWidth('xl'),
                 Tables\Actions\Action::make('view-report-card')
                     ->label('성적표')
                     ->icon('heroicon-m-newspaper')
@@ -280,11 +412,82 @@ class StudentResource extends Resource
                         'record' => $record,
                     ]))
                     ->modalWidth('7xl'),
+
+
+                Tables\Actions\Action::make('manage-account')
+                    ->label(fn($record) => '계정 관리')
+                    ->color(function ($record) {
+                        if ($record->user->username === null) {
+                            return 'gray';
+                        } elseif (!$record->user->is_active) {
+                            return 'danger';
+                        } else {
+                            return 'primary';
+                        }
+                    })
+                    ->icon('heroicon-m-user')
+                    ->fillForm(fn($record) => [
+                        'username' => $record->user->username,
+                        'is_active' => $record->user->is_active,
+                    ])
+                    ->form([
+                        TextInput::make('username')
+                            ->label('계정')
+                            // ->readOnly()
+                            ->required(),
+                        TextInput::make('password')
+                            ->confirmed()
+                            ->password()
+                            ->label('비밀번호')
+                            ->dehydrateStateUsing(fn(string $state): string => Hash::make($state))
+                            ->dehydrated(fn(?string $state): bool => filled($state))
+                            ->required(fn(string $operation): bool => $operation === 'create'),
+                        TextInput::make('password_confirmation')
+                            ->password()
+                            ->dehydrated(false)
+                            ->label('비밀번호 확인')
+                            ->required(fn(string $operation): bool => $operation === 'create'),
+                        Grid::make(2)
+                            ->schema([
+                                Toggle::make('is_active')
+                                    ->label('승인')
+                                    ->inlineLabel()
+                                    ->inline()
+                                    ->default(true),
+                            ]),
+                    ])
+                    ->modalHeading('계정 관리')
+                    ->modalWidth('sm')
+                    ->action(function ($record, $data) {
+                        $record->user->update([
+                            'username' => $data['username'],
+                            'is_active' => $data['is_active'],
+                        ]);
+
+                        if ($data['password'] ?? false) {
+                            $record->user->update([
+                                'password' => Hash::make($data['password']),
+                            ]);
+                        }
+                        Notification::make()
+                            ->title('계정이 성공적으로 업데이트되었습니다.')
+                            ->send();
+                    }),
+                Tables\Actions\Action::make('manage-counseling')
+                    ->label('상담 관리')
+                    ->modalHeading('상담 관리')
+                    ->icon('heroicon-m-clipboard-document-list')
+                    ->url(fn($record) => '/admin/counselings?tableFilters[student_id][value]=' . $record->id)
+                    ->modalWidth('2xl'),
+                Tables\Actions\EditAction::make()
+                    ->modalHeading('학생 수정하기')
+                    ->modalWidth('xl'),
             ])
             ->hiddenFilterIndicators(true)
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->modalHeading('학생 삭제'),
                 ]),
             ])
             ->emptyStateHeading('학생이 없습니다.');

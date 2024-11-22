@@ -77,7 +77,8 @@ class SubCategoriesRelationManager extends RelationManager
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->modalHeading('하위 분류 삭제'),
                 ]),
             ])
             ->defaultSort('order', 'asc');

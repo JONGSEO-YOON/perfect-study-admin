@@ -5,6 +5,7 @@ namespace App\Filament\Resources\CounselingResource\Pages;
 use App\Filament\Resources\CounselingResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
+use Livewire\Attributes\On;
 
 class ListCounselings extends ListRecords
 {
@@ -26,9 +27,12 @@ class ListCounselings extends ListRecords
                 ->modalHeading('상담 요청하기')
                 ->createAnother(false)
                 ->modalSubmitActionLabel('저장')
-                ->fillForm([
-                    'request' => true,
-                ])
+                ->fillForm(function () {
+                    return [
+                        'student_id' => $this->tableFilters['student_id']['value'] ?? null,
+                        'request' => true,
+                    ];
+                })
                 ->modalWidth('xl'),
             Actions\CreateAction::make('create-counseling')
                 ->icon('heroicon-m-pencil-square')
@@ -36,6 +40,11 @@ class ListCounselings extends ListRecords
                 ->modalHeading('상담 기록하기')
                 ->createAnother(false)
                 ->modalSubmitActionLabel('저장')
+                ->fillForm(function () {
+                    return [
+                        'student_id' => $this->tableFilters['student_id']['value'] ?? null,
+                    ];
+                })
                 ->modalWidth('xl'),
             Actions\Action::make('manage-counselors')
                 ->icon('heroicon-m-cog-8-tooth')
@@ -45,5 +54,13 @@ class ListCounselings extends ListRecords
                 ->modalHeading('상담실 계정 관리')
                 ->modalWidth('xl'),
         ];
+    }
+
+    #[On('studentAdded')]
+    public function onStudentAdded($record): void
+    {
+        if ($this->mountedActionsData[0] ?? false) {
+            $this->mountedActionsData[0]['student_id'] = $record['id'];
+        }
     }
 }

@@ -2,9 +2,11 @@
 
 namespace App\Livewire;
 
+use App\Filament\Resources\StudentResource;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
+use Filament\Actions\CreateAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Grid;
@@ -17,7 +19,7 @@ use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Livewire\Component;
 
-class TestSheetReportCard extends Component implements HasActions, HasForms
+class AddStudentAction extends Component implements HasActions, HasForms
 {
   use InteractsWithForms;
   use InteractsWithActions;
@@ -34,17 +36,28 @@ class TestSheetReportCard extends Component implements HasActions, HasForms
 
   public function render()
   {
-    return view('livewire.test-sheet-report-card');
+    return view('livewire.add-student-action');
   }
 
-  public function detailAction(): Action
+  public function addStudentAction(): Action
   {
-    return Action::make('detail')
-      ->modalHeading('상세보기')
+    return CreateAction::make('addStudent')
+      ->label('신규 학생 등록')
+      ->modalHeading('신규 학생 등록')
+      ->icon('heroicon-m-user-plus')
+      ->size('sm')
+      ->link()
+      ->model(StudentResource::getModel())
+      ->form(StudentResource::_form(true))
+      ->modalWidth('xl')
       ->modalCancelActionLabel('닫기')
-      ->modalSubmitAction(false)
-      ->modalContent(fn() => view('livewire.test-sheet-report-card-detail'));
+      ->modalSubmitActionLabel('등록')
+      ->createAnother(false)
+      ->after(function ($record) {
+        $this->dispatch('studentAdded', $record);
+      });
   }
+
 
   public function initAction() {}
 }

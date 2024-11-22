@@ -172,7 +172,8 @@ class TeacherResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->modalHeading('강사 삭제'),
                 ]),
             ]);
     }

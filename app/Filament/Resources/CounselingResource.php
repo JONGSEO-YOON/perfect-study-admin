@@ -18,11 +18,14 @@ use Filament\Forms\Components\Tabs\Tab;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ViewField;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -44,7 +47,6 @@ class CounselingResource extends Resource
         return '';
     }
 
-
     public static function form(Form $form): Form
     {
         return $form
@@ -62,6 +64,7 @@ class CounselingResource extends Resource
                                 return User::where('userable_type', Student::class)
                                     ->with('userable')
                                     ->get()
+                                    // ->filter(fn($user) => $user->userable !== null)
                                     ->mapWithKeys(fn($user) => [$user->userable->id => $user->name . ' (' . $user->birthed_at->format('Y-m-d') . ')'])
                                     ->toArray();
                             })
@@ -80,6 +83,12 @@ class CounselingResource extends Resource
                             ->required()
                             ->preload()
                             ->searchable(),
+                        Grid::make(2)
+                            ->schema([
+                                ViewField::make('add_student_link')
+                                    ->dehydrated(false)
+                                    ->view('filament.components.forms.add-student-link')
+                            ])->columnSpanFull(),
                         DatePicker::make('planned_start_at')
                             ->label('상담 희망 시작일'),
                         DatePicker::make('planned_end_at')
@@ -198,7 +207,6 @@ class CounselingResource extends Resource
     {
         return $table
             ->columns([
-                //
                 TextColumn::make('id')
                     ->label('No')
                     ->html()
@@ -253,7 +261,25 @@ class CounselingResource extends Resource
             ])
             ->filters([
                 //
-            ])
+                SelectFilter::make('status')
+                    ->options([
+                        '상담 요청' => '상담 요청',
+                        '상담 진행' => '상담 진행',
+                        '상담 완료' => '상담 완료',
+                    ])
+                    ->label('상태'),
+                SelectFilter::make('student_id')
+                    ->options(function () {
+                        return User::where('userable_type', Student::class)
+                            ->with('userable')
+                            ->get()
+                            ->mapWithKeys(fn($user) => [$user->userable->id => $user->name . ' (' . $user->birthed_at->format('Y-m-d') . ')'])
+                            ->toArray();
+                    })
+                    ->searchable()
+                    ->preload()
+                    ->label('상태'),
+            ], FiltersLayout::AboveContent)
             ->actions([
                 Tables\Actions\EditAction::make()
                     ->modalHeading('상담 기록하기')

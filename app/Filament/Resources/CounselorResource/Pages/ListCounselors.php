@@ -5,6 +5,7 @@ namespace App\Filament\Resources\CounselorResource\Pages;
 use App\Filament\Resources\CounselorResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
+use Livewire\Attributes\On;
 
 class ListCounselors extends ListRecords
 {
