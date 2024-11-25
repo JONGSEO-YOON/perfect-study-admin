@@ -1,0 +1,94 @@
+<script setup>
+import { ref, computed } from "vue";
+
+const props = defineProps({
+    item: {
+        type: Object,
+        required: true,
+    },
+    initialExpanded: {
+        type: Boolean,
+        default: false,
+    },
+    innerClass: {
+        type: String,
+        default: "",
+    },
+    selectedItems: {
+        type: Array,
+        default: () => [],
+    },
+});
+
+const emit = defineEmits(["select"]);
+
+const isExpanded = ref(props.initialExpanded);
+const toggle = () => {
+    if (props.item.children?.length) {
+        isExpanded.value = !isExpanded.value;
+    }
+};
+
+const handleSelect = (event) => {
+    event.stopPropagation(); // 이벤트 버블링 방지
+    emit("select", props.item);
+};
+
+const isSelected = computed(() => {
+    return props.selectedItems.some((item) => item.id === props.item.id);
+});
+</script>
+
+<template>
+    <div class="w-full">
+        <div
+            :class="innerClass"
+            class="flex items-center gap-x-2 px-4 py-2 hover:bg-gray-50 cursor-pointer"
+            @click="toggle"
+        >
+            <span v-if="item.children?.length" class="w-4 text-gray-500 mr-1">
+                <svg
+                    :class="{
+                        'rotate-90': isExpanded,
+                    }"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    class="size-5 transition-all"
+                >
+                    <path
+                        fill-rule="evenodd"
+                        d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
+                        clip-rule="evenodd"
+                    />
+                </svg>
+            </span>
+            <span v-else class="w-4"></span>
+            <div
+                v-if="item.type !== 'scope'"
+                class="flex items-center"
+                @click="handleSelect"
+            >
+                <input
+                    type="checkbox"
+                    :checked="isSelected"
+                    class="h-4 w-4 text-primary-600 rounded border-gray-300"
+                />
+            </div>
+            <span
+                @click="(e) => (item.type !== 'scope' ? handleSelect(e) : '')"
+                class="flex-1"
+                >{{ item.name }}</span
+            >
+        </div>
+        <div v-if="isExpanded" class="pl-6">
+            <QuestionCategoryItem
+                v-for="child in item.children"
+                :key="child.id"
+                :item="child"
+                :selectedItems="selectedItems"
+                @select="$emit('select', $event)"
+            />
+        </div>
+    </div>
+</template>

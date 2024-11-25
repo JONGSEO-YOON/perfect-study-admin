@@ -13,7 +13,11 @@
 >
     <head>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+        <!-- Scripts -->
+        @stack('scripts')
+        
         @vite('resources/css/app.css')
+        @vite('resources/js/QuestionCategorySelector.js')
 
         {{ \Filament\Support\Facades\FilamentView::renderHook(\Filament\View\PanelsRenderHook::HEAD_START, scopes: $livewire->getRenderHookScopes()) }}
 
@@ -124,11 +128,13 @@
             </script>
         @endif
 
-        @stack('scripts')
+
 
         {{ \Filament\Support\Facades\FilamentView::renderHook(\Filament\View\PanelsRenderHook::SCRIPTS_AFTER, scopes: $livewire->getRenderHookScopes()) }}
 
         {{ \Filament\Support\Facades\FilamentView::renderHook(\Filament\View\PanelsRenderHook::BODY_END, scopes: $livewire->getRenderHookScopes()) }}
-        @livewire(\App\Livewire\QuestionEditForm::class)
+        {{-- @livewire(\App\Livewire\QuestionEditForm::class) --}}
+
+
     </body>
 </html>
