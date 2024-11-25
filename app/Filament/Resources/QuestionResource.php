@@ -15,7 +15,6 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\Tabs\Tab;
 use Filament\Forms\Components\TagsInput;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\ToggleButtons;
@@ -30,6 +29,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Str;
+use Mohamedsabil83\FilamentFormsTinyeditor\Components\TinyEditor;
 
 class QuestionResource extends Resource
 {
@@ -87,7 +87,7 @@ class QuestionResource extends Resource
                             ->previewable(true)
                             ->downloadable(true)
                             ->columnSpanFull(),
-                        Textarea::make('content')
+                        TinyEditor::make('content')
                             ->visible(fn(Get $get) => $get('question_display_type') === 'content')
                             ->label('문제 내용')
                             ->required()
@@ -191,7 +191,7 @@ class QuestionResource extends Resource
                                                     ->downloadable(true)
                                                     ->columnSpanFull()
                                                     ->visible(fn(Get $get) => $get($prefix . '.display_type') === 'image'),
-                                                Textarea::make($prefix . '.content')
+                                                TinyEditor::make($prefix . '.content')
                                                     ->required()
                                                     ->label('내용')
                                                     ->placeholder('선택지를 입력하세요.')
@@ -233,7 +233,7 @@ class QuestionResource extends Resource
                             ->previewable(true)
                             ->downloadable(true)
                             ->columnSpanFull(),
-                        Textarea::make('explanation')
+                        TinyEditor::make('explanation')
                             ->label('해설 내용')
                             ->required()
                             ->placeholder('해설 내용을 입력하세요.')

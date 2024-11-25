@@ -99,6 +99,32 @@
 
         {{ \Filament\Support\Facades\FilamentView::renderHook(\Filament\View\PanelsRenderHook::HEAD_END, scopes: $livewire->getRenderHookScopes()) }}
 
+
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const observer = new MutationObserver(() => {
+                    // MathType 팝업의 존재 여부 확인
+                    const mathTypePopups = document.querySelectorAll('.wrs_modal_dialogContainer');
+        
+                    // 하나라도 보이는 팝업이 있는지 확인
+                    const isAnyPopupVisible = Array.from(mathTypePopups).some(popup => 
+                        window.getComputedStyle(popup).display !== 'none'
+                    );
+
+                    const mathTypeButtons = document.querySelectorAll('.tox-tbtn');
+                  
+                    mathTypeButtons.forEach(btn => {
+                        btn.style.visibility = isAnyPopupVisible ? 'hidden' : 'visible';
+                    });
+                });
+
+                // 문서 전체를 observe
+                observer.observe(document, {
+                    childList: true,
+                    subtree: true,
+                });
+            });
+        </script>
     </head>
 
     <body

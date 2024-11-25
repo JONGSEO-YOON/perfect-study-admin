@@ -13,6 +13,7 @@
         "intervention/image": "^3.8",
         "laravel/framework": "^11.9",
         "laravel/tinker": "^2.9",
+        "mohamedsabil83/filament-forms-tinyeditor": "^2.3",
         "rupadana/filament-slider": "^1.0"
     },
     "require-dev": {
