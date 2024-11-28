@@ -15,6 +15,8 @@ class QuestionCategorySelector extends Component implements HasMingles
 
     public $selectedId = null;
 
+    public $multiple = false;
+
     public function component(): string
     {
         return 'resources/js/QuestionCategorySelector.js';
@@ -26,6 +28,7 @@ class QuestionCategorySelector extends Component implements HasMingles
         return [
             'questionCategories' => $questionCategories,
             'selectedId' => $this->selectedId,
+            'multiple' => $this->multiple,
         ];
     }
 }

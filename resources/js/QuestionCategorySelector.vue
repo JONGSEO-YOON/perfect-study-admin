@@ -9,13 +9,23 @@ const props = defineProps({
 });
 
 const selectedDepth0 = ref("중"); // 초기 선택값을 '고'로 설정
-const selectedDepth1 = ref("1-1");
+const selectedDepth1 = ref([]);
 const selectedItems = ref([]); // 선택된 항목들을 저장할 배열
+
+const multiple = ref(props.mingleData.multiple);
+
 if (props.mingleData.selectedId) {
-    selectedItems.value.push({
-        id: props.mingleData.selectedId,
-        // name: props.mingleData.selectedName,
-    });
+    if (Array.isArray(props.mingleData.selectedId)) {
+        props.mingleData.selectedId.forEach((id) => {
+            selectedItems.value.push({
+                id,
+            });
+        });
+    } else {
+        selectedItems.value.push({
+            id: props.mingleData.selectedId,
+        });
+    }
 }
 
 const selectedCategories = computed(() => {
@@ -26,20 +36,26 @@ const selectedCategories = computed(() => {
 });
 
 const selectedChildren = computed(() => {
-    if (!selectedDepth1.value) return [];
-    return selectedCategories.value.filter(
-        (category) => category.name === selectedDepth1.value
+    if (!selectedDepth1.value.length) return [];
+    return selectedCategories.value.filter((category) =>
+        selectedDepth1.value.includes(category.name)
     );
 });
 
 const selectCategory = (categoryName) => {
     selectedDepth0.value = categoryName;
-    selectedDepth1.value = null;
+    // selectedDepth1.value = null;
 };
 
 const selectDepth1 = (categoryName) => {
-    selectedDepth1.value = categoryName;
+    const index = selectedDepth1.value.indexOf(categoryName);
+    if (index === -1) {
+        selectedDepth1.value.push(categoryName);
+    } else {
+        selectedDepth1.value.splice(index, 1);
+    }
 };
+
 const handleItemSelect = (item) => {
     if (selectedItems.value.some((selected) => selected.id === item.id)) {
         selectedItems.value = selectedItems.value.filter(
@@ -47,15 +63,21 @@ const handleItemSelect = (item) => {
         );
         return;
     }
-    selectedItems.value = [];
+    if (!multiple.value) {
+        selectedItems.value = [];
+    }
     if (item) selectedItems.value.push(item);
 };
-
-watch(selectedItems, (newVal) => {
-    const event = new Event("selectedQuestionCategoryChanged");
-    event.data = JSON.parse(JSON.stringify(newVal));
-    window.dispatchEvent(event);
-});
+//should be deep
+watch(
+    selectedItems,
+    (newVal) => {
+        const event = new Event("selectedQuestionCategoryChanged");
+        event.data = JSON.parse(JSON.stringify(newVal));
+        window.dispatchEvent(event);
+    },
+    { deep: true }
+);
 </script>
 
 <template>
@@ -87,7 +109,7 @@ watch(selectedItems, (newVal) => {
                     :key="child.id"
                     :class="[
                         'min-w-max py-2 px-4 border rounded-full',
-                        selectedDepth1 === child.name
+                        selectedDepth1.includes(child.name)
                             ? 'bg-primary-100/50 text-primary-400 border-primary-400'
                             : '',
                     ]"
@@ -98,7 +120,7 @@ watch(selectedItems, (newVal) => {
                 </button>
             </div>
         </div>
-        <div class="h-[300px] overflow-y-auto flex flex-col">
+        <div class="h-[400px] overflow-y-auto flex flex-col">
             <QuestionCategoryItem
                 v-for="child in selectedChildren"
                 initialExpanded
@@ -106,6 +128,7 @@ watch(selectedItems, (newVal) => {
                 :key="child.id"
                 :item="child"
                 :selectedItems="selectedItems"
+                :multiple="multiple"
                 @select="handleItemSelect"
             />
         </div>

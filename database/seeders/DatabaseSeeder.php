@@ -24,16 +24,17 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
 
-        $this->call([
-            SchoolSeeder::class,
-            GradeSystemSeeder::class,
-            QuestionCategorySeeder::class,
-        ]);
-
         User::factory()->create([
             'name' => '관리자',
             'username' => 'admin',
             'phone' => '010-1234-5678',
+        ]);
+
+
+        $this->call([
+            SchoolSeeder::class,
+            GradeSystemSeeder::class,
+            QuestionCategorySeeder::class,
         ]);
 
         Teacher::factory(12)->create();
