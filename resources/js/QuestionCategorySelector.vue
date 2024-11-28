@@ -11,6 +11,12 @@ const props = defineProps({
 const selectedDepth0 = ref("중"); // 초기 선택값을 '고'로 설정
 const selectedDepth1 = ref("1-1");
 const selectedItems = ref([]); // 선택된 항목들을 저장할 배열
+if (props.mingleData.selectedId) {
+    selectedItems.value.push({
+        id: props.mingleData.selectedId,
+        // name: props.mingleData.selectedName,
+    });
+}
 
 const selectedCategories = computed(() => {
     const selected = props.mingleData.questionCategories.find(

@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasUser;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Question extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUser;
 
     protected function casts(): array
     {
@@ -24,5 +25,16 @@ class Question extends Model
     public function choices()
     {
         return $this->hasMany(QuestionChoice::class);
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (!$model->user_id && auth()->check()) {
+                $model->user_id = auth()->id();
+            }
+        });
     }
 }

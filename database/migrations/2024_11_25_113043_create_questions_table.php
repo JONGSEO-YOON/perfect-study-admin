@@ -43,6 +43,7 @@ return new class extends Migration
         // 문제 테이블 수정
         Schema::create('questions', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('question_type_id')
                 ->constrained('question_categories')
                 ->onDelete('cascade');

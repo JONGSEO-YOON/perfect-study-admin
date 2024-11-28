@@ -13,6 +13,8 @@ class QuestionCategorySelector extends Component implements HasMingles
 {
     use InteractsWithMingles;
 
+    public $selectedId = null;
+
     public function component(): string
     {
         return 'resources/js/QuestionCategorySelector.js';
@@ -23,6 +25,7 @@ class QuestionCategorySelector extends Component implements HasMingles
         $questionCategories = QuestionCategory::getFullTree();
         return [
             'questionCategories' => $questionCategories,
+            'selectedId' => $this->selectedId,
         ];
     }
 }

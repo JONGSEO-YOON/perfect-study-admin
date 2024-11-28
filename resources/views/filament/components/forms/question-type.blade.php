@@ -13,6 +13,8 @@
 @endscript
 <x-dynamic-component :component="$getFieldWrapperView()" :field="$field">
     <div id="category-selector" x-data="{ state: $wire.$entangle('{{ $getStatePath() }}') }">
-        @livewire(\App\Livewire\QuestionCategorySelector::class)
+        @livewire(\App\Livewire\QuestionCategorySelector::class, [
+            'selectedId' => $getState(),
+        ])
     </div>
 </x-dynamic-component>
