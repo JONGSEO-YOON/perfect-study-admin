@@ -1,124 +1,154 @@
 <x-filament-panels::page>
-    <div class="flex flex-row mx-auto gap-x-2">
-        <div class="flex flex-col flex-1">
-            <div class="w-full bg-white border rounded-lg p-4 flex flex-col items-center justify-center mb-1">
-                <h1 class="font-medium text-gray-600">총 문제</h1>
-                <h1 class="font-bold text-gray-800 text-2xl">{{ count($questions) }}문제</h1>
-                <h1 class="font-medium text-gray-600 text-sm my-1">
-                    객관식 {{ $summary['by_answer_type']['multiple_choice'] ?? 0 }} · 주관식(정수형)
-                    {{ $summary['by_answer_type']['integer'] ?? 0 }}
-                </h1>
-
-                <div class="py-2 px-14 w-full flex flex-col mt-4 text-gray-600">
-                    <div class="flex flex-row border-b">
-                        @for ($i = 1; $i <= 5; $i++)
-                            @php
-                                // 최대값을 120px로 설정하고 현재 값의 비율을 계산
-                                $maxValue = max($summary['by_level']);
-                                $height = $maxValue > 0 ? (($summary['by_level'][$i] ?? 0) * 120) / $maxValue : 0;
-                            @endphp
-                            <div class="flex-1 flex flex-col items-center justify-end text-medium gap-y-1 text-sm">
-                                {{ $summary['by_level'][$i] ?? 0 }}문제
-                                <div class=" w-[24px] rounded-t bg-primary-500" style="height: {{ $height }}px">
-                                </div>
-                            </div>
-                        @endfor
-                    </div>
-                    <div class="flex flex-row py-1 text-sm">
-                        @for ($i = 1; $i <= 5; $i++)
-                            <div class="flex-1 flex items-center justify-center">
-                                레벨 {{ $i }}
-                            </div>
-                        @endfor
-
-                    </div>
-                </div>
+    <div class="flex flex-col mx-auto">
+        <x-filament-actions::modals />
+        @if ($state === 'question-selection')
+            <div class="flex flex-row mb-3 justify-between">
+                {{ $this->addQuestion }}
+                {{ $this->confirmQuestion }}
             </div>
-            <div class="flex-1 flex bg-white border rounded-lg flex-col">
+            <div class="flex flex-row gap-x-2">
+                <div class="flex flex-col flex-1">
+                    <div class="w-full bg-white border rounded-lg p-4 flex flex-col items-center justify-center mb-1">
+                        <h1 class="font-medium text-gray-600">총 문제</h1>
+                        <h1 class="font-bold text-gray-800 text-2xl">{{ count($questions) }}문제</h1>
+                        <h1 class="font-medium text-gray-600 text-sm my-1">
+                            객관식 {{ $summary['by_answer_type']['multiple_choice'] ?? 0 }} · 주관식(정수형)
+                            {{ $summary['by_answer_type']['integer'] ?? 0 }}
+                        </h1>
 
-                <div class="bg-gray-50 border-b rounded-t-lg">
-                    <div class="grid grid-cols-12 gap-2 px-2 py-3">
-                        <div class="col-span-1 text-center text-sm font-medium text-gray-900">번호</div>
-                        <div class="col-span-2 text-center text-sm font-medium text-gray-900">레벨</div>
-                        <div class="col-span-2 text-center text-sm font-medium text-gray-900">문제 타입</div>
-                        <div class="col-span-5 text-center text-sm font-medium text-gray-900">유형명</div>
-                        <div class="col-span-2 text-center text-sm font-medium text-gray-900">순서 변경</div>
+                        <div class="py-2 px-14 w-full flex flex-col mt-4 text-gray-600">
+                            <div class="flex flex-row border-b">
+                                @for ($i = 1; $i <= 5; $i++)
+                                    @php
+                                        // 최대값을 120px로 설정하고 현재 값의 비율을 계산
+                                        $maxValue = max($summary['by_level']);
+                                        $height =
+                                            $maxValue > 0 ? (($summary['by_level'][$i] ?? 0) * 120) / $maxValue : 0;
+                                    @endphp
+                                    <div
+                                        class="flex-1 flex flex-col items-center justify-end text-medium gap-y-1 text-sm">
+                                        {{ $summary['by_level'][$i] ?? 0 }}문제
+                                        <div class=" w-[24px] rounded-t bg-primary-500"
+                                            style="height: {{ $height }}px">
+                                        </div>
+                                    </div>
+                                @endfor
+                            </div>
+                            <div class="flex flex-row py-1 text-sm">
+                                @for ($i = 1; $i <= 5; $i++)
+                                    <div class="flex-1 flex items-center justify-center">
+                                        레벨 {{ $i }}
+                                    </div>
+                                @endfor
+
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 flex bg-white border rounded-lg flex-col">
+                        <div class="bg-gray-50 border-b rounded-t-lg">
+                            <div class="grid grid-cols-12 gap-2 px-2 py-3">
+                                <div class="col-span-1 text-center text-sm font-medium text-gray-900">번호</div>
+                                <div class="col-span-2 text-center text-sm font-medium text-gray-900">레벨</div>
+                                <div class="col-span-2 text-center text-sm font-medium text-gray-900">문제 타입</div>
+                                <div class="col-span-5 text-center text-sm font-medium text-gray-900">유형명</div>
+                                <div class="col-span-2 text-center text-sm font-medium text-gray-900">순서 변경</div>
+                            </div>
+                        </div>
+                        <!-- Scrollable Content -->
+                        <div class="grow overflow-y-auto h-0">
+                            <div wire:sortable="onOrderChanged" class="divide-y divide-gray-200">
+                                @foreach ($questions as $index => $question)
+                                    <div wire:key="question-{{ $question->id }}"
+                                        wire:sortable.item="{{ $question->id }}"
+                                        class="grid grid-cols-12 gap-2 px-2 py-3 bg-white hover:bg-gray-50 transition-colors">
+                                        <div class="col-span-1 text-center text-sm text-gray-900">{{ $index + 1 }}
+                                        </div>
+                                        <div class="col-span-2 text-center text-sm text-gray-900">레벨
+                                            {{ $question->level }}
+                                        </div>
+
+                                        <div class="col-span-2 text-center text-sm text-gray-900">
+                                            {{ $question->answer_type === 'integer' ? '주관식 (정수형)' : '객관식' }}
+                                        </div>
+                                        <div class="col-span-5 text-center text-sm text-gray-900">
+                                            {{ $question->questionType?->name }}</div>
+                                        <div wire:sortable.handle class="col-span-2  flex items-center justify-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                                                fill="currentColor" class="size-4">
+                                                <path fill-rule="evenodd"
+                                                    d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z"
+                                                    clip-rule="evenodd" />
+                                            </svg>
+
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <!-- Scrollable Content -->
-                <div class="grow overflow-y-auto h-0" wire:sortable-group="onOrderChanged">
-                    <div wire:sortable="onOrderChanged" class="divide-y divide-gray-200">
-                        @foreach ($questions as $index => $question)
-                            <div wire:key="question-{{ $question->id }}" wire:sortable.item="{{ $question->id }}"
-                                class="grid grid-cols-12 gap-2 px-2 py-3 bg-white hover:bg-gray-50 transition-colors">
-                                <div class="col-span-1 text-center text-sm text-gray-900">{{ $index + 1 }}</div>
-                                <div class="col-span-2 text-center text-sm text-gray-900">레벨 {{ $question->level }}
-                                </div>
-
-                                <div class="col-span-2 text-center text-sm text-gray-900">
-                                    {{ $question->answer_type === 'integer' ? '주관식 (정수형)' : '객관식' }}
-                                </div>
-                                <div class="col-span-5 text-center text-sm text-gray-900">
-                                    {{ $question->questionType?->name }}</div>
+                <div class="flex flex-1">
+                    <div class="flex flex-col bg-gray-100 p-4 rounded-lg gap-y-3 h-[calc(100vh)] overflow-auto ">
+                        <h1 class="text-base font-bold text-gray-800">선택된 문제 목록</h1>
+                        @foreach ($questions as $number => $question)
+                            <div class="bg-white shadow flex flex-col rounded-lg">
                                 <div
-                                    class="col-span-2 wire:sortable.handle cursor-move flex items-center justify-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-                                        class="w-5 h-5 text-gray-400 cursor-grab active:cursor-grabbing">
-                                        <path
-                                            d="M7 3a1 1 0 0 0-2 0v12a1 1 0 1 0 2 0V3zM15 3a1 1 0 0 0-2 0v12a1 1 0 1 0 2 0V3z" />
-                                    </svg>
+                                    class="text-2xl bg-primary-400 text-white font-bold px-4 py-2.5 rounded-t-lg flex items-center">
+                                    {{ $number + 1 }}
+                                    <h2 class="flex items-center ml-4 text-base">
+                                        {{ $question->questionType?->name }}
+                                    </h2>
+                                    <h2 class="flex items-center ml-4 text-sm">
+                                        레벨: {{ $question->level }}
+                                    </h2>
+                                </div>
+                                <img class="w-full rounded-b-lg" src="/storage/{{ $question->image_path }}" />
+                                <div class="flex flex-row text-sm">
+                                    <button type="button"
+                                        wire:click="mountAction('addSimilarQuestion', { question: {{ $question }} })"
+                                        class="flex flex-1 items-center justify-center bg-primary-400 text-white py-2.5 font-bold rounded-bl-lg gap-x-2.5 hover:bg-primary-500 transition-all ">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                                            class="size-5">
+                                            <path d="M8 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Z" />
+                                            <path fill-rule="evenodd"
+                                                d="M4.5 2A1.5 1.5 0 0 0 3 3.5v13A1.5 1.5 0 0 0 4.5 18h11a1.5 1.5 0 0 0 1.5-1.5V7.621a1.5 1.5 0 0 0-.44-1.06l-4.12-4.122A1.5 1.5 0 0 0 11.378 2H4.5Zm5 5a3 3 0 1 0 1.524 5.585l1.196 1.195a.75.75 0 1 0 1.06-1.06l-1.195-1.196A3 3 0 0 0 9.5 7Z"
+                                                clip-rule="evenodd" />
+                                        </svg>
+
+                                        유사 문제 조회
+                                    </button>
+                                    <button wire:click="removeQuestion({{ $question->id }})"
+                                        class="flex flex-1 items-center justify-center bg-danger-400 text-white py-2.5 font-bold rounded-br-lg gap-x-2.5 hover:bg-danger-500 transition-all">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                                            class="size-4">
+                                            <path fill-rule="evenodd"
+                                                d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"
+                                                clip-rule="evenodd" />
+                                        </svg>
+
+                                        삭제
+                                    </button>
                                 </div>
                             </div>
                         @endforeach
                     </div>
                 </div>
-
-
             </div>
-        </div>
-        <div class="flex flex-1">
-            <div class="flex flex-col bg-gray-100 p-4 rounded-lg gap-y-3 h-[calc(100vh)] overflow-auto ">
-                <h1 class="text-base font-bold text-gray-800">선택된 문제 목록</h1>
-                @foreach ($questions as $number => $question)
-                    <div class="bg-white shadow flex flex-col rounded-lg">
-                        <div
-                            class="text-2xl bg-primary-400 text-white font-bold px-4 py-2.5 rounded-t-lg flex items-center">
-                            {{ $number + 1 }}
-                            <h2 class="flex items-center ml-4 text-base">
-                                {{ $question->questionType?->name }}
-                            </h2>
-                            <h2 class="flex items-center ml-4 text-sm">
-                                레벨: {{ $question->level }}
-                            </h2>
-                        </div>
-                        <img class="w-full rounded-b-lg" src="/storage/{{ $question->image_path }}" />
-                        <div class="flex flex-row text-sm">
-                            <button
-                                class="flex flex-1 items-center justify-center bg-primary-400 text-white py-2.5 font-bold rounded-bl-lg gap-x-2.5 hover:bg-primary-500 transition-all ">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-                                    class="size-4">
-                                    <path
-                                        d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
-                                    <path
-                                        d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
-                                </svg>
-                                유사 문제 조회
-                            </button>
-                            <button
-                                class="flex flex-1 items-center justify-center bg-danger-400 text-white py-2.5 font-bold rounded-br-lg gap-x-2.5 hover:bg-danger-500 transition-all">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-                                    class="size-4">
-                                    <path fill-rule="evenodd"
-                                        d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"
-                                        clip-rule="evenodd" />
-                                </svg>
-
-                                삭제
-                            </button>
-                        </div>
-                    </div>
-                @endforeach
+        @else
+            <div class="w-[1200px] flex flex-row gap-x-4">
+                <div class="flex-1">
+                    {{ $this->form }}
+                </div>
+                <div class="flex-1">
+                    <img src="/storage/01JDPAQCZ5GDFJ6N2ZY2HVJ87K.png" />
+                </div>
             </div>
-        </div>
+        @endif
     </div>
+    <style>
+        .draggable-mirror {
+            width: 500px !important;
+            box-sizing: border-box !important;
+        }
+    </style>
 </x-filament-panels::page>

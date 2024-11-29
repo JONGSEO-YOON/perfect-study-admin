@@ -8,25 +8,79 @@ const props = defineProps({
     mingleData: {},
 });
 
-const selectedDepth0 = ref("중"); // 초기 선택값을 '고'로 설정
+const selectedDepth0 = ref(); // 초기 선택값을 '고'로 설정
 const selectedDepth1 = ref([]);
 const selectedItems = ref([]); // 선택된 항목들을 저장할 배열
 
 const multiple = ref(props.mingleData.multiple);
 
+// 재귀적으로 아이템을 찾는 함수
+const findCategoryPath = (categories, targetIds, currentPath = []) => {
+    for (const category of categories) {
+        // 현재 카테고리를 경로에 추가
+        const newPath = [...currentPath, category.name];
+
+        // items가 있는 경우 체크
+        if (category.children?.some((item) => targetIds.includes(item.id))) {
+            return newPath;
+        }
+
+        // children이 있는 경우 재귀적으로 검색
+        if (category.children?.length) {
+            const foundPath = findCategoryPath(
+                category.children,
+                targetIds,
+                newPath
+            );
+            if (foundPath) {
+                return foundPath;
+            }
+        }
+    }
+    return null;
+};
+
+// 초기 선택된 아이템 설정 및 카테고리 자동 선택
 if (props.mingleData.selectedId) {
-    if (Array.isArray(props.mingleData.selectedId)) {
-        props.mingleData.selectedId.forEach((id) => {
-            selectedItems.value.push({
-                id,
-            });
-        });
-    } else {
-        selectedItems.value.push({
-            id: props.mingleData.selectedId,
-        });
+    const selectedIds = Array.isArray(props.mingleData.selectedId)
+        ? props.mingleData.selectedId
+        : [props.mingleData.selectedId];
+
+    // selectedItems 설정
+    selectedIds.forEach((id) => {
+        selectedItems.value.push({ id });
+    });
+
+    // 재귀적으로 카테고리 경로 찾기
+    const categoryPath = findCategoryPath(
+        props.mingleData.questionCategories,
+        selectedIds
+    );
+
+    if (categoryPath) {
+        // 첫 번째 depth 설정
+        selectedDepth0.value = categoryPath[0];
+
+        // 두 번째 이후의 depth들을 selectedDepth1에 추가
+        if (categoryPath.length > 1) {
+            selectedDepth1.value = categoryPath.slice(1);
+        }
     }
 }
+
+// if (props.mingleData.selectedId) {
+//     if (Array.isArray(props.mingleData.selectedId)) {
+//         props.mingleData.selectedId.forEach((id) => {
+//             selectedItems.value.push({
+//                 id,
+//             });
+//         });
+//     } else {
+//         selectedItems.value.push({
+//             id: props.mingleData.selectedId,
+//         });
+//     }
+// }
 
 const selectedCategories = computed(() => {
     const selected = props.mingleData.questionCategories.find(
@@ -37,7 +91,16 @@ const selectedCategories = computed(() => {
 
 const selectedChildren = computed(() => {
     if (!selectedDepth1.value.length) return [];
-    return selectedCategories.value.filter((category) =>
+    // getall 1depth categories of all not only from selected.
+    const allCategories = props.mingleData.questionCategories.reduce(
+        (acc, category) => {
+            acc.push(...category.children);
+            return acc;
+        },
+        []
+    );
+
+    return allCategories.filter((category) =>
         selectedDepth1.value.includes(category.name)
     );
 });

@@ -14,9 +14,11 @@
     <head>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
 
+
         <!-- Scripts -->
         @stack('scripts')
         
+        @vite('resources/js/app.js')
         @vite('resources/css/app.css')
         @vite('resources/js/QuestionCategorySelector.js')
 

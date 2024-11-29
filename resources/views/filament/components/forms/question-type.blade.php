@@ -5,16 +5,15 @@
             const element = document.getElementById('category-selector');
             if (element) {
                 let multiple = '{{ $multiple ?? false }}';
+                let event = '{{ $event ?? false }}';
                 if (multiple) {
-                    console.log('here');
                     Alpine.evaluate(element, 'state = ' + JSON.stringify(data.map(item => item.id)));
+                    if (event) {
+                        Livewire.dispatch(event, data.map(item => item.id))
+                    }
                     return;
                 }
-                // @if ($multiple ?? false)
-                //     console.log('here');
-                //     Alpine.evaluate(element, 'state = ' + JSON.stringify(data.map(item => item.id)));
-                //     return;
-                // @endif
+
                 const selectedId = data[0]?.id ?? null;
                 Alpine.evaluate(element, 'state = ' + selectedId);
             }

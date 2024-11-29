@@ -26,6 +26,8 @@ use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -119,7 +121,7 @@ class QuestionResource extends Resource
                         ->placeholder('문제 내용을 입력하세요.')
                         ->columnSpanFull(),
                     Select::make('level')
-                        ->label('난이도')
+                        ->label('레벨')
                         ->required()
                         ->options([
                             1 => '1',
@@ -304,7 +306,7 @@ class QuestionResource extends Resource
                     ->sortable()
                     ->label('문제 유형'),
                 TextColumn::make('level')
-                    ->label('난이도')
+                    ->label('레벨')
                     ->sortable(),
                 TextColumn::make('content2')
                     ->state(true)
@@ -319,11 +321,31 @@ class QuestionResource extends Resource
                     ->label('문제'),
                 TextColumn::make('created_at')
                     ->date('Y-m-d')
+                    ->sortable()
                     ->label('생성일')
             ])
+            ->defaultSort('id', 'desc')
             ->filters([
-                //
-            ])
+                Filter::make('questionType')
+                    ->form([
+                        // ViewField::make('question_type_ids')
+                        //     ->label('문제 유형')
+                        //     ->view('filament.components.forms.question-type', [
+                        //         'multiple' => true,
+                        //     ])
+                        //     ->reactive()
+                        //     ->live()
+                        //     ->columnSpanFull(),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            $data['question_type_ids'] ?? null,
+                            fn(Builder $query, $questionTypeIds) => $query->whereIn('question_type_id', $questionTypeIds)
+                        );
+                    })
+
+                    ->columnSpanFull()
+            ], FiltersLayout::AboveContent)
             ->actions([
                 Tables\Actions\EditAction::make()
                     ->modalHeading('문제 수정')

@@ -126,7 +126,7 @@ class QuestionEditForm extends Component implements HasForms
                                 InputSliderBehaviour::DRAG,
                                 InputSliderBehaviour::TAP
                             ])
-                            ->label('난이도')
+                            ->label('레벨')
                             ->enableTooltips(),
 
                         Select::make('related')

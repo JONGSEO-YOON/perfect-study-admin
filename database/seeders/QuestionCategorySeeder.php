@@ -18,7 +18,7 @@ class QuestionCategorySeeder extends Seeder
         for ($grade = 1; $grade <= 6; $grade++) {
             for ($semester = 1; $semester <= 2; $semester++) {
                 $categories[] = [
-                    'name' => "{$grade}-{$semester}",
+                    'name' => "초 {$grade}-{$semester}",
                     'type' => 'scope',
                     'depth' => 1,
                     'order' => ($grade - 1) * 2 + $semester
@@ -69,7 +69,7 @@ class QuestionCategorySeeder extends Seeder
                 }
 
                 $categories[] = [
-                    'name' => "{$grade}-{$semester}",
+                    'name' => "중 {$grade}-{$semester}",
                     'type' => 'scope',
                     'depth' => 1,
                     'order' => ($grade - 1) * 2 + $semester,
