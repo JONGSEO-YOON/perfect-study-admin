@@ -457,7 +457,7 @@ const editedQuestions = computed(() => {
                             class="flex items-center ml-4 text-sm"
                             v-if="question.data"
                         >
-                            난이도 : {{ question.data?.level }}
+                            레벨 : {{ question.data?.level }}
                         </h2>
                         <h2
                             class="flex items-center ml-4 text-sm"

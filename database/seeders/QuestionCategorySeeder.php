@@ -1563,6 +1563,7 @@ class QuestionCategorySeeder extends Seeder
             for ($level = 1; $level <= 5; $level++) {
                 // 각 조합당 5개의 문제 생성
                 Question::factory()
+                    ->count(10)
                     ->create([
                         'question_type_id' => $category->id,
                         'level' => $level,
