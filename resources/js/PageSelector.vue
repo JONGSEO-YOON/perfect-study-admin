@@ -67,16 +67,28 @@ const extractQuestions = async () => {
     // sort selected pages
     selectedPages.value.sort((a, b) => a.number - b.number);
     for (const selectedPage of selectedPages.value) {
+        const questions = await wire.extractQuestions(selectedPage);
+        if (questions?.length) {
+            extractedPages.value.push({
+                page: selectedPage,
+                data: questions,
+            });
+        } else {
+            extractedPages.value.push({
+                page: selectedPage,
+                data: [],
+            });
+        }
         // const _path = `/Users/choeintag/Repositories/math-bank-proto/storage/app/public/converted-pdfs/${id}/page_${selectedPage.number}.jpg`;
         // const response = await fetch(
         //     `http://172.30.1.59:8088/detect_problems?input_path=${_path}`
         // );
         // const data = await response.json();
 
-        extractedPages.value.push({
-            page: selectedPage,
-            data: [],
-        });
+        // extractedPages.value.push({
+        //     page: selectedPage,
+        //     data: [],
+        // });
     }
     extracting.value = false;
     status.value = "extracted";
@@ -104,6 +116,24 @@ const editQuestion = async (question) => {
     event.data = { ...question, ...question.data };
     event.callback = (editedQuestion) => {
         question.data = editedQuestion;
+    };
+    window.dispatchEvent(event);
+};
+
+const editSubQuestion1 = async (question) => {
+    const event = new Event("editQuestion");
+    event.data = { ...question.sub1_data, is_sub_question: true };
+    event.callback = (editedQuestion) => {
+        question.sub1_data = editedQuestion;
+    };
+    window.dispatchEvent(event);
+};
+
+const editSubQuestion2 = async (question) => {
+    const event = new Event("editQuestion");
+    event.data = { ...question.sub2_data, is_sub_question: true };
+    event.callback = (editedQuestion) => {
+        question.sub2_data = editedQuestion;
     };
     window.dispatchEvent(event);
 };
@@ -147,7 +177,9 @@ const extractedQuestions = computed(() => {
 });
 
 const editedQuestions = computed(() => {
-    return croppedQuestions.value.filter((q) => q.data);
+    return croppedQuestions.value.filter(
+        (q) => q.data && q.sub1_data && q.sub2_data
+    );
 });
 </script>
 
@@ -280,7 +312,36 @@ const editedQuestions = computed(() => {
             v-if="status === 'page-select'"
             class="flex flex-col transition duration-300"
         >
-            <div class="flex justify-end">
+            <div class="flex justify-between gap-x-2">
+                <div class="flex gap-x-2">
+                    <button
+                        v-if="!extracting"
+                        :disabled="selectedPages.length === pages.length"
+                        style="
+                            --c-400: var(--primary-400);
+                            --c-500: var(--primary-500);
+                            --c-600: var(--primary-600);
+                        "
+                        class="fi-btn relative grid-flow-col disabled:opacity-50 items-center justify-center font-semibold outline-none transition-all duration-75 focus-visible:ring-2 rounded-lg fi-color-custom fi-btn-color-primary fi-color-primary fi-size-lg fi-btn-size-lg gap-1.5 px-3.5 py-2.5 text-sm inline-grid shadow-sm bg-custom-600 text-white hover:bg-custom-500 focus-visible:ring-custom-500/50 dark:bg-custom-500 dark:hover:bg-custom-400 dark:focus-visible:ring-custom-400/50"
+                        @click="selectedPages = pages"
+                    >
+                        <span class="fi-btn-label"> 전체 선택 </span>
+                    </button>
+                    <button
+                        v-if="!extracting"
+                        :disabled="!selectedPages?.length"
+                        style="
+                            --c-400: var(--primary-400);
+                            --c-500: var(--primary-500);
+                            --c-600: var(--primary-600);
+                        "
+                        class="fi-btn relative grid-flow-col disabled:opacity-50 items-center justify-center font-semibold outline-none transition-all duration-75 focus-visible:ring-2 rounded-lg fi-color-custom fi-btn-color-primary fi-color-primary fi-size-lg fi-btn-size-lg gap-1.5 px-3.5 py-2.5 text-sm inline-grid shadow-sm bg-custom-600 text-white hover:bg-custom-500 focus-visible:ring-custom-500/50 dark:bg-custom-500 dark:hover:bg-custom-400 dark:focus-visible:ring-custom-400/50"
+                        @click="selectedPages = []"
+                    >
+                        <span class="fi-btn-label"> 전체 선택 해제 </span>
+                    </button>
+                </div>
+
                 <button
                     style="
                         --c-400: var(--primary-400);
@@ -442,8 +503,14 @@ const editedQuestions = computed(() => {
                     <h1
                         class="text-2xl font-bold px-4 py-2.5 rounded-t-lg flex items-center"
                         :class="{
-                            'bg-primary-400 text-white': question.data,
-                            'bg-gray-100': !question.data,
+                            'bg-primary-400 text-white':
+                                question.data &&
+                                question.sub1_data &&
+                                question.sub2_data,
+                            'bg-gray-100':
+                                !question.data ||
+                                !question.sub1_data ||
+                                !question.sub2_data,
                         }"
                     >
                         {{ question.number }}
@@ -470,7 +537,11 @@ const editedQuestions = computed(() => {
                     <div class="flex flex-row">
                         <button
                             @click="editQuestion(question)"
-                            class="flex flex-1 items-center justify-center bg-primary-400 text-white py-3 font-bold rounded-bl-lg gap-x-2.5 hover:bg-primary-500 transition-all"
+                            class="flex flex-1 items-center justify-center text-white py-3 font-bold rounded-bl-lg gap-x-2.5 hover:bg-primary-500 transition-all"
+                            :class="{
+                                'bg-primary-400': question.data,
+                                'bg-gray-400': !question.data,
+                            }"
                         >
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -487,6 +558,52 @@ const editedQuestions = computed(() => {
                             </svg>
 
                             편집
+                        </button>
+                        <button
+                            @click="editSubQuestion1(question)"
+                            class="flex flex-1 items-center justify-center text-white py-3 font-bold gap-x-2.5 hover:bg-primary-500 transition-all"
+                            :class="{
+                                'bg-primary-400': question.sub1_data,
+                                'bg-gray-400': !question.sub1_data,
+                            }"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                                class="size-5"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z"
+                                    clip-rule="evenodd"
+                                />
+                            </svg>
+
+                            유사 문제 1
+                        </button>
+                        <button
+                            @click="editSubQuestion2(question)"
+                            class="flex flex-1 items-center justify-center text-white py-3 font-bold gap-x-2.5 hover:bg-primary-500 transition-all"
+                            :class="{
+                                'bg-primary-400': question.sub2_data,
+                                'bg-gray-400': !question.sub2_data,
+                            }"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                                class="size-5"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z"
+                                    clip-rule="evenodd"
+                                />
+                            </svg>
+
+                            유사 문제 2
                         </button>
                         <button
                             @click="confirmDeleteQuestion(question)"

@@ -9,6 +9,7 @@ use Faker\Provider\ar_EG\Text;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -23,14 +24,18 @@ use Filament\Forms\Components\ViewField;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ViewColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use Mohamedsabil83\FilamentFormsTinyeditor\Components\TinyEditor;
 
@@ -47,6 +52,34 @@ class QuestionResource extends Resource
     protected static ?string $navigationGroup = '문제 관리';
 
     protected static ?int $navigationSort = 1;
+
+    public static function handleUpdate($data)
+    {
+        $choices = $data['choices'] ?? [];
+        unset($data['questionCategory']);
+        unset($data['choices_count']);
+        unset($data['choices']);
+        $question = Question::find($data['id']);
+        $question->update([
+            ...$data
+        ]);
+        if (
+            $data['answer_type'] === 'multiple_choice'
+            && $data['choices_display_type'] === 'seperate'
+        ) {
+            $question->choices()->delete();
+            $i = 1;
+            foreach ($choices as $choice) {
+                $question->choices()->create([
+                    'number' => $i++,
+                    'content' => $choice['content'] ?? null,
+                    'display_type' => $choice['display_type'],
+                    'image_path' => $choice['image_path'] ?? null
+                ]);
+            }
+        }
+        return $question;
+    }
 
     public static function handleCreate($data)
     {
@@ -92,6 +125,7 @@ class QuestionResource extends Resource
                         ->label('문제 유형')
                         ->view('filament.components.forms.question-type')
                         ->live()
+                        ->hidden(fn(Get $get) => $get('is_sub_question'))
                         ->required()
                         ->columnSpanFull(),
                     ToggleButtons::make('question_display_type')
@@ -279,9 +313,12 @@ class QuestionResource extends Resource
                 ->default([])
                 ->placeholder('태그를 입력하세요.')
                 ->columnSpanFull(),
-            Toggle::make('is_wrong_note')
-                ->label('오답용')
-                ->columnSpanFull(),
+            Hidden::make('is_sub_question')
+                ->dehydrated(false)
+                ->default(false),
+            // Toggle::make('is_wrong_note')
+            //     ->label('오답용')
+            //     ->columnSpanFull(),
 
         ];
     }
@@ -295,6 +332,9 @@ class QuestionResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(function ($query) {
+                return $query->where('parent_question_id', null);
+            })
             ->emptyStateHeading('문제가 없습니다.')
             ->columns([
                 //
@@ -308,17 +348,20 @@ class QuestionResource extends Resource
                 TextColumn::make('level')
                     ->label('레벨')
                     ->sortable(),
-                TextColumn::make('content2')
-                    ->state(true)
-                    ->html()
-                    ->formatStateUsing(function ($record) {
-                        if ($record->question_display_type === 'image') {
-                            return "<img src='/storage/{$record->image_path}' alt='문제 이미지' style='max-width: 300px; max-height: 300px;'>";
-                        } else {
-                            return $record->content;
-                        }
-                    })
+                ViewColumn::make('content')
+                    ->view('filament.components.columns.question')
                     ->label('문제'),
+                // TextColumn::make('content2')
+                //     ->state(true)
+                //     ->html()
+                //     ->formatStateUsing(function ($record) {
+                //         if ($record->question_display_type === 'image') {
+                //             return "<img src='/storage/{$record->image_path}' alt='문제 이미지' style='max-width: 300px; max-height: 300px;'>";
+                //         } else {
+                //             return new HtmlString($record->content);
+                //         }
+                //     })
+                //     ->label('문제'),
                 TextColumn::make('created_at')
                     ->date('Y-m-d')
                     ->sortable()
@@ -347,9 +390,139 @@ class QuestionResource extends Resource
                     ->columnSpanFull()
             ], FiltersLayout::AboveContent)
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->modalHeading('문제 수정')
-                    ->modalWidth('2xl'),
+                ActionGroup::make([
+                    Tables\Actions\EditAction::make()
+                        ->fillForm(function ($record) {
+                            return [
+                                'choices' => $record->choices->map(function ($choice) {
+                                    return [
+                                        'content' => $choice->content,
+                                        'display_type' => $choice->display_type,
+                                        'image_path' => $choice->image_path,
+                                    ];
+                                })->toArray(),
+                                'choices_count' => $record->choices->count() > 0 ? $record->choices->count() : 4,
+                                ...$record->toArray(),
+                            ];
+                        })
+                        ->using(function ($data, $record) {
+                            $data['id'] = $record->id;
+                            return self::handleUpdate($data);
+                        })
+                        ->modalHeading('문제 수정')
+                        ->modalWidth('2xl'),
+                    Tables\Actions\Action::make('유사 문제 1')
+                        ->label('유사 문제 1')
+                        ->icon('heroicon-m-pencil-square')
+                        ->fillForm(function ($record) {
+                            $subQuestion = $record->childQuestions()
+                                ->orderBy('id', 'asc')
+                                ->first();
+                            if ($subQuestion) {
+                                return [
+                                    'is_sub_question' => true,
+                                    'choices' => $subQuestion->choices->map(function ($choice) {
+                                        return [
+                                            'content' => $choice->content,
+                                            'display_type' => $choice->display_type,
+                                            'image_path' => $choice->image_path,
+                                        ];
+                                    })->toArray(),
+                                    'choices_count' => $subQuestion->choices->count() > 0  ?  $subQuestion->choices->count() : 4,
+                                    ...$subQuestion->toArray(),
+                                ];
+                            }
+                            return [
+                                'choices' => [],
+                                'choices_count' => 4,
+                                'question_display_type' => 'image',
+                                'answer_type' => 'multiple_choice',
+                                'choices_display_type' => 'in_question',
+                                'is_sub_question' => true,
+                            ];
+                        })
+                        ->form(self::_form())
+                        ->action(function ($record, $data) {
+                            $subQuestion = $record->childQuestions()
+                                ->orderBy('id', 'asc')
+                                ->first();
+                            if ($subQuestion) {
+                                $data['id'] = $subQuestion->id;
+                                self::handleUpdate($data);
+                            } else {
+                                $data['parent_question_id'] = $record->id;
+                                self::handleCreate($data);
+                            }
+                            Notification::make()
+                                ->title('유사 문제가 저장되었습니다')
+                                ->success()
+                                ->send();
+                        })
+                        ->modalHeading('문제 수정')
+                        ->modalWidth('2xl'),
+                    Tables\Actions\Action::make('유사 문제 2')
+                        ->label('유사 문제 2')
+                        ->fillForm(function ($record) {
+                            $subQuestion = $record->childQuestions()
+                                ->orderBy('id', 'asc')
+                                ->skip(1)
+                                ->first();
+                            if ($subQuestion) {
+                                return [
+                                    'is_sub_question' => true,
+                                    'choices' => $subQuestion->choices->map(function ($choice) {
+                                        return [
+                                            'content' => $choice->content,
+                                            'display_type' => $choice->display_type,
+                                            'image_path' => $choice->image_path,
+                                        ];
+                                    })->toArray(),
+                                    'choices_count' => $subQuestion->choices->count() > 0  ?  $subQuestion->choices->count() : 4,
+                                    ...$subQuestion->toArray(),
+                                ];
+                            }
+                            return [
+                                'question_display_type' => 'image',
+                                'answer_type' => 'multiple_choice',
+                                'choices_display_type' => 'in_question',
+                                'choices' => [],
+                                'choices_count' => 4,
+                                'is_sub_question' => true,
+                            ];
+                        })
+                        ->form(self::_form())
+                        ->action(function ($record, $data) {
+                            $subQuestion = $record->childQuestions()
+                                ->orderBy('id', 'asc')
+                                ->skip(1)
+                                ->first();
+                            if ($subQuestion) {
+                                $data['id'] = $subQuestion->id;
+                                self::handleUpdate($data);
+                            } else {
+                                $data['parent_question_id'] = $record->id;
+                                self::handleCreate($data);
+                            }
+                            Notification::make()
+                                ->title('유사 문제가 저장되었습니다')
+                                ->success()
+                                ->send();
+                        })
+                        ->icon('heroicon-m-pencil-square')
+                        ->modalHeading('문제 수정')
+                        ->modalWidth('2xl'),
+                ]),
+                // Tables\Actions\EditAction::make()
+                //     ->modalHeading('문제 수정')
+                //     ->modalWidth('2xl'),
+                // Tables\Actions\EditAction::make('유사 문제 1')
+                //     ->label('유사 문제 1')
+                //     ->modalHeading('문제 수정')
+                //     ->modalWidth('2xl'),
+                // Tables\Actions\EditAction::make('유사 문제 2')
+                //     ->label('유사 문제 2')
+                //     ->modalHeading('문제 수정')
+                //     ->modalWidth('2xl'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

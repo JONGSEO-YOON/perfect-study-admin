@@ -257,6 +257,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                         $questions = Question::where('question_type_id', $typeId)
                             ->where('level', $level)
                             ->whereNotIn('id', $excludeIds) // 제외할 ID 필터링 추가
+                            ->whereNull('parent_question_id') // 부모 문제는 제외
                             ->with('questionType')
                             ->inRandomOrder()
                             ->take($typeQuestionCount)
@@ -299,6 +300,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                             $questions = Question::where('question_type_id', $typeId)
                                 ->where('level', $level)
                                 ->whereNotIn('id', $excludeIds) // 제외할 ID 필터링 추가
+                                ->whereNull('parent_question_id') // 부모 문제는 제외
                                 ->with('questionType')
                                 ->inRandomOrder()
                                 ->take($typeQuestionCount)

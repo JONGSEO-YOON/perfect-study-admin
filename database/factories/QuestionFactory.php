@@ -28,7 +28,7 @@ class QuestionFactory extends Factory
             'choices_display_type' => 'in_question',
             'explanation' => fake()->paragraph(),
             'tags' => fake()->randomElements(['테스트 태그 1', '테스트 태그 2', '테스트 태그 3', '테스트 태그 4'], rand(1, 2)),
-            'is_wrong_note' => false,
+            // 'is_wrong_note' => false,
             'explanation_image_path' => null,
             'explanation_video_url' => null,
         ];

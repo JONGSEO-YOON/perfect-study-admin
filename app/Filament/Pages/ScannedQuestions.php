@@ -61,7 +61,10 @@ class ScannedQuestions extends Page
 
     public function editQuestionInternalAction(): Action
     {
-        $url = explode('/storage', $this->arguments['url'])[1];
+        $url = null;
+        if ($this->arguments['url'] ?? false) {
+            $url = explode('/storage', $this->arguments['url'])[1];
+        }
         return Action::make('editQuestionInternal')
             ->modalHeading('문제 편집하기')
             ->modalWidth('2xl')
@@ -76,10 +79,12 @@ class ScannedQuestions extends Page
             ])
             ->form(QuestionResource::_form())
             ->action(function ($data) {
-                $questionCategory = QuestionCategory::find($data['question_type_id'])->toArray();
-                $this->dispatch('edit-question', array_merge($data, [
-                    'questionCategory' => $questionCategory,
-                ]));
+                if ($data['question_type_id'] ?? false) {
+                    $questionCategory = QuestionCategory::find($data['question_type_id'])->toArray();
+                    $data['questionCategory'] = $questionCategory;
+                }
+                $this->dispatch('edit-question', $data);
+                // $questionCategory = QuestionCategory::find($data['question_type_id'])->toArray();
             })
             ->modalCancelActionLabel('닫기');
     }

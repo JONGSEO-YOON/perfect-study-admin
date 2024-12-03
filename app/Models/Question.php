@@ -14,6 +14,7 @@ class Question extends Model
     {
         return [
             'tags' => 'array',
+            'metadata' => 'array',
         ];
     }
 
@@ -25,6 +26,16 @@ class Question extends Model
     public function choices()
     {
         return $this->hasMany(QuestionChoice::class);
+    }
+
+    public function parentQuestion()
+    {
+        return $this->belongsTo(Question::class, 'parent_question_id');
+    }
+
+    public function childQuestions()
+    {
+        return $this->hasMany(Question::class, 'parent_question_id');
     }
 
     protected static function boot()

@@ -44,9 +44,17 @@ return new class extends Migration
         Schema::create('questions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
+
             $table->foreignId('question_type_id')
+                ->nullable()
                 ->constrained('question_categories')
                 ->onDelete('cascade');
+
+            $table->foreignId('parent_question_id')
+                ->nullable()
+                ->constrained('questions')
+                ->onDelete('cascade');
+
             $table->enum('question_display_type', ['content', 'image'])
                 ->default('content');
             $table->text('content')->nullable();
@@ -64,8 +72,9 @@ return new class extends Migration
             $table->text('explanation')->nullable();
             $table->string('explanation_image_path')->nullable();
             $table->string('explanation_video_url')->nullable();
-            $table->boolean('is_wrong_note')->default(false);
+            // $table->boolean('is_wrong_note')->default(false);
             $table->json('tags')->nullable();
+            $table->json('metadata')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

@@ -1,4 +1,22 @@
 <x-filament-panels::page>
+    <script>
+        window.onPreviewLoaded = () => {
+            //dispath "setQuestion" event to preview iframe
+            const questions = @json($questions);
+            // setTimeout(() => {
+            //     console.log('d')
+            //     window.postMessage({
+            //         type: 'setQuestions',
+            //         questions
+            //     }, '*');
+
+            // }, 1000);
+            document.getElementById('preview').contentWindow.postMessage({
+                type: 'setQuestions',
+                questions: questions
+            }, '*');
+        }
+    </script>
     <div class="flex flex-col mx-auto">
         <x-filament-actions::modals />
         @if ($state === 'question-selection')
@@ -102,7 +120,11 @@
                                         레벨: {{ $question->level }}
                                     </h2>
                                 </div>
-                                <img class="w-full rounded-b-lg" src="/storage/{{ $question->image_path }}" />
+                                @if ($question->question_display_type === 'image')
+                                    <img class="w-full " src="/storage/{{ $question->image_path }}" />
+                                @else
+                                    <div class="min-h-[150px] p-4 text-xl">{!! $question->content !!}</div>
+                                @endif
                                 <div class="flex flex-row text-sm">
                                     <button type="button"
                                         wire:click="mountAction('addSimilarQuestion', { question: {{ $question }} })"
@@ -136,15 +158,17 @@
             </div>
         @else
             <div class="w-[1200px] flex flex-row gap-x-4">
-                <div class="flex-1">
+                <div class="flex-1 !grow-[15]">
                     {{ $this->form }}
                 </div>
-                <div class="flex-1">
-                    <img src="/storage/01JDPAQCZ5GDFJ6N2ZY2HVJ87K.png" />
+                <div class="flex-1 !grow-[20]">
+                    <iframe onload="onPreviewLoaded()" id="preview" class="w-full h-full"
+                        src="/preview-test-sheet?scale=0.65"></iframe>
                 </div>
             </div>
         @endif
     </div>
+
     <style>
         .draggable-mirror {
             width: 500px !important;

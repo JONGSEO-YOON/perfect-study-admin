@@ -9,6 +9,7 @@ use Ijpatricio\Mingle\Concerns\InteractsWithMingles;
 use Ijpatricio\Mingle\Contracts\HasMingles;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Livewire\Component;
 
 class PageSelector extends Component implements HasMingles
@@ -121,11 +122,48 @@ class PageSelector extends Component implements HasMingles
         }
     }
 
+    public function extractQuestions($data)
+    {
+        $number = $data['number'];
+
+        $filePath = "storage/app/public/converted-pdfs/{$this->id}/page_{$number}.jpg";
+        $fullPath = env('APP_ABSOLUTE_PATH') . '/' . $filePath;
+
+        try {
+            // HTTP 요청 보내기
+            $response = Http::get(env('EXTRACT_SERVER_URL') . '/detect_problems', [
+                'input_path' => $fullPath
+            ]);
+
+            // JSON 응답 확인 및 반환
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            // 에러 처리
+            return [];
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
     public function addQuestions($questions)
     {
         DB::transaction(function () use ($questions) {
             foreach ($questions as $question) {
-                QuestionResource::handleCreate($question['data']);
+                $questionSub1 = $question['sub1_data'];
+                $questionSub2 = $question['sub2_data'];
+
+                unset($question['sub1_data']);
+                unset($question['sub2_data']);
+
+                $createdQuestion = QuestionResource::handleCreate($question['data']);
+
+                $questionSub1['parent_question_id'] = $createdQuestion->id;
+                $questionSub2['parent_question_id'] = $createdQuestion->id;
+
+                QuestionResource::handleCreate($questionSub1);
+                QuestionResource::handleCreate($questionSub2);
             }
 
             Notification::make()
