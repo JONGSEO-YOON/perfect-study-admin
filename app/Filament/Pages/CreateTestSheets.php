@@ -7,6 +7,7 @@ use App\Models\GradeSystem;
 use App\Models\Question;
 use App\Models\Student;
 use App\Models\TempData;
+use Faker\Provider\ar_EG\Text;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
@@ -76,7 +77,8 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         'template' => 'default',
         'split' => 'default',
         'selected_page_index' => -1,
-
+        'title' => '수학 영역(미적분)',
+        'sub_title' => '2023년 대학수학능력시험 실전 모의고사 22회',
     ];
 
     public function form(Form $form): Form
@@ -223,6 +225,29 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                     Hidden::make('selected_page_index')
                         ->live()
                         ->default('default'),
+                    TextInput::make('title')
+                        ->label('제목')
+                        ->columnSpanFull()
+                        ->afterStateUpdated(function (Get $get, Set $set) {
+                            $this->dispatch('onPageMetaChanged', [
+                                'title' => $get('title'),
+                                'subTitle' => $get('sub_title'),
+                            ]);
+                        })
+                        ->live()
+                        ->required(),
+                    TextInput::make('sub_title')
+                        ->label('부제목')
+                        ->columnSpanFull()
+                        ->live()
+                        ->afterStateUpdated(function (Get $get, Set $set) {
+                            $this->dispatch('onPageMetaChanged', [
+                                'title' => $get('title'),
+                                'subTitle' => $get('sub_title'),
+                            ]);
+                        })
+                        ->required(),
+
                     ToggleButtons::make('split')
                         ->label(function (Get $get) {
                             $page = $get('selected_page_index');

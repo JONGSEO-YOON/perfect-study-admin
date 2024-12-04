@@ -17,12 +17,17 @@
                 data: data[0]
             }, '*');
         });
+        Livewire.on('onPageMetaChanged', (data) => {
+            console.log(data[0]);
+            document.getElementById('preview').contentWindow.postMessage({
+                type: 'onPageMetaChanged',
+                data: data[0]
+            }, '*');
+        });
         //window add event listener
         window.addEventListener('message', (event) => {
             if (event.data.type === 'onPageSelected') {
                 Livewire.dispatch('onPageSelected', event.data);
-                console.log(event)
-                // console.log(event.data)
             }
         });
     </script>

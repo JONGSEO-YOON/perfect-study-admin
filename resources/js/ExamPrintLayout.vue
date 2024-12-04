@@ -13,6 +13,8 @@ console.log(props);
 const scale = ref(props.mingleData.scale);
 
 const selectedIndex = ref(null);
+const subTitle = ref("2023년 대학수학능력시험 실전 모의고사 22회");
+const title = ref("수학 영역(미적분)");
 const questions = ref([]);
 const marginRights = ref(new Map()); // 각 이미지의 margin-right 값을 저장
 const isDragging = ref(false);
@@ -487,15 +489,17 @@ onMounted(() => {
         } else if (event.data.type === "onSplitChanged") {
             const split = event.data.data.layoutMode;
             const pageIndex = event.data.data.pageIndex;
-            console.log("split", split, pageIndex);
             if (pageIndex === -1) {
                 globalLayoutMode.value = split;
             } else {
                 setPageLayoutMode(pageIndex, split);
             }
-            //globalLayoutMode.value = split;
-            //calculatePages();
             calculatePages();
+        } else if (event.data.type === "onPageMetaChanged") {
+            const _title = event.data.data.title;
+            const _subTitle = event.data.data.subTitle;
+            title.value = _title;
+            subTitle.value = _subTitle;
         }
     });
     document.addEventListener("mousemove", handleDrag);
@@ -532,12 +536,12 @@ onMounted(() => {
                 <div
                     class="flex items-center justify-center text-2xl tracking-tighter"
                 >
-                    2023년 대학수학능력시험 실전 모의고사 22회
+                    {{ subTitle }}
                 </div>
                 <div
                     class="flex items-center justify-center text-4xl tracking-tighter font-semibold mt-1.5"
                 >
-                    수학 영역 (미적분)
+                    {{ title }}
                 </div>
                 <div class="flex flex-row items-center justify-between mt-2">
                     <div
@@ -575,7 +579,7 @@ onMounted(() => {
                     >
                         {{ pageIndex + 1 }}
                     </div>
-                    수학 영역(가형)
+                    {{ title }}
                 </div>
             </template>
 
@@ -831,7 +835,7 @@ onMounted(() => {
                 >
                     {{ pages.length + pageIndex + 1 }}
                 </div>
-                수학 영역(가형)
+                {{ title }}
             </div>
 
             <!-- 2단 레이아웃의 해설 내용 -->
