@@ -84,6 +84,9 @@ class PageSelector extends Component implements HasMingles
                 // 새 Imagick 인스턴스 생성
                 $imagick = new \Imagick($sourcePath);
 
+                $sourceWidth = $imagick->getImageWidth();
+                $sourceHeight = $imagick->getImageHeight();
+
                 // 크롭 실행
                 $imagick->cropImage(
                     $question['width'],
@@ -108,6 +111,11 @@ class PageSelector extends Component implements HasMingles
 
                 $questions[] = [
                     'number' => $number,
+                    'metadata' => [
+                        ...$question,
+                        'sourceWidth' => $sourceWidth,
+                        'sourceHeight' => $sourceHeight,
+                    ],
                     'url' =>  asset("storage/converted-pdfs/{$this->id}/questions/question_{$number}.jpg")
                 ];
             }
@@ -151,19 +159,22 @@ class PageSelector extends Component implements HasMingles
     {
         DB::transaction(function () use ($questions) {
             foreach ($questions as $question) {
-                $questionSub1 = $question['sub1_data'];
-                $questionSub2 = $question['sub2_data'];
+                $questionSub1 = $question['sub1_data'] ?? null;
+                $questionSub2 = $question['sub2_data'] ?? null;
 
                 unset($question['sub1_data']);
                 unset($question['sub2_data']);
 
                 $createdQuestion = QuestionResource::handleCreate($question['data']);
 
-                $questionSub1['parent_question_id'] = $createdQuestion->id;
-                $questionSub2['parent_question_id'] = $createdQuestion->id;
-
-                QuestionResource::handleCreate($questionSub1);
-                QuestionResource::handleCreate($questionSub2);
+                if ($questionSub1) {
+                    $questionSub1['parent_question_id'] = $createdQuestion->id;
+                    QuestionResource::handleCreate($questionSub1);
+                }
+                if ($questionSub2) {
+                    $questionSub2['parent_question_id'] = $createdQuestion->id;
+                    QuestionResource::handleCreate($questionSub2);
+                }
             }
 
             Notification::make()

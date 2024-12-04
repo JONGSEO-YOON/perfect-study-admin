@@ -95,7 +95,6 @@ const extractQuestions = async () => {
 };
 
 const onUpdateData = (newData, pageNumber) => {
-    console.log(newData);
     const pageIndex = extractedPages.value.findIndex(
         (page) => page.page.number === pageNumber
     );
@@ -108,7 +107,6 @@ const editQuestions = async () => {
     const response = await wire.editQuestions(extractedQuestions.value);
     croppedQuestions.value = response.questions;
     status.value = "editing";
-    console.log(croppedQuestions.value);
 };
 
 const editQuestion = async (question) => {
@@ -177,9 +175,10 @@ const extractedQuestions = computed(() => {
 });
 
 const editedQuestions = computed(() => {
-    return croppedQuestions.value.filter(
-        (q) => q.data && q.sub1_data && q.sub2_data
-    );
+    return croppedQuestions.value.filter((q) => q.data);
+    // return croppedQuestions.value.filter(
+    //     (q) => q.data && q.sub1_data && q.sub2_data
+    // );
 });
 </script>
 

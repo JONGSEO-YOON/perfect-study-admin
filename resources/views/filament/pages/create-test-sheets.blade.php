@@ -1,22 +1,35 @@
-<x-filament-panels::page>
+@script
     <script>
-        window.onPreviewLoaded = () => {
-            //dispath "setQuestion" event to preview iframe
-            const questions = @json($questions);
-            // setTimeout(() => {
-            //     console.log('d')
-            //     window.postMessage({
-            //         type: 'setQuestions',
-            //         questions
-            //     }, '*');
-
-            // }, 1000);
+        window.questions = @json($this->questions);
+        window.onPreviewLoaded = async () => {
             document.getElementById('preview').contentWindow.postMessage({
                 type: 'setQuestions',
-                questions: questions
+                questions: window.questions
             }, '*');
         }
+        Livewire.on('onQuestionUpdated', (data) => {
+            window.questions = Object.values(data[0]);
+            console.log(window.questions)
+        });
+        Livewire.on('onSplitChanged', (data) => {
+            document.getElementById('preview').contentWindow.postMessage({
+                type: 'onSplitChanged',
+                data: data[0]
+            }, '*');
+        });
+        //window add event listener
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'onPageSelected') {
+                Livewire.dispatch('onPageSelected', event.data);
+                console.log(event)
+                // console.log(event.data)
+            }
+        });
     </script>
+@endscript
+
+<x-filament-panels::page>
+
     <div class="flex flex-col mx-auto">
         <x-filament-actions::modals />
         @if ($state === 'question-selection')
@@ -157,13 +170,13 @@
                 </div>
             </div>
         @else
-            <div class="w-[1200px] flex flex-row gap-x-4">
+            <div class="w-[1350px] flex flex-row gap-x-4">
                 <div class="flex-1 !grow-[15]">
                     {{ $this->form }}
                 </div>
-                <div class="flex-1 !grow-[20]">
+                <div class="flex-1 !grow-[25]">
                     <iframe onload="onPreviewLoaded()" id="preview" class="w-full h-full"
-                        src="/preview-test-sheet?scale=0.65"></iframe>
+                        src="/preview-test-sheet?scale=1"></iframe>
                 </div>
             </div>
         @endif

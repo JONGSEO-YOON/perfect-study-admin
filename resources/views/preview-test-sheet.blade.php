@@ -1,5 +1,7 @@
 <x-layouts.simple>
-    @livewire('exam-print-layout')
+    @livewire('exam-print-layout', [
+        'scale' => $scale ?? null,
+    ])
     <style>
         @font-face {
             font-family: 'MT';

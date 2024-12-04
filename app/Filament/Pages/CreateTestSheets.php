@@ -31,6 +31,7 @@ use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 
 class CreateTestSheets extends Page implements HasForms, HasActions
@@ -45,7 +46,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
 
     protected static bool $shouldRegisterNavigation = false;
 
-    protected ?string $maxContentWidth = '6xl';
+    protected ?string $maxContentWidth = 'full';
 
     protected static ?string $title = '문제 등록';
 
@@ -72,6 +73,9 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         'is_auto' => true,
         'start_date' => null,
         'end_date' => null,
+        'template' => 'default',
+        'split' => 'default',
+        'selected_page_index' => -1,
 
     ];
 
@@ -209,10 +213,47 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                 ->heading('2. 문제지 템플릿')
                 ->columns(4)
                 ->schema([
-                    ColorPicker::make('color')
-                        ->label('색상')
-                        ->columnSpan(1)
-                        ->default('#000000'),
+                    ToggleButtons::make('template')
+                        ->label('템플릿')
+                        ->required()
+                        ->options([
+                            'default' => '기본 (고3)',
+                        ])
+                        ->default('default'),
+                    Hidden::make('selected_page_index')
+                        ->live()
+                        ->default('default'),
+                    ToggleButtons::make('split')
+                        ->label(function (Get $get) {
+                            $page = $get('selected_page_index');
+                            if ($page === -1) {
+                                $page = '전체';
+                            } else {
+                                $page++;
+                            }
+                            return '문제 분할 (' . ($page) . ' 페이지)';
+                        })
+                        ->inline()
+                        ->columnSpanFull()
+                        ->required()
+                        ->options([
+                            'default' => '기본',
+                            '2Items' => '2분할',
+                            '3-1Items' => '3-1분할',
+                            '3-2Items' => '3-2분할',
+                            '4Items' => '4분할',
+                            '6Items' => '6분할',
+                        ])
+                        ->columnStart(1)
+                        ->live()
+                        ->afterStateUpdated(function (Get $get, Set $set) {
+                            $this->dispatch('onSplitChanged', [
+                                'layoutMode' => $get('split'),
+                                'pageIndex' => $get('selected_page_index'),
+                            ]);
+                        })
+                        ->default('default'),
+
                 ])
 
         ])
@@ -258,7 +299,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                             ->where('level', $level)
                             ->whereNotIn('id', $excludeIds) // 제외할 ID 필터링 추가
                             ->whereNull('parent_question_id') // 부모 문제는 제외
-                            ->with('questionType')
+                            ->with('questionType', 'choices')
                             ->inRandomOrder()
                             ->take($typeQuestionCount)
                             ->get();
@@ -301,7 +342,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                                 ->where('level', $level)
                                 ->whereNotIn('id', $excludeIds) // 제외할 ID 필터링 추가
                                 ->whereNull('parent_question_id') // 부모 문제는 제외
-                                ->with('questionType')
+                                ->with('questionType', 'choices')
                                 ->inRandomOrder()
                                 ->take($typeQuestionCount)
                                 ->get();
@@ -368,6 +409,8 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         $this->questions = $this->questions->sortBy(function ($question) use ($orderedIds) {
             return array_search($question->id, $orderedIds);
         })->values();
+
+        $this->dispatch('onQuestionUpdated', $this->questions);
     }
 
     public function removeQuestion($questionId)
@@ -376,6 +419,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             return $question->id == $questionId;
         });
         $this->summary = self::getDistributionSummary($this->questions);
+        $this->dispatch('onQuestionUpdated', $this->questions);
     }
 
     #[On('onQuestionTypeChanged')]
@@ -449,6 +493,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                     'is_even_distribution' => true,
                     'exclude_ids' => $this->questions->pluck('id')->toArray(),
                 ]);
+
                 return [
                     'questions' => $questions,
                     'question_ids' => [],
@@ -536,9 +581,24 @@ class CreateTestSheets extends Page implements HasForms, HasActions
     {
         $questions = Question::whereIn('id', $questionIds)->get();
         $this->questions = $this->questions->concat($questions);
+        $this->dispatch('onQuestionUpdated', $this->questions);
+
         Notification::make()
             ->title('문제 추가 완료')
             ->success()
             ->send();
+    }
+
+    #[On('onPageSelected')]
+    public function onPageSelected($data)
+    {
+        $pageIndex = $data['pageIndex'];
+        $this->data['selected_page_index'] = $pageIndex;
+        $this->data['split'] = $data['layoutMode'];
+        //if ($pageIndex === -1) {
+        //    $this->data['selected_page_index'] = $pageIndex;
+        //} else {
+        //    $this->data['start_date'] = null;
+        //}
     }
 }

@@ -316,6 +316,8 @@ class QuestionResource extends Resource
             Hidden::make('is_sub_question')
                 ->dehydrated(false)
                 ->default(false),
+            Hidden::make('metadata')
+                ->nullable()
             // Toggle::make('is_wrong_note')
             //     ->label('오답용')
             //     ->columnSpanFull(),

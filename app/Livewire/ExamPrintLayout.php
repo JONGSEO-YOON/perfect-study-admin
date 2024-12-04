@@ -11,6 +11,8 @@ class ExamPrintLayout extends Component implements HasMingles
 {
     use InteractsWithMingles;
 
+    public $scale = 1;
+
     public function component(): string
     {
         return 'resources/js/ExamPrintLayout.js';
@@ -19,6 +21,7 @@ class ExamPrintLayout extends Component implements HasMingles
     public function mingleData(): array
     {
         return [
+            'scale' => $this->scale,
             'message' => 'Message in a bottle 🍾',
         ];
     }
@@ -27,4 +30,9 @@ class ExamPrintLayout extends Component implements HasMingles
     {
         return $amount * 2;
     }
+
+    // public function onPageSelected($data)
+    // {
+    //     dd($data);
+    // }
 }
