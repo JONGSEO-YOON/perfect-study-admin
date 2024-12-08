@@ -22,7 +22,7 @@
 
 <body>
     <!-- Page Content -->
-    <main>
+    <main class="h-full">
         {{ $slot }}
     </main>
 

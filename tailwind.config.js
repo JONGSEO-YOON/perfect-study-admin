@@ -2,6 +2,13 @@ import preset from "./vendor/filament/support/tailwind.config.preset";
 
 export default {
     presets: [preset], 
+    theme: {
+        extend: {
+            screens: {
+                "h-md": {'raw': '(min-height: 900px)'},
+            },
+        }
+    },
     content: [
         "./app/Filament/**/*.php",
         "./resources/views/filament/**/*.blade.php",
