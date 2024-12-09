@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\StudentCheckMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,6 +16,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(
             except: ['juso-popup']
         );
+
+        // 커스텀 미들웨어 등록
+        $middleware->alias([
+            'student.check' => StudentCheckMiddleware::class,
+        ]);
+
+        // 글로벌 미들웨어 등록
+        // $middleware->append([
+        //     \App\Http\Middleware\StudentCheckMiddleware::class,
+        // ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

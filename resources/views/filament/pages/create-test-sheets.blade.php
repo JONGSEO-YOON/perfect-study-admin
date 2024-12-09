@@ -175,9 +175,28 @@
                 </div>
             </div>
         @else
+            <div class="flex flex-row mb-3 justify-end">
+                <button style="--c-400:var(--primary-400);--c-500:var(--primary-500);--c-600:var(--primary-600);"
+                    class="fi-btn relative grid-flow-col items-center justify-center font-semibold outline-none transition duration-75 focus-visible:ring-2 rounded-lg fi-color-custom fi-btn-color-primary fi-color-primary fi-size-md fi-btn-size-md gap-1.5 px-3 py-2 text-sm inline-grid shadow-sm bg-custom-600 text-white hover:bg-custom-500 focus-visible:ring-custom-500/50 dark:bg-custom-500 dark:hover:bg-custom-400 dark:focus-visible:ring-custom-400/50 fi-ac-action fi-ac-btn-action"
+                    type="submit" form="test-sheet-form">
+                    <svg class="fi-btn-icon transition duration-75 h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"
+                        data-slot="icon">
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="fi-btn-label">
+                        다음 단계
+                    </span>
+                </button>
+
+            </div>
             <div class="w-[1350px] flex flex-row gap-x-4">
                 <div class="flex-1 !grow-[15]">
-                    {{ $this->form }}
+                    <form id="test-sheet-form" wire:submit="createTestSheet">
+                        {{ $this->form }}
+                    </form>
                 </div>
                 <div class="flex-1 !grow-[25]">
                     <iframe onload="onPreviewLoaded()" id="preview" class="w-full h-full"

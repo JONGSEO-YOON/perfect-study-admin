@@ -93,7 +93,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                         ->label('문제지 명')
                         ->columnSpanFull()
                         ->required(),
-                    ToggleButtons::make('status')
+                    ToggleButtons::make('tags_toggle')
                         ->label('태그')
                         ->options([
                             '기본' => '기본',
@@ -470,7 +470,6 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         $this->mountedActionsData[0]['questions'] = $questions->toArray();
     }
 
-
     public function addSimilarQuestionAction()
     {
         return Action::make('addSimilarQuestion')
@@ -625,5 +624,60 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         //} else {
         //    $this->data['start_date'] = null;
         //}
+    }
+
+    public function createTestSheet()
+    {
+        $formData = $this->data;
+
+        // 문제 데이터를 JSON으로 변환 가능한 형태로 준비
+        $questionsData = $this->questions->map(function ($question) {
+            return $question->toArray();
+        })->toArray();
+
+        $scopes = $this->questions
+            ->map(fn($question) => $question->questionType->name)
+            ->unique()
+            ->values()
+            ->toArray();
+
+        // 테스트 시트 생성
+        $tags = $formData['tags'];
+        $tags_toggle = $formData['tags_toggle'];
+        if ($tags_toggle) {
+            $tags = array_merge($tags, explode(',', $tags_toggle));
+        }
+        $testSheet = \App\Models\TestSheet::create([
+            'name' => $formData['name'],
+            'tags' => $tags,
+            'status' => 'pending',
+            'user_id' => auth()->id(),
+            'target_group' => $formData['target_group'],
+            'target_grades' => $formData['target_grades'],
+            'target_levels' => $formData['target_levels'],
+            'target_classrooms' => $formData['target_classrooms'],
+            'target_students' => $formData['target_students'],
+            'is_auto' => $formData['is_auto'],
+            'start_date' => $formData['start_date'],
+            'end_date' => $formData['end_date'],
+            'template' => $formData['template'],
+            'split' => $formData['split'],
+            'title' => $formData['title'],
+            'sub_title' => $formData['sub_title'],
+            'questions' => $questionsData,
+            'scopes' => $scopes,
+        ]);
+
+
+
+        // 성공 알림
+        Notification::make()
+            ->title('시험지가 생성되었습니다.')
+            ->success()
+            ->send();
+
+        // 시험지 목록 페이지로 리다이렉트
+        // return redirect()->route('filament.resources.test-sheets.index');
+        return redirect('/admin/test-sheets');
     }
 }

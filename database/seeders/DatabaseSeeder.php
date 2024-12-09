@@ -35,6 +35,7 @@ class DatabaseSeeder extends Seeder
             SchoolSeeder::class,
             GradeSystemSeeder::class,
             QuestionCategorySeeder::class,
+            QuestionSeeder::class,
         ]);
 
         Teacher::factory(12)->create();
@@ -144,57 +145,57 @@ class DatabaseSeeder extends Seeder
 
         $classroom->students()->attach(Student::all()->random(5));
 
-        TestSheet::create([
-            'tag' => '중간고사',
-            'name' => '2024년 1학기 중간고사',
-            'target_group' => 'grade',
-            'target_grades' => ['고3'],
-            'user_id' => User::first()->id,
-            'status' => 'progress',
-            'scopes' => [
-                '두 점 사이의 거리',
-                '부등식의 증명'
-            ]
-        ]);
+        // TestSheet::create([
+        //     'tags' => '중간고사',
+        //     'name' => '2024년 1학기 중간고사',
+        //     'target_group' => 'grade',
+        //     'target_grades' => ['고3'],
+        //     'user_id' => User::first()->id,
+        //     'status' => 'progress',
+        //     'scopes' => [
+        //         '두 점 사이의 거리',
+        //         '부등식의 증명'
+        //     ]
+        // ]);
 
-        TestSheet::create([
-            'tag' => '주간 TEST',
-            'name' => '2024년 24주차 레벨별 주간 TEST',
-            'target_group' => 'level',
-            'target_grades' => ['고3'],
-            'target_levels' => ['A'],
-            'user_id' => User::first()->id,
-            'status' => 'pending',
-            'scopes' => [
-                '수열의 귀납적 정의'
-            ]
-        ]);
+        // TestSheet::create([
+        //     'tags' => '주간 TEST',
+        //     'name' => '2024년 24주차 레벨별 주간 TEST',
+        //     'target_group' => 'level',
+        //     'target_grades' => ['고3'],
+        //     'target_levels' => ['A'],
+        //     'user_id' => User::first()->id,
+        //     'status' => 'pending',
+        //     'scopes' => [
+        //         '수열의 귀납적 정의'
+        //     ]
+        // ]);
 
-        TestSheet::create([
-            'tag' => '일일 TEST',
-            'name' => '2024년 11월 1일 일일 TEST',
-            'target_group' => 'classroom',
-            'target_grades' => ['고3'],
-            'target_classrooms' => ['고3 - A레벨 - 평일 특강반'],
-            'status' => 'completed',
-            'user_id' => User::first()->id,
-            'scopes' => [
-                '속도와 가속도',
-                '부정적분'
-            ]
-        ]);
+        // TestSheet::create([
+        //     'tags' => '일일 TEST',
+        //     'name' => '2024년 11월 1일 일일 TEST',
+        //     'target_group' => 'classroom',
+        //     'target_grades' => ['고3'],
+        //     'target_classrooms' => ['고3 - A레벨 - 평일 특강반'],
+        //     'status' => 'completed',
+        //     'user_id' => User::first()->id,
+        //     'scopes' => [
+        //         '속도와 가속도',
+        //         '부정적분'
+        //     ]
+        // ]);
 
-        TestSheet::create([
-            'tag' => '숙제',
-            'name' => '2024년 11월 1일자 숙제',
-            'target_group' => 'classroom',
-            'target_grades' => ['고3'],
-            'target_classrooms' => ['고3 - A레벨 - 평일 특강반', '고3 - A레벨 - 주말 특강반'],
-            'status' => 'completed',
-            'user_id' => User::first()->id,
-            'scopes' => [
-                '이등변삼각형의 성질'
-            ]
-        ]);
+        // TestSheet::create([
+        //     'tags' => '숙제',
+        //     'name' => '2024년 11월 1일자 숙제',
+        //     'target_group' => 'classroom',
+        //     'target_grades' => ['고3'],
+        //     'target_classrooms' => ['고3 - A레벨 - 평일 특강반', '고3 - A레벨 - 주말 특강반'],
+        //     'status' => 'completed',
+        //     'user_id' => User::first()->id,
+        //     'scopes' => [
+        //         '이등변삼각형의 성질'
+        //     ]
+        // ]);
     }
 }

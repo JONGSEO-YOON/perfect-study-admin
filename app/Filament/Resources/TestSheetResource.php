@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\TestSheetResource\Pages;
 use App\Filament\Resources\TestSheetResource\RelationManagers;
+use App\Models\GradeSystem;
 use App\Models\TestSheet;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
@@ -52,7 +53,7 @@ class TestSheetResource extends Resource
                 TextColumn::make('id')
                     ->label('No')
                     ->rowIndex(),
-                TextColumn::make('tag')
+                TextColumn::make('tags')
                     ->label('태그')
                     ->sortable()
                     ->searchable(),
@@ -62,9 +63,10 @@ class TestSheetResource extends Resource
                     ->searchable()
                     ->html()
                     ->formatStateUsing(function ($record) {
+                        $question_count = count($record->questions);
                         return <<<EOF
                             $record->name <br />
-                            <span class="text-primary-500 mt-1 font-medium">14문항 |</span>
+                            <span class="text-primary-500 mt-1 font-medium">{$question_count}문항 |</span>
                             <span class="text-primary-500 mt-1 font-semibold">{$record->scopes[0]}</span>
                             
                         EOF;
@@ -76,7 +78,13 @@ class TestSheetResource extends Resource
                     ->html()
                     ->formatStateUsing(function ($record) {
                         if ($record->target_group === 'grade') {
-                            return implode(',', $record->target_grades) . ' - 학년 전체';
+                            // loop through the target_grades and find the grade name
+                            $grades = [];
+                            foreach ($record->target_grades as $grade) {
+                                $_grade = GradeSystem::find($grade);
+                                $grades[] = $_grade->display_name;
+                            }
+                            return implode(', ', $grades) . ' - 학년 전체';
                         } else if ($record->target_group === 'level') {
                             return $record->target_grades[0] . ' - '  .  $record->target_levels[0] . '레벨';
                         } else if (
@@ -85,29 +93,8 @@ class TestSheetResource extends Resource
                             return  implode(',<br />', $record->target_classrooms);
                         }
                     }),
-                // TextColumn::make('target_group')
-                //     ->badge()
-                //     ->label('')
-                //     ->formatStateUsing(function ($record) {
-                //         if ($record->target_group === 'grade') {
-                //             return '학년 전체';
-                //         } else if ($record->target_group === 'level') {
-                //             return '레벨별';
-                //         } else if (
-                //             $record->target_group === 'classroom'
-                //         ) {
-                //             return '반별';
-                //         } else {
-                //             return '학생별';
-                //         }
-                //     })
-                //     ->color(fn(string $state): string => match ($state) {
-                //         default => 'gray',
-                //     }),
-
-
-                TextColumn::make('created_at')
-                    ->date('Y-m-d')
+                TextColumn::make('start_date')
+                    ->date('Y-m-d H:i')
                     ->label('출제일')
                     ->sortable(),
                 TextColumn::make('status')
@@ -153,6 +140,27 @@ class TestSheetResource extends Resource
             ], FiltersLayout::AboveContent)
             ->actions([
                 // Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('start-test-sheet')
+                    ->label('문제지 출제')
+                    ->visible(fn($record) => $record->status === 'pending' && empty($record->start_date))
+                    ->icon('heroicon-m-check')
+                    ->modalHeading('문제지 출제')
+                    ->requiresConfirmation()
+                    ->action(fn($record) => $record->update([
+                        'status' => 'progress',
+                        'start_date' => now(),
+                    ])),
+                Tables\Actions\Action::make('end-test-sheet')
+                    ->label('문제지 마감')
+                    ->color('danger')
+                    ->visible(fn($record) => $record->status === 'progress')
+                    ->icon('heroicon-m-check')
+                    ->modalHeading('문제지 마감')
+                    ->requiresConfirmation()
+                    ->action(fn($record) => $record->update([
+                        'status' => 'completed',
+                        'end_date' => now(),
+                    ])),
                 Tables\Actions\Action::make('view-report-card')
                     ->label('성적표')
                     ->icon('heroicon-m-newspaper')
@@ -161,6 +169,7 @@ class TestSheetResource extends Resource
                     ->modalContent(fn($record) => view('filament.components.modals.test-sheet-report-card-modal', [
                         'record' => $record,
                     ]))
+                    ->visible(fn($record) => $record->status === 'completed')
                     ->modalWidth('5xl'),
             ])
             ->bulkActions([

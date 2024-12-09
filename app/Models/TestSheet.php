@@ -20,6 +20,9 @@ class TestSheet extends Model
         'lecture_info' => 'array',
         'attachments' => 'array',
         'scopes' => 'array',
+        'questions' => 'array',
+        'tags' => 'array',
+        'start_date' => 'datetime',
     ];
 
     // 강의를 등록한 사용자와의 관계
@@ -37,5 +40,27 @@ class TestSheet extends Model
                 $model->user_id = auth()->id();
             }
         });
+    }
+
+    public function getTargetGradeNamesAttribute($value)
+    {
+        $grades = [];
+        foreach ($this->target_grades as $grade) {
+            $_grade = GradeSystem::find($grade);
+            $grades[] = $_grade->display_name;
+        }
+        return implode(', ', $grades);
+    }
+
+    public function userAnswers()
+    {
+        return $this->hasMany(TestSheetAnswer::class)
+            ->where('user_id', auth()->id());
+    }
+    public function latestUserAnswer()
+    {
+        return $this->hasOne(TestSheetAnswer::class)
+            ->where('user_id', auth()->id())
+            ->latest();
     }
 }

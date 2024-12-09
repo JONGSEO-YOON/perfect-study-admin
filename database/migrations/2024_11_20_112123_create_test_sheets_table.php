@@ -6,28 +6,29 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
+
     public function up(): void
     {
         Schema::create('test_sheets', function (Blueprint $table) {
             $table->id();
             $table->string('name')->comment('시험지 제목');
-            $table->string('tag')->comment('시험지 태그');
-            $table->string('status')->default('pending')->comment('시험지 태그');
+            $table->json('tags')->nullable()->comment('시험지 태그들');
+            $table->json('scopes')->nullable()->comment('시험지 태그들');
+            $table->string('status')->default('pending')->comment('시험지 상태');
             $table->foreignId('user_id')->nullable()->index();
-
             $table->enum('target_group', ['grade', 'level', 'classroom', 'student'])->default('grade')->comment('대상');
             $table->json('target_grades')->nullable()->comment('대상 학년들'); // [1, 2, 3]
             $table->json('target_levels')->nullable()->comment('대상 레벨들'); // ["A", "B"]
             $table->json('target_classrooms')->nullable()->comment('대상 교실/반들'); // [1, 2, 3] (classroom_ids)
             $table->json('target_students')->nullable()->comment('대상 학생들'); // [1, 2, 3] (student_ids)
-
-            $table->json('scopes')->nullable()->comment('범위');
-            // this is sample
-            // $table->json('questions')->nullable()->comment('대상 학생들'); // [1, 2, 3] (student_ids)
-
+            $table->boolean('is_auto')->default(true)->comment('자동 출제 여부');
+            $table->timestamp('start_date')->nullable()->comment('출제일');
+            $table->date('end_date')->nullable()->comment('마감일');
+            $table->string('template')->default('default')->comment('템플릿');
+            $table->string('split')->default('default')->comment('문제 분할 방식');
+            $table->string('title')->comment('제목');
+            $table->string('sub_title')->comment('부제목');
+            $table->json('questions')->nullable()->comment('문제 목록');
             $table->timestamps();
         });
     }
