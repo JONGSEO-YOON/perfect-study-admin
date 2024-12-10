@@ -6,6 +6,7 @@ use App\Filament\Resources\QuestionResource;
 use App\Models\QuestionCategory;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
+use Livewire\Attributes\Url;
 
 class ScannedQuestions extends Page
 {
@@ -22,13 +23,15 @@ class ScannedQuestions extends Page
 
     public $id;
 
+    #[Url]
+    public $material_id = null;
+
     public $arguments = [];
 
     public function mount($id)
     {
         $this->id = $id;
     }
-
 
     public function deleteQuestionAction(): Action
     {
@@ -75,6 +78,7 @@ class ScannedQuestions extends Page
                 'choices_display_type' => 'in_question',
                 'choices' => [],
                 'choices_count' => 4,
+                'material_id' => $this->material_id,
                 ...$this->arguments,
             ])
             ->form(QuestionResource::_form())

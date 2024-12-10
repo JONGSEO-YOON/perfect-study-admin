@@ -3,14 +3,17 @@
 namespace App\Filament\Resources\QuestionResource\Pages;
 
 use App\Filament\Resources\QuestionResource;
+use App\Filament\Resources\QuestionResource\Widgets\BookOverview;
 use App\Livewire\QuestionTypeField;
+use App\Models\Material;
 use Filament\Actions;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use \Imagick;
 use \ImagickPixel;
-
+use Livewire\Attributes\Url;
 
 class ListQuestions extends ListRecords
 {
@@ -19,6 +22,9 @@ class ListQuestions extends ListRecords
     protected static ?string $title = '문제 은행';
 
     protected ?string $maxContentWidth = '4xl';
+
+    #[Url]
+    public $parent_id = null;
 
     public function getBreadcrumb(): ?string
     {
@@ -34,7 +40,27 @@ class ListQuestions extends ListRecords
                 ->modalHeading('스캔하여 등록하기')
                 ->modalWidth('2xl')
                 ->modalSubmitActionLabel('스캔하기')
+                ->fillForm(function () {
+                    if (!$this->parent_id) {
+                        return [];
+                    }
+
+                    $material = Material::find($this->parent_id);
+                    if ($material->type !== 'book') {
+                        return [];
+                    }
+                    return [
+                        'material_id' => $this->parent_id,
+                    ];
+                })
                 ->form([
+                    Select::make('material_id')
+                        ->label('교재')
+                        ->searchable()
+                        ->options(
+                            \App\Models\Material::where('type', 'book')->get()->pluck('name', 'id')
+                        )
+                        ->placeholder('교재를 선택하세요.'),
                     FileUpload::make('file')
                         ->placeholder('파일을 업로드하세요')
                         ->label('스캔할 파일 업로드')
@@ -61,7 +87,7 @@ class ListQuestions extends ListRecords
                             ->danger()
                             ->send();
                     }
-                    return redirect('/admin/scanned-questions/' . $attachmentName);
+                    return redirect('/admin/scanned-questions/' . $attachmentName . '?material_id=' . ($data['material_id'] ?? ''));
                 }),
             Actions\CreateAction::make()
                 ->icon('heroicon-m-plus-circle')
@@ -70,10 +96,35 @@ class ListQuestions extends ListRecords
                 ->modalWidth('2xl')
                 ->createAnother(false)
                 ->modalSubmitActionLabel('저장')
+                ->fillForm(function () {
+                    if (!$this->parent_id) {
+                        return [];
+                    }
+
+                    $material = Material::find($this->parent_id);
+                    if ($material->type !== 'book') {
+                        return [];
+                    }
+
+                    return [
+                        'material_id' => $this->parent_id,
+                    ];
+                })
                 ->using(function ($data) {
                     return QuestionResource::handleCreate($data);
                 }),
         ];
+    }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            BookOverview::class,
+        ];
+    }
+    public function getHeaderWidgetsColumns(): int | array
+    {
+        return 1;
     }
 
     public function convertPdfToImages($pdfPath, $outputDir)

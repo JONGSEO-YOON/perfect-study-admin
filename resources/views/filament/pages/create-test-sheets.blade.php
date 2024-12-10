@@ -9,7 +9,6 @@
         }
         Livewire.on('onQuestionUpdated', (data) => {
             window.questions = Object.values(data[0]);
-            console.log(window.questions)
         });
         Livewire.on('onSplitChanged', (data) => {
             document.getElementById('preview').contentWindow.postMessage({
@@ -57,6 +56,9 @@
                                 @for ($i = 1; $i <= 5; $i++)
                                     @php
                                         // 최대값을 120px로 설정하고 현재 값의 비율을 계산
+                                        if (!count($summary['by_level'])) {
+                                            $summary['by_level'] = [0];
+                                        }
                                         $maxValue = max($summary['by_level']);
                                         $height =
                                             $maxValue > 0 ? (($summary['by_level'][$i] ?? 0) * 120) / $maxValue : 0;

@@ -10,6 +10,8 @@ class Question extends Model
 {
     use HasFactory, HasUser;
 
+    protected $with = ['questionType', 'choices'];
+
     protected function casts(): array
     {
         return [

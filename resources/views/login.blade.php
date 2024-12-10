@@ -38,11 +38,13 @@
                     </button>
 
                     <div class="mt-4 flex justify-between font-medium">
-                        <a href="#" class="text-[#6D4FC5]">회원가입</a>
+                        <a href="#" class="text-[#6D4FC5] signup">회원가입</a>
                         <a href="#" class="text-[#6D4FC5]">아이디/비밀번호 찾기</a>
                     </div>
                 </form>
             </div>
         </div>
     </div>
+    <x-signup-modal />
+
 </x-layouts.simple>

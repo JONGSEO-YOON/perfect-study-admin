@@ -55,6 +55,14 @@ return new class extends Migration
                 ->constrained('questions')
                 ->onDelete('cascade');
 
+            $table->foreignId('material_id')
+                ->nullable()
+                ->constrained('materials')
+                ->onDelete('cascade');
+
+
+            $table->integer('seq')->nullable();
+
             $table->enum('question_display_type', ['content', 'image'])
                 ->default('content');
             $table->text('content')->nullable();
@@ -72,7 +80,6 @@ return new class extends Migration
             $table->text('explanation')->nullable();
             $table->string('explanation_image_path')->nullable();
             $table->string('explanation_video_url')->nullable();
-            // $table->boolean('is_wrong_note')->default(false);
             $table->json('tags')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();

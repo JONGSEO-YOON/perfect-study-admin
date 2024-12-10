@@ -111,7 +111,7 @@ const editQuestions = async () => {
 
 const editQuestion = async (question) => {
     const event = new Event("editQuestion");
-    event.data = { ...question, ...question.data };
+    event.data = { ...question, ...question.data, seq: question.number };
     event.callback = (editedQuestion) => {
         question.data = editedQuestion;
     };

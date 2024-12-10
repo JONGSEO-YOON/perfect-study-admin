@@ -56,12 +56,17 @@ class QuestionResource extends Resource
     public static function handleUpdate($data)
     {
         $choices = $data['choices'] ?? [];
+        $tags = $data['tags'] ?? [];
+        if (is_string($tags)) {
+            $tags = explode(',', $tags);
+        }
         unset($data['questionCategory']);
         unset($data['choices_count']);
         unset($data['choices']);
         $question = Question::find($data['id']);
         $question->update([
-            ...$data
+            ...$data,
+            'tags' => $tags,
         ]);
         if (
             $data['answer_type'] === 'multiple_choice'
@@ -84,11 +89,16 @@ class QuestionResource extends Resource
     public static function handleCreate($data)
     {
         $choices = $data['choices'] ?? [];
+        $tags = $data['tags'] ?? [];
+        if (is_string($tags)) {
+            $tags = explode(',', $tags);
+        }
         unset($data['questionCategory']);
         unset($data['choices_count']);
         unset($data['choices']);
         $question = Question::create([
-            ...$data
+            ...$data,
+            'tags' => $tags,
         ]);
         if (
             $data['answer_type'] === 'multiple_choice'
@@ -307,6 +317,13 @@ class QuestionResource extends Resource
                         ->downloadable(true)
                         ->columnSpanFull(),
                 ]),
+            Select::make('material_id')
+                ->label('교재')
+                ->searchable()
+                ->options(
+                    \App\Models\Material::where('type', 'book')->get()->pluck('name', 'id')
+                )
+                ->placeholder('교재를 선택하세요.'),
             TagsInput::make('tags')
                 ->label('태그')
                 ->separator(',')
@@ -316,6 +333,8 @@ class QuestionResource extends Resource
             Hidden::make('is_sub_question')
                 ->dehydrated(false)
                 ->default(false),
+            Hidden::make('seq')
+                ->nullable(),
             Hidden::make('metadata')
                 ->nullable()
             // Toggle::make('is_wrong_note')
@@ -371,25 +390,36 @@ class QuestionResource extends Resource
             ])
             ->defaultSort('id', 'desc')
             ->filters([
-                Filter::make('questionType')
+                Filter::make('material_id')
                     ->form([
-                        // ViewField::make('question_type_ids')
-                        //     ->label('문제 유형')
-                        //     ->view('filament.components.forms.question-type', [
-                        //         'multiple' => true,
-                        //     ])
-                        //     ->reactive()
-                        //     ->live()
-                        //     ->columnSpanFull(),
+                        Hidden::make('material_id'),
                     ])
-                    ->query(function (Builder $query, array $data): Builder {
-                        return $query->when(
-                            $data['question_type_ids'] ?? null,
-                            fn(Builder $query, $questionTypeIds) => $query->whereIn('question_type_id', $questionTypeIds)
-                        );
+                    ->query(function (Builder $query, array $data) {
+                        return $query
+                            ->when($data['material_id'], function ($query, $materialId) {
+                                return $query->where('material_id', $materialId);
+                            });
                     })
+                    ->columnSpanFull(),
+                // Filter::make('questionType')
+                //     ->form([
+                // ViewField::make('question_type_ids')
+                //     ->label('문제 유형')
+                //     ->view('filament.components.forms.question-type', [
+                //         'multiple' => true,
+                //     ])
+                //     ->reactive()
+                //     ->live()
+                //     ->columnSpanFull(),
+                // ])
+                // ->query(function (Builder $query, array $data): Builder {
+                //     return $query->when(
+                //         $data['question_type_ids'] ?? null,
+                //         fn(Builder $query, $questionTypeIds) => $query->whereIn('question_type_id', $questionTypeIds)
+                //     );
+                // })
+                // ->columnSpanFull()
 
-                    ->columnSpanFull()
             ], FiltersLayout::AboveContent)
             ->actions([
                 ActionGroup::make([

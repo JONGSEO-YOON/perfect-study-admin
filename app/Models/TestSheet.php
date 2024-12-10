@@ -23,6 +23,7 @@ class TestSheet extends Model
         'questions' => 'array',
         'tags' => 'array',
         'start_date' => 'datetime',
+        'end_date' => 'datetime',
     ];
 
     // 강의를 등록한 사용자와의 관계

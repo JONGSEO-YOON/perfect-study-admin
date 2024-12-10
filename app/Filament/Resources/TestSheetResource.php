@@ -6,9 +6,11 @@ use App\Filament\Resources\TestSheetResource\Pages;
 use App\Filament\Resources\TestSheetResource\RelationManagers;
 use App\Models\GradeSystem;
 use App\Models\TestSheet;
+use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Fieldset;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -49,6 +51,7 @@ class TestSheetResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('id', 'desc')
             ->columns([
                 TextColumn::make('id')
                     ->label('No')
@@ -97,17 +100,20 @@ class TestSheetResource extends Resource
                     ->date('Y-m-d H:i')
                     ->label('출제일')
                     ->sortable(),
+                TextColumn::make('end_date')
+                    ->date('Y-m-d H:i')
+                    ->label('마감일')
+                    ->sortable(),
                 TextColumn::make('status')
                     ->label('출제 상태')
                     ->formatStateUsing(function ($record) {
+                        $auto = $record->is_auto ? '(자동 출제)' : '';
                         if ($record->status === 'pending') {
-                            return '출제 대기';
-                        } else if ($record->status === 'draft') {
-                            return '미출제';
+                            return '출제 대기 ' . $auto;
                         } else if ($record->status === 'progress') {
-                            return '출제 중';
+                            return '출제 중 ' . $auto;
                         } else if ($record->status === 'completed') {
-                            return '출제 종료';
+                            return '출제 종료 ' . $auto;
                         }
                     })
                     ->sortable()
@@ -121,22 +127,49 @@ class TestSheetResource extends Resource
                     }),
             ])
             ->filters([
-                //
                 Filter::make('duration')
                     ->columnSpan(2)
                     ->form([
                         Fieldset::make('duration')
-                            ->label('시험 조회 기간')
+                            ->label('조회 기간')
                             ->extraAttributes(['class' => 'border-none', 'style' => 'padding: 0; padding-top: 0.5rem;'])
                             ->schema([
                                 DatePicker::make('from')
-                                    ->default(now()->format('Y-m-d'))
+                                    ->default(now()->subDays(7)->format('Y-m-d'))
                                     ->label(false),
                                 DatePicker::make('until')
                                     ->default(now()->format('Y-m-d'))
                                     ->label(false)
                             ]),
                     ])
+                    ->query(function (Builder $query, $data) {
+                        $from = Carbon::parse($data['from'])->startOfDay();
+                        $until = Carbon::parse($data['until'])->endOfDay();
+                        $query->whereBetween('start_date', [$from, $until]);
+                    }),
+                Filter::make('status')
+                    ->columnSpan(2)
+                    ->form([
+                        Fieldset::make('status')
+                            ->label('출제 상태')
+                            ->extraAttributes(['class' => 'border-none', 'style' => 'padding: 0; padding-top: 0.5rem;'])
+                            ->schema([
+                                Select::make('status')
+                                    ->options([
+                                        'all' => '전체',
+                                        'pending' => '출제 대기',
+                                        'progress' => '출제 중',
+                                        'completed' => '출제 종료',
+                                    ])
+                                    ->default('all')
+                                    ->label(false),
+                            ]),
+                    ])
+                    ->query(function (Builder $query, $data) {
+                        if ($data['status'] !== 'all') {
+                            $query->where('status', $data['status']);
+                        }
+                    }),
             ], FiltersLayout::AboveContent)
             ->actions([
                 // Tables\Actions\EditAction::make(),
@@ -171,6 +204,11 @@ class TestSheetResource extends Resource
                     ]))
                     ->visible(fn($record) => $record->status === 'completed')
                     ->modalWidth('5xl'),
+                Tables\Actions\Action::make('edit-test-sheet')
+                    ->label('수정')
+                    ->icon('heroicon-m-pencil-square')
+                    ->url(fn($record) => '/admin/test-sheets/create/' . $record->temp_data_id . '?test_sheet_id=' . $record->id)
+                    ->visible(fn($record) => $record->status === 'pending'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

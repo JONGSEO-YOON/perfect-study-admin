@@ -27,8 +27,7 @@ class UserWebController extends Controller implements HasMiddleware
 
   public function login(Request $request)
   {
-    // 로그인 로직 구현
-    // 예: Auth::attempt() 등
+
     $credentials = $request->validate([
       'username' => ['required'],
       'password' => ['required'],
@@ -42,6 +41,14 @@ class UserWebController extends Controller implements HasMiddleware
         Auth::logout();
         return back()
           ->withErrors(['username' => '학생 계정으로만 로그인이 가능합니다.'])
+          ->withInput();
+      }
+
+      // is_active 체크 추가
+      if (!$user->is_active) {
+        Auth::logout();
+        return back()
+          ->withErrors(['username' => '아직 승인 대기 중입니다. 관리자 승인 후 이용하실 수 있습니다.'])
           ->withInput();
       }
 

@@ -19,7 +19,13 @@
                         레벨: {{ $question['level'] }}
                     </h2>
                 </div>
-                <img class="w-full rounded-b-lg" src="/storage/{{ $question['image_path'] }}" />
+                @if ($question['question_display_type'] === 'image')
+                    <img class="w-full rounded-b-lg p-4" src="/storage/{{ $question['image_path'] }}" />
+                @else
+                    <div class="p-4 text-2xl">
+                        {!! $question['content'] !!}
+                    </div>
+                @endif
                 <div class="flex flex-row text-sm">
                     <button wire:click="addTempQuestion({{ $question['id'] }})" type="button"
                         @disabled(in_array($question['id'], $questionIds))

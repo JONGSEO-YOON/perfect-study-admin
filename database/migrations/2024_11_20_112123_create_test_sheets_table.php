@@ -23,12 +23,13 @@ return new class extends Migration
             $table->json('target_students')->nullable()->comment('대상 학생들'); // [1, 2, 3] (student_ids)
             $table->boolean('is_auto')->default(true)->comment('자동 출제 여부');
             $table->timestamp('start_date')->nullable()->comment('출제일');
-            $table->date('end_date')->nullable()->comment('마감일');
+            $table->timestamp('end_date')->nullable()->comment('마감일');
             $table->string('template')->default('default')->comment('템플릿');
             $table->string('split')->default('default')->comment('문제 분할 방식');
             $table->string('title')->comment('제목');
             $table->string('sub_title')->comment('부제목');
             $table->json('questions')->nullable()->comment('문제 목록');
+            $table->string('temp_data_id')->nullable();
             $table->timestamps();
         });
     }

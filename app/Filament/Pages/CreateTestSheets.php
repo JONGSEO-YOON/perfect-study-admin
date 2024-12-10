@@ -5,8 +5,10 @@ namespace App\Filament\Pages;
 use App\Models\Classroom;
 use App\Models\GradeSystem;
 use App\Models\Question;
+use App\Models\QuestionCategory;
 use App\Models\Student;
 use App\Models\TempData;
+use App\Models\TestSheet;
 use Faker\Provider\ar_EG\Text;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -15,6 +17,7 @@ use Filament\Actions\StaticAction;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Radio;
@@ -34,6 +37,7 @@ use Filament\Pages\Page;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 
 class CreateTestSheets extends Page implements HasForms, HasActions
 {
@@ -50,6 +54,9 @@ class CreateTestSheets extends Page implements HasForms, HasActions
     protected ?string $maxContentWidth = 'full';
 
     protected static ?string $title = '문제 등록';
+
+    #[Url]
+    public $test_sheet_id;
 
     public $id;
 
@@ -198,13 +205,13 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                         ->default(true)
                         ->live()
                         ->label('자동 출제'),
-                    DatePicker::make('start_date')
+                    DateTimePicker::make('start_date')
                         ->label('출제일')
                         ->columnStart(1)
                         ->columnSpan(2)
                         ->visible(fn(Get $get) => $get('is_auto'))
                         ->required(),
-                    DatePicker::make('end_date')
+                    DateTimePicker::make('end_date')
                         ->label('마감일')
                         ->visible(fn(Get $get) => $get('is_auto'))
                         ->columnSpan(2)
@@ -288,10 +295,32 @@ class CreateTestSheets extends Page implements HasForms, HasActions
     public function mount($id)
     {
         $query = TempData::findOrFail($id)?->value;
-        // $questions = self::selectRandomQuestions($query);
-        $this->questions = self::selectRandomQuestions($query);
+        if ($this->test_sheet_id !== null) {
+            $testSheet = TestSheet::findOrFail($this->test_sheet_id);
+            $this->questions = Question::whereIn('id', collect($testSheet->questions)->pluck('id'))
+                ->with('questionType', 'choices')
+                ->get()
+                ->sortBy(function ($question) use ($testSheet) {
+                    // testSheet->questions 배열에서 해당 id의 인덱스를 찾아서 그 순서대로 정렬
+                    return array_search(
+                        $question->id,
+                        collect($testSheet->questions)->pluck('id')->toArray()
+                    );
+                })
+                ->values();
+            $this->data = array_merge(
+                $this->data,
+                $testSheet->toArray()
+            );
+        } else {
+            $this->questions = self::selectRandomQuestions($query);
+            $this->data = array_merge(
+                $this->data,
+                $query
+            );
+        }
+
         $this->summary = self::getDistributionSummary($this->questions);
-        // dd($query, $summary, $questions);
         $this->id = $id;
         $this->query = $query;
     }
@@ -302,6 +331,46 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         $questionTypeIds = $params['question_type_ids'];
         $isEvenDistribution = $params['is_even_distribution'];
         $excludeIds = $params['exclude_ids'] ?? []; // 제외할 ID 목록, 없으면 빈 배열
+        $materialId = $params['material_id'] ?? null; // 자료 ID, 없으면 null
+        $isTagBase = $params['is_tag_based'] ?? false;
+        $tags = $params['tags'] ?? [];
+
+        if ($params['should_exclude_recent_questions'] ?? false) {
+            $target_group = $params['target_group'] ?? 'grade';
+            $targetQuery = TestSheet::where('user_id', auth()->id())
+                ->where('created_at', '>=', now()->subMonth());
+
+            // 타겟 그룹별 조건 추가
+            switch ($target_group) {
+                case 'grade':
+                    $targetQuery->whereJsonContains('target_grades', $params['target_grades']);
+                    break;
+                case 'level':
+                    $targetQuery->whereJsonContains('target_grades', $params['target_grades'])
+                        ->whereJsonContains('target_levels', $params['target_levels']);
+                    break;
+                case 'classroom':
+                    $targetQuery->whereJsonContains('target_classrooms', $params['target_classrooms']);
+                    break;
+                case 'student':
+                    $targetQuery->whereJsonContains('target_students', $params['target_students']);
+                    break;
+            }
+
+            // 최근 출제된 문제들의 ID 수집
+            $recentQuestionIds = $targetQuery->get()
+                ->pluck('questions.*.id')
+                ->flatten()
+                ->filter()
+                ->unique()
+                ->values()
+                ->toArray();
+
+            // 기존 제외 ID들과 병합
+            $excludeIds = array_merge($excludeIds, $recentQuestionIds);
+        }
+
+
         $result = collect();
 
         if ($isEvenDistribution) {
@@ -320,10 +389,25 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                 foreach ($questionTypeIds as $typeIndex => $typeId) {
                     $typeQuestionCount = $questionsPerType + ($typeIndex < $remainingTypeQuestions ? 1 : 0);
                     if ($typeQuestionCount > 0) {
+
                         $questions = Question::where('question_type_id', $typeId)
                             ->where('level', $level)
                             ->whereNotIn('id', $excludeIds) // 제외할 ID 필터링 추가
                             ->whereNull('parent_question_id') // 부모 문제는 제외
+                            ->when($materialId, function ($query, $materialId) {
+                                return $query->where('material_id', $materialId);
+                            })
+                            ->when($isTagBase, function ($query) use ($tags) {
+                                return $query->where(function ($q) use ($tags) {
+                                    // if $tags is string set it in []
+                                    if (!is_array($tags)) {
+                                        $tags = [$tags];
+                                    }
+                                    foreach ($tags as $tag) {
+                                        $q->whereJsonContains('tags', $tag);
+                                    }
+                                });
+                            })
                             ->with('questionType', 'choices')
                             ->inRandomOrder()
                             ->take($typeQuestionCount)
@@ -367,6 +451,12 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                                 ->where('level', $level)
                                 ->whereNotIn('id', $excludeIds) // 제외할 ID 필터링 추가
                                 ->whereNull('parent_question_id') // 부모 문제는 제외
+                                ->when($materialId, function ($query, $materialId) {
+                                    return $query->where('material_id', $materialId);
+                                })
+                                ->when($isTagBase, function ($query) use ($tags) {
+                                    return $query->whereJsonContains('tags', $tags);
+                                })
                                 ->with('questionType', 'choices')
                                 ->inRandomOrder()
                                 ->take($typeQuestionCount)
@@ -376,6 +466,12 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                     }
                 }
             }
+        }
+
+        // 교재가 지정된 경우에만 순서 보존 
+        if (!empty($materialId)) {
+            // sort by question->seq
+            $result = $result->sortBy('seq')->values();
         }
 
         return $result;
@@ -434,6 +530,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         $this->questions = $this->questions->sortBy(function ($question) use ($orderedIds) {
             return array_search($question->id, $orderedIds);
         })->values();
+
 
         $this->dispatch('onQuestionUpdated', $this->questions);
     }
@@ -631,9 +728,12 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         $formData = $this->data;
 
         // 문제 데이터를 JSON으로 변환 가능한 형태로 준비
+        // dd($this->questions);
+
         $questionsData = $this->questions->map(function ($question) {
             return $question->toArray();
         })->toArray();
+
 
         $scopes = $this->questions
             ->map(fn($question) => $question->questionType->name)
@@ -643,11 +743,12 @@ class CreateTestSheets extends Page implements HasForms, HasActions
 
         // 테스트 시트 생성
         $tags = $formData['tags'];
-        $tags_toggle = $formData['tags_toggle'];
+        $tags_toggle = $formData['tags_toggle'] ?? '';
         if ($tags_toggle) {
             $tags = array_merge($tags, explode(',', $tags_toggle));
         }
-        $testSheet = \App\Models\TestSheet::create([
+
+        $upsertData = [
             'name' => $formData['name'],
             'tags' => $tags,
             'status' => 'pending',
@@ -666,15 +767,21 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             'sub_title' => $formData['sub_title'],
             'questions' => $questionsData,
             'scopes' => $scopes,
-        ]);
-
-
-
-        // 성공 알림
-        Notification::make()
-            ->title('시험지가 생성되었습니다.')
-            ->success()
-            ->send();
+            'temp_data_id' => $this->id,
+        ];
+        if ($this->test_sheet_id) {
+            TestSheet::find($this->test_sheet_id)->update($upsertData);
+            Notification::make()
+                ->title('시험지가 수정되었습니다.')
+                ->success()
+                ->send();
+        } else {
+            $testSheet = TestSheet::create($upsertData);
+            Notification::make()
+                ->title('시험지가 생성되었습니다.')
+                ->success()
+                ->send();
+        }
 
         // 시험지 목록 페이지로 리다이렉트
         // return redirect()->route('filament.resources.test-sheets.index');
