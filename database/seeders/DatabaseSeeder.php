@@ -24,12 +24,13 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
 
-        User::factory()->create([
+        $admin = User::factory()->create([
             'name' => '관리자',
             'username' => 'admin',
             'phone' => '010-1234-5678',
         ]);
-
+        $adminTeacher = Teacher::factory()->create([]);
+        $adminTeacher->user()->save($admin);
 
         $this->call([
             SchoolSeeder::class,

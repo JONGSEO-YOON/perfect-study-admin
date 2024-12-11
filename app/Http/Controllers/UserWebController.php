@@ -63,26 +63,57 @@ class UserWebController extends Controller implements HasMiddleware
 
   public function main()
   {
-    $testsheets = TestSheet::where('status', 'progress')
-      ->orWhere('status', 'completed')
-      ->orderBy('start_date', 'desc')
-      ->get();
-    return view('main', compact('testsheets'));
+    // 현재 로그인한 사용자의 student 정보 가져오기
+    $student = auth()->user()->userable;
+    if (!$student || !($student instanceof Student)) {
+      return view('main', ['testsheets' => collect()]);
+    }
+
+    $perPage = request('per_page', 10);
+    $page = request('page', 1);
+    $type = request('type', 'test');
+
+    $testsheets = TestSheet::inProgressOrCompleted()
+      ->availableFor($student)
+      ->when($type === 'homework', function ($query) {
+        return $query->whereJsonContains('tags', '숙제');
+      })
+      ->when($type !== 'homework', function ($query) {
+        return $query->whereJsonDoesntContain('tags', '숙제');
+      })
+      ->latest('start_date')
+      ->paginate($perPage)
+      ->through(function ($testsheet) {
+        return $testsheet;
+      });
+
+    if (request()->ajax()) {
+      if ($testsheets->isEmpty()) {
+        return '';
+      }
+      return view('components.test-sheet-list', ['testsheets' => $testsheets]);
+    }
+
+    $remaining_count = $this->_getRemainingTestsCount($student);
+
+    return view('main', compact('testsheets', 'type', 'perPage', 'page', 'remaining_count'));
   }
 
-  public function showTestSheet($id)
+  public function _getRemainingTestsCount($student)
   {
-    return view('test-sheet', compact('id'));
-  }
+    $base_query = TestSheet::inProgress()
+      ->availableFor($student)
+      ->whereDoesntHave('latestUserAnswer', function ($query) use ($student) {
+        // $query->where('status', 'completed');
+      });
 
-  // public function showTestSheetResult($id)
-  // {
-  //   $testsheet = TestSheet::findOrFail($id);
-  //   return view('test-sheet-result', compact('testsheet'));
-  // }
-
-  public function showTestSheetResultQuestion($id, $question_id)
-  {
-    return view('test-sheet-result-question', compact('id', 'question_id'));
+    return [
+      'homework' => (clone $base_query)
+        ->whereJsonContains('tags', '숙제')
+        ->count(),
+      'test' => (clone $base_query)
+        ->whereJsonDoesntContain('tags', '숙제')
+        ->count()
+    ];
   }
 }

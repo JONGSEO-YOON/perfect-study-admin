@@ -18,6 +18,9 @@ class TestSheetViewer extends Component
   public $currentQuestion = null;
   public $currentAnswer = '';  // 현재 입력 중인 답안
 
+  public $elapsedTime = 0;
+  protected $lastSaveTime = 0;
+
   public function render()
   {
     return view('livewire.test-sheet-viewer');
@@ -27,16 +30,23 @@ class TestSheetViewer extends Component
   {
     $this->id = $id;
     $this->testsheet = TestSheet::find($id);
-    $alreadyTaken = TestSheetAnswer::where('test_sheet_id', $id)
+
+    $latestAnswer = TestSheetAnswer::where('test_sheet_id', $id)
       ->where('user_id', auth()->id())
       ->latest()
-      ->exists();
-    if ($alreadyTaken) {
-      return redirect("/test-sheet-result/{$id}");
+      ->first();
+
+    if ($latestAnswer) {
+      if ($latestAnswer->status === 'completed') {
+        return redirect("/test-sheet-result/{$id}");
+      }
+      $this->answers = $latestAnswer->answers;
+      $this->elapsedTime = $latestAnswer->time ?? 0;
+    } else {
+      $this->answers = array_fill(0, count($this->testsheet->questions), null);
     }
 
     $this->questions = $this->testsheet->questions;
-    $this->answers = array_fill(0, count($this->questions), null);
     $this->currentQuestion = $this->questions[$this->currentQuestionIndex];
     $this->updateProgress();
   }
@@ -61,12 +71,19 @@ class TestSheetViewer extends Component
       'total' => $total,
       'percentage' => (($this->currentQuestionIndex + 1) / $total) * 100
     ];
+    $this->currentAnswer = $this->answers[$this->currentQuestionIndex] ?? '';
   }
 
   public function appendNumber($number)
   {
-    $this->currentAnswer = $this->currentAnswer . $number;
+    if ($this->currentQuestion['answer_type'] === 'multiple_choice') {
+      $this->currentAnswer = $number;
+    } else {
+
+      $this->currentAnswer = $this->currentAnswer . $number;
+    }
   }
+
 
   public function toggleSign()
   {
@@ -88,10 +105,25 @@ class TestSheetViewer extends Component
   {
     if (strlen($this->currentAnswer) > 0) {
       $this->answers[$this->currentQuestionIndex] = intval($this->currentAnswer);
+
+      // Save current progress
+      TestSheetAnswer::updateOrCreate(
+        [
+          'test_sheet_id' => $this->testsheet->id,
+          'user_id' => auth()->id(),
+          'status' => 'pending'
+        ],
+        [
+          'answers' => $this->answers,
+          'correct_count' => 0 // 진행 중에는 채점하지 않음
+        ]
+      );
+
       $this->currentAnswer = '';
       $this->nextQuestion();
     }
   }
+
 
   public function goToQuestion($index)
   {
@@ -101,8 +133,31 @@ class TestSheetViewer extends Component
     $this->updateProgress();
   }
 
+  public function pauseTest()
+  {
+    return redirect('/');
+  }
+
   public function completeTest()
   {
+    // 답안이 하나도 없는지 체크
+    $hasAnyAnswer = false;
+    foreach ($this->answers as $answer) {
+      if ($answer !== null) {
+        $hasAnyAnswer = true;
+        break;
+      }
+    }
+
+    if (!$hasAnyAnswer) {
+      // 하나도 답을 작성하지 않은 경우
+      $this->dispatch('alert', [
+        'type' => 'error',
+        'message' => '최소 한 문제 이상 답안을 작성해주세요.'
+      ]);
+      return;
+    }
+
     // Calculate correct answers
     $correctCount = 0;
     foreach ($this->answers as $index => $answer) {
@@ -111,15 +166,39 @@ class TestSheetViewer extends Component
       }
     }
 
-    // Create test sheet answer record
-    TestSheetAnswer::create([
-      'test_sheet_id' => $this->testsheet->id,
-      'user_id' => auth()->id(),
-      'answers' => $this->answers,
-      'correct_count' => $correctCount
-    ]);
+    // Update existing test sheet answer record
+    TestSheetAnswer::where('test_sheet_id', $this->testsheet->id)
+      ->where('user_id', auth()->id())
+      ->where('status', 'pending')
+      ->update([
+        'answers' => $this->answers,
+        'correct_count' => $correctCount,
+        'status' => 'completed',
+        'time' => $this->elapsedTime
+      ]);
 
-    // Redirect to results page
     return redirect("/test-sheet-result/{$this->testsheet->id}");
+  }
+
+  public function updateTimer()
+  {
+    $this->elapsedTime++;
+
+    // 5초마다 시간 저장
+    if (time() - $this->lastSaveTime >= 5) {
+      TestSheetAnswer::updateOrCreate(
+        [
+          'test_sheet_id' => $this->testsheet->id,
+          'user_id' => auth()->id(),
+          'status' => 'pending'
+        ],
+        [
+          'time' => $this->elapsedTime,
+          'answers' => $this->answers,
+          'correct_count' => 0
+        ]
+      );
+      $this->lastSaveTime = time();
+    }
   }
 }

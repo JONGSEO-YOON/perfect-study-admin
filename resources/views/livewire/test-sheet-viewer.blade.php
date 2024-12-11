@@ -19,14 +19,15 @@
                     </h2>
                 </div>
                 <div class="flex flex-col md:flex-row ml-auto">
-                    <div class="flex flex-row gap-x-2 items-center text-[#7D7D92] ml-auto text-sm md:text-base">
+                    <div wire:poll.1000ms="updateTimer"
+                        class="flex flex-row gap-x-2 items-center text-[#7D7D92] ml-auto text-sm md:text-base">
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
                             xmlns="http://www.w3.org/2000/svg">
                             <path
                                 d="M7.00001 13.6667C3.31801 13.6667 0.333344 10.682 0.333344 7.00004C0.333344 3.31804 3.31801 0.333374 7.00001 0.333374C10.682 0.333374 13.6667 3.31804 13.6667 7.00004C13.6667 10.682 10.682 13.6667 7.00001 13.6667ZM7.66668 7.00004V3.66671H6.33334L6.33334 8.33337H10.3333V7.00004H7.66668Z"
                                 fill="#7D7D92" />
                         </svg>
-                        00:00:00
+                        {{ sprintf('%02d:%02d:%02d', floor($elapsedTime / 3600), floor(($elapsedTime % 3600) / 60), $elapsedTime % 60) }}
                     </div>
                     <button @click="showCompletionModal=true"
                         class="bg-[#F4F4F4] rounded-[5px] py-2 px-6 font-semibold ml-4 hidden md:flex">
@@ -86,7 +87,8 @@
                         </div>
                     </template>
                 </button>
-                <button class="border border-[#E9E9E9] rounded-[10px] font-semibold flex-1 py-3 bg-white"
+                <button x-show="!showAnswerPanel"
+                    class="border border-[#E9E9E9] rounded-[10px] font-semibold flex-1 py-3 bg-white"
                     wire:click="nextQuestion" @click="showAnswerPanel = false">
                     다음 문제
                 </button>
@@ -105,9 +107,15 @@
                 </div>
 
                 <div class="grid grid-cols-3 gap-2">
+
                     <div class="col-span-2"></div>
-                    <button wire:click="toggleSign"
-                        class="bg-[#F4F4F4] hover:bg-gray-300 p-4 rounded-[10px] text-xl transition-all">+ / -</button>
+                    @if ($currentQuestion['answer_type'] !== 'multiple_choice')
+                        <button wire:click="toggleSign"
+                            class="bg-[#F4F4F4] hover:bg-gray-300 p-4 rounded-[10px] text-xl transition-all">+ /
+                            -</button>
+                    @else
+                        <div></div>
+                    @endif
                     <button wire:click="appendNumber(1)"
                         class="bg-[#F4F4F4] hover:bg-gray-300 p-4 rounded-[10px] text-xl transition-all">1</button>
                     <button wire:click="appendNumber(2)"
@@ -194,9 +202,14 @@
                     class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">
                     취소
                 </button>
+                <button wire:click="pauseTest"
+                    class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">
+                    일시정지
+                </button>
+
                 <button wire:click="completeTest"
                     class="px-4 py-2 bg-[#8570C2] text-white rounded-lg hover:bg-[#7460B2] transition-colors">
-                    종료하기
+                    제출하기
                 </button>
             </div>
         </div>

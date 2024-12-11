@@ -15,6 +15,9 @@ class TestSheetResult extends Component
   public $percentage;
   public $answers = [];
 
+  public $selectedQuestionNo = null;
+
+
   public function mount($id)
   {
     $this->testsheet = TestSheet::findOrFail($id);
@@ -52,5 +55,10 @@ class TestSheetResult extends Component
       'answerStatuses' => collect($this->testsheet->questions)
         ->map(fn($q, $i) => $this->getAnswerStatus($i))
     ]);
+  }
+
+  public function selectQuestion($questionNo)
+  {
+    $this->selectedQuestionNo = $questionNo;
   }
 }

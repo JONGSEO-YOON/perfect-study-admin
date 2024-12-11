@@ -8,9 +8,6 @@
 
     <title>{{ config('app.name', 'Laravel') }}</title>
 
-
-    {{-- <script src="https://www.wiris.net/demo/plugins/app/WIRISplugins.js?viewer=image"></script> --}}
-
     <!-- Scripts -->
     @stack('scripts')
 

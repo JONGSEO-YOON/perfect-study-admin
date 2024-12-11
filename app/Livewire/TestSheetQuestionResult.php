@@ -10,24 +10,11 @@ class TestSheetQuestionResult extends Component
 {
   public $testsheet;
   public $questionNo;
-  public $question;
-  public $testSheetAnswer;
-  public $userAnswer;
-  public $isCorrect;
 
   public function mount($id, $questionNo)
   {
     $this->testsheet = TestSheet::findOrFail($id);
     $this->questionNo = $questionNo;
-    $this->question = $this->testsheet->questions[$questionNo - 1];
-
-    $this->testSheetAnswer = TestSheetAnswer::where('test_sheet_id', $id)
-      ->where('user_id', auth()->id())
-      ->latest()
-      ->firstOrFail();
-
-    $this->userAnswer = $this->testSheetAnswer->answers[$questionNo - 1];
-    $this->isCorrect = $this->userAnswer === $this->question['answer'];
   }
 
   public function backToList()

@@ -16,7 +16,13 @@ return new class extends Migration
             $table->foreignId('test_sheet_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->json('answers');
-            $table->integer('correct_count');
+            $table->enum('status', [
+                'pending',
+                'completed',
+            ])->default('pending');
+            $table->integer('time')->default(0);
+
+            $table->integer('correct_count')->nullable();
             $table->timestamps();
         });
     }

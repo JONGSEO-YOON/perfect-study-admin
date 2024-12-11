@@ -8,6 +8,9 @@
 
     <title>{{ config('app.name', 'Laravel') }}</title>
 
+    <!-- Scripts -->
+    @stack('scripts')
+
     <!-- Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -17,7 +20,7 @@
 
 <body>
     <!-- Page Content -->
-    <main>
+    <main class="h-full">
         {{ $slot }}
     </main>
 
@@ -25,7 +28,7 @@
     @livewireScripts
 
     <!-- Alpine.js -->
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    {{-- <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script> --}}
 </body>
 
 </html>

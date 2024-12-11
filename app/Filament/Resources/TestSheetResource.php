@@ -4,8 +4,11 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\TestSheetResource\Pages;
 use App\Filament\Resources\TestSheetResource\RelationManagers;
+use App\Models\Classroom;
 use App\Models\GradeSystem;
+use App\Models\Student;
 use App\Models\TestSheet;
+use App\Models\User;
 use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
@@ -81,20 +84,15 @@ class TestSheetResource extends Resource
                     ->html()
                     ->formatStateUsing(function ($record) {
                         if ($record->target_group === 'grade') {
-                            // loop through the target_grades and find the grade name
-                            $grades = [];
-                            foreach ($record->target_grades as $grade) {
-                                $_grade = GradeSystem::find($grade);
-                                $grades[] = $_grade->display_name;
-                            }
-                            return implode(', ', $grades) . ' - 학년 전체';
+                            return self::formatGradeTarget($record->target_grades);
                         } else if ($record->target_group === 'level') {
-                            return $record->target_grades[0] . ' - '  .  $record->target_levels[0] . '레벨';
-                        } else if (
-                            $record->target_group === 'classroom'
-                        ) {
-                            return  implode(',<br />', $record->target_classrooms);
+                            return self::formatLevelTarget($record->target_grades, $record->target_levels);
+                        } else if ($record->target_group === 'classroom') {
+                            return self::formatClassroomTarget($record->target_classrooms);
+                        } else if ($record->target_group === 'student') {
+                            return self::formatStudentTarget($record->target_students);
                         }
+                        return '';
                     }),
                 TextColumn::make('start_date')
                     ->date('Y-m-d H:i')
@@ -145,7 +143,16 @@ class TestSheetResource extends Resource
                     ->query(function (Builder $query, $data) {
                         $from = Carbon::parse($data['from'])->startOfDay();
                         $until = Carbon::parse($data['until'])->endOfDay();
-                        $query->whereBetween('start_date', [$from, $until]);
+                        $query->where(function ($q) use ($from, $until) {
+                            $q->where(function ($subQuery) use ($from, $until) {
+                                $subQuery->whereNotNull('start_date')
+                                    ->whereBetween('start_date', [$from, $until]);
+                            })
+                                ->orWhere(function ($subQuery) use ($from, $until) {
+                                    $subQuery->whereNull('start_date')
+                                        ->whereBetween('created_at', [$from, $until]);
+                                });
+                        });
                     }),
                 Filter::make('status')
                     ->columnSpan(2)
@@ -224,6 +231,75 @@ class TestSheetResource extends Resource
         return [
             //
         ];
+    }
+
+    public static function formatGradeTarget(array $grades): string
+    {
+        $gradeNames = array_map(function ($gradeId) {
+            $grade = GradeSystem::find($gradeId);
+            return $grade->display_name;
+        }, $grades);
+
+        return implode(', ', $gradeNames) . ' - 학년 전체';
+    }
+
+    public static function formatLevelTarget(array $grades, array $levels): string
+    {
+        $gradeNames = array_map(function ($gradeId) {
+            $grade = GradeSystem::find($gradeId);
+            return $grade?->display_name;
+        }, $grades);
+
+        // null이나 빈 값 제거
+        $gradeNames = array_filter($gradeNames);
+        $levels = array_filter($levels);
+
+        if (empty($gradeNames) || empty($levels)) {
+            return '';
+        }
+
+        // "중1, 중2 - A레벨, B레벨" 형태로 출력
+        return implode(', ', $gradeNames) . ' - ' .
+            implode('레벨, ', $levels) . '레벨';
+    }
+
+    public static function formatClassroomTarget(array $classroomIds): string
+    {
+        $classroomNames = array_map(function ($classroomId) {
+            $classroom = Classroom::find($classroomId);
+            return $classroom?->name;
+        }, $classroomIds);
+
+        // null이나 빈 값 제거
+        $classroomNames = array_filter($classroomNames);
+
+        if (empty($classroomNames)) {
+            return '';
+        }
+
+        return implode(', ', $classroomNames);
+    }
+
+    public static function formatStudentTarget(array $studentIds): string
+    {
+        $studentNames = array_map(function ($studentId) {
+            $student = User::find($studentId);
+            return $student?->name;
+        }, $studentIds);
+
+        // null이나 빈 값 제거
+        $studentNames = array_filter($studentNames);
+
+        if (empty($studentNames)) {
+            return '';
+        }
+
+        // 각 학생 이름 뒤에 "학생" 붙이기
+        $formattedNames = array_map(function ($name) {
+            return $name . ' 학생';
+        }, $studentNames);
+
+        return implode(', ', $formattedNames);
     }
 
     public static function getPages(): array

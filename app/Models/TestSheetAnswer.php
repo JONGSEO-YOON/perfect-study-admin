@@ -24,4 +24,15 @@ class TestSheetAnswer extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function getAnswerCountAttribute()
+    {
+        if (!$this->answers) {
+            return 0;
+        }
+
+        return count(array_filter($this->answers, function ($answer) {
+            return $answer !== null;
+        }));
+    }
 }
