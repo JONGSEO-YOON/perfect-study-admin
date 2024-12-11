@@ -56,10 +56,10 @@
             @foreach ($materials->where('type', 'book')->sortBy('created_at') as $material)
                 <div class="flex flex-col items-center space-y-2 hover:brightness-90 cursor-pointer transition-all"
                     wire:click="redirectTo(location.href, {{ $material->id }})">
-                    @if ($material->profile_photo_path)
-                        <div class="aspect-[2/3] w-full bg-gray-200 rounded-lg overflow-hidden">
-                            <img src="{{ Storage::url($material->profile_photo_path) }}" alt="{{ $material->name }}"
-                                class="w-full h-full object-cover">
+                    @if ($material->image_path)
+                        <div class="aspect-[2/3] w-full bg-gray-200 rounded-lg overflow-hidden shadow">
+                            <img src="{{ Storage::url($material->image_path) }}" alt="{{ $material->name }}"
+                                class="w-full h-full object-cover boz">
                         </div>
                     @else
                         <div
