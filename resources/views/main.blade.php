@@ -1,10 +1,21 @@
 <x-layouts.simple>
     <div class="h-full w-full flex flex-row">
-        <aside class=" lg:w-[280px] xl:w-[320px] h-full border-r px-5 flex-col py-4 hidden lg:flex">
-            <a href="#">
+        <aside
+            class="w-[280px] xl:w-[320px] h-full border-r px-5 flex-col py-4 lg:flex
+       fixed top-0 left-0 right-0 bottom-0  bg-white
+       lg:relative 
+       hidden
+        ">
+            <div class="flex flex-row items-center justify-between">
                 <img src="/logo.png" class="w-2/3" />
-            </a>
-            <div class="flex flex-col mt-8 gap-y-0.5">
+                <button class="lg:hidden menu-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-6">
+                        <path
+                            d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="flex flex-col mt-8 gap-y-0.5 flex-1">
                 <a href="#"
                     class="flex items-center gap-x-5 font-semibold p-4 transition-all hover:bg-[#F6F8FF] rounded-lg bg-[#F6F8FF] text-[#8570C2]">
                     <svg width="16" height="18" viewBox="0 0 16 18" fill="none"
@@ -56,11 +67,25 @@
                     </svg>
                     공지사항
                 </a>
+                <div class="flex-1"></div>
+                <a href="/logout"
+                    class="flex mt-10 items-center gap-x-5 font-semibold p-4  transition-all hover:bg-[#F6F8FF] rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5">
+                        <path fill-rule="evenodd"
+                            d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z"
+                            clip-rule="evenodd" />
+                        <path fill-rule="evenodd"
+                            d="M19 10a.75.75 0 0 0-.75-.75H8.704l1.048-.943a.75.75 0 1 0-1.004-1.114l-2.5 2.25a.75.75 0 0 0 0 1.114l2.5 2.25a.75.75 0 1 0 1.004-1.114l-1.048-.943h9.546A.75.75 0 0 0 19 10Z"
+                            clip-rule="evenodd" />
+                    </svg>
+
+                    로그아웃
+                </a>
             </div>
         </aside>
         <div class="flex-1 flex flex-col">
             <div class="px-5 items-center flex-row py-4 border-b flex lg:hidden">
-                <a href="#">
+                <a href="#" class="menu-button">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
                         xmlns="http://www.w3.org/2000/svg">
                         <path d="M5 17L13 17L5 17ZM5 12L19 12L5 12ZM5 7L13 7L5 7Z" fill="#383838" />
@@ -141,5 +166,32 @@
                 });
             }
         });
+        document.addEventListener('DOMContentLoaded', function() {
+            // 토글 버튼과 사이드바 요소 선택
+            const toggleButtons = document.querySelectorAll('.menu-button');
+            const sidebar = document.querySelector('aside');
+
+            // 초기 상태 설정 (모바일에서는 숨김)
+            if (window.innerWidth < 1024) {
+                sidebar.classList.add('hidden');
+            }
+
+            // 버튼 클릭 이벤트 처리
+            for (const toggleButton of toggleButtons) {
+                toggleButton.addEventListener('click', function() {
+                    sidebar.classList.toggle('hidden');
+                });
+            }
+
+            // 화면 크기 변경 시 처리
+            window.addEventListener('resize', function() {
+                if (window.innerWidth >= 1024) {
+                    sidebar.classList.remove('hidden');
+                } else {
+                    sidebar.classList.add('hidden');
+                }
+            });
+        });
     </script>
+
 </x-layouts.simple>

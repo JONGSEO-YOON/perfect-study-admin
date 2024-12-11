@@ -16,6 +16,10 @@ Route::get('/test-sheet/{id}', TestSheetViewer::class)->name('test.sheet');
 Route::get('/test-sheet-result/{id}', TestSheetResult::class)->name('test-sheet.result');
 Route::get('/test-sheet-result/{id}/{questionNo}', TestSheetQuestionResult::class)->name('test-sheet.question.result');
 
+Route::get('/logout', function () {
+    auth()->logout();
+    return redirect('/');
+});
 
 Route::get('/preview-test-sheet', function () {
     $scale = request('scale', 1);
