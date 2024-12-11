@@ -22,15 +22,11 @@ class TestSheetReportCard extends Component implements HasActions, HasForms
   use InteractsWithForms;
   use InteractsWithActions;
 
-  public $data = [
-    'date' => null,
-    'classroom_id' => 0,
-  ];
+  public $testsheet;
 
-  public function mount()
-  {
-    $this->data['date'] = now()->format('Y-m-d');
-  }
+  public $arguments = [];
+
+  public function mount() {}
 
   public function render()
   {
@@ -40,11 +36,24 @@ class TestSheetReportCard extends Component implements HasActions, HasForms
   public function detailAction(): Action
   {
     return Action::make('detail')
+      ->action(function ($arguments) {
+        $this->arguments = $arguments['student'];
+        $this->replaceMountedAction('detailInternal');
+      });
+  }
+
+  public function detailInternalAction(): Action
+  {
+    return Action::make('detailInternal')
       ->modalHeading('상세보기')
       ->modalCancelActionLabel('닫기')
       ->modalSubmitAction(false)
-      ->modalContent(fn() => view('livewire.test-sheet-report-card-detail'));
+      ->modalContent(fn() => view('livewire.test-sheet-report-card-detail', [
+        'testsheet' => $this->testsheet,
+        'questionTypes' => $this->arguments['question_types'] ?? [],
+      ]));
   }
+
 
   public function initAction() {}
 }

@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Models\QuestionCategory;
 use App\Models\TestSheet;
 use App\Models\TestSheetAnswer;
 use Livewire\Component;
@@ -160,11 +161,27 @@ class TestSheetViewer extends Component
 
     // Calculate correct answers
     $correctCount = 0;
+    $correctCountReport = [];
+
     foreach ($this->answers as $index => $answer) {
+      $questionType = $this->questions[$index]['question_type_id'];
+      if (!isset($correctCountReport[$questionType])) {
+        $name = QuestionCategory::find($questionType)->name;
+        $correctCountReport[$questionType] = [
+          'name' => $name,
+          'total' => 0,
+          'correct' => 0
+        ];
+      }
+
+      $correctCountReport[$questionType]['total']++;
+
       if ($answer === $this->questions[$index]['answer']) {
         $correctCount++;
+        $correctCountReport[$questionType]['correct']++;
       }
     }
+
 
     // Update existing test sheet answer record
     TestSheetAnswer::where('test_sheet_id', $this->testsheet->id)
@@ -173,6 +190,7 @@ class TestSheetViewer extends Component
       ->update([
         'answers' => $this->answers,
         'correct_count' => $correctCount,
+        'correct_count_report' => $correctCountReport,
         'status' => 'completed',
         'time' => $this->elapsedTime
       ]);

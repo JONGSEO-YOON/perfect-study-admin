@@ -197,10 +197,7 @@ class TestSheetResource extends Resource
                     ->icon('heroicon-m-check')
                     ->modalHeading('문제지 마감')
                     ->requiresConfirmation()
-                    ->action(fn($record) => $record->update([
-                        'status' => 'completed',
-                        'end_date' => now(),
-                    ])),
+                    ->action(fn($record) => $record->complete()),
                 Tables\Actions\Action::make('view-report-card')
                     ->label('성적표')
                     ->icon('heroicon-m-newspaper')
@@ -210,7 +207,7 @@ class TestSheetResource extends Resource
                         'record' => $record,
                     ]))
                     ->visible(fn($record) => $record->status === 'completed')
-                    ->modalWidth('5xl'),
+                    ->modalWidth('6xl'),
                 Tables\Actions\Action::make('edit-test-sheet')
                     ->label('수정')
                     ->icon('heroicon-m-pencil-square')

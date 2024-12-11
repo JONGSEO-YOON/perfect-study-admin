@@ -94,13 +94,13 @@
                     풀이된 문제
                     @if ($testsheet->latestUserAnswer)
                         <span><span
-                                class="text-[#7256C2] font-bold">{{ $testsheet->latestUserAnswer->correct_count }}</span>/{{ count($testsheet->questions) }}</span>
+                                class="text-[#7256C2] font-bold">{{ $testsheet->latestUserAnswer->answer_count }}</span>/{{ count($testsheet->questions) }}</span>
                     @else
                         <span><span class="text-[#7256C2] font-bold">0</span>/{{ count($testsheet->questions) }}</span>
                     @endif
                 </div>
             </div>
-            @if ($testsheet->latestUserAnswer)
+            @if ($testsheet->latestUserAnswer?->status === 'completed')
                 <a href="/test-sheet-result/{{ $testsheet->id }}"
                     class="flex flex-row items-center justify-center py-2.5 px-7 bg-[#F4F4F4] font-semibold  rounded-[5px] gap-x-3 mt-4">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
@@ -118,7 +118,11 @@
                             d="M12.106 5.23521C12.4262 5.40549 12.694 5.65967 12.8808 5.97054C13.0676 6.2814 13.1663 6.63722 13.1663 6.99988C13.1663 7.36254 13.0676 7.71836 12.8808 8.02922C12.694 8.34008 12.4262 8.59427 12.106 8.76455L3.56467 13.4092C2.18933 14.1579 0.5 13.1845 0.5 11.6452V2.35521C0.5 0.815213 2.18933 -0.157454 3.56467 0.589879L12.106 5.23521Z"
                             fill="currentColor" />
                     </svg>
-                    응시하기
+                    @if ($testsheet->latestUserAnswer)
+                        이어풀기
+                    @else
+                        응시하기
+                    @endif
                 </a>
             @endif
         </div>

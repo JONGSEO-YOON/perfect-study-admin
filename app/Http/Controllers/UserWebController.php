@@ -104,7 +104,7 @@ class UserWebController extends Controller implements HasMiddleware
     $base_query = TestSheet::inProgress()
       ->availableFor($student)
       ->whereDoesntHave('latestUserAnswer', function ($query) use ($student) {
-        // $query->where('status', 'completed');
+        $query->where('status', 'completed');
       });
 
     return [

@@ -162,7 +162,7 @@ class QuestionSeeder extends Seeder
             ],
             [
                 'user_id' => 1,
-                'question_type_id' => 18,
+                'question_type_id' => 19,
                 'parent_question_id' => null,
                 'question_display_type' => 'content',
                 'content' => '<p><math xmlns="http://www.w3.org/1998/Math/MathML"><mfenced><mrow><msqrt><mn>3</mn></msqrt><mo>-</mo><msup><mn>1</mn><mn>3</mn></msup></mrow></mfenced><mo>÷</mo><msqrt><mn>2</mn></msqrt></math>의 값은?</p>',

@@ -30,6 +30,7 @@ return new class extends Migration
             $table->string('sub_title')->comment('부제목');
             $table->json('questions')->nullable()->comment('문제 목록');
             $table->string('temp_data_id')->nullable();
+            $table->json('report')->nullable()->comment('시험 결과 리포트');
             $table->timestamps();
         });
     }

@@ -65,6 +65,38 @@
                         {!! $currentQuestion['content'] !!}
                     </div>
                 @endif
+                {{-- {{ dd($currentQuestion['choices_display_type']) }} --}}
+                @if ($currentQuestion['answer_type'] === 'multiple_choice' && $currentQuestion['choices_display_type'] === 'seperate')
+                    <div class="gap-x-1.5 grid grid-cols-3 mt-4 w-full md:w-2/3 px-4 md:px-0">
+                        @foreach ($currentQuestion['choices'] as $i => $choice)
+                            <div class="flex flex-row gap-x-1 items-center h-7">
+                                <div>
+                                    @if ($i === 0)
+                                        ①
+                                    @elseif ($i === 1)
+                                        ②
+                                    @elseif ($i === 2)
+                                        ③
+                                    @elseif ($i === 3)
+                                        ④
+                                    @elseif ($i === 4)
+                                        ⑤
+                                    @elseif ($i === 5)
+                                        ⑥
+                                    @endif
+                                </div>
+                                @if ($choice['display_type'] === 'content')
+                                    <div class="flex-1">{!! $choice['content'] !!}</div>
+                                @elseif ($choice['display_type'] === 'image')
+                                    <div class="flex-1">
+                                        <img src="{{ Storage::url($choice['image_path']) }}"
+                                            alt="Choice {{ $i + 1 }}" class="w-full">
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
             </div>
         </div>
     </div>

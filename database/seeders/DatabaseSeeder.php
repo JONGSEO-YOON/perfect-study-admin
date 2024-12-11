@@ -128,7 +128,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $classroom = Classroom::create([
-            'name' => '3학년 A레벨 평일 특강반',
+            'name' => '3학년 A레벨 평일반',
             'teacher_id' => Teacher::first()->id,
             'target_grades' => [
                 GradeSystem::where('display_name', '고3')->first()->id,
@@ -136,12 +136,12 @@ class DatabaseSeeder extends Seeder
             'target_level' => 'A',
         ]);
         Classroom::create([
-            'name' => '3학년 A레벨 주말 특강반',
+            'name' => '3학년 M레벨 평일반',
             'teacher_id' => Teacher::first()->id,
             'target_grades' => [
                 GradeSystem::where('display_name', '고3')->first()->id,
             ],
-            'target_level' => 'A',
+            'target_level' => 'M',
         ]);
 
         $classroom->students()->attach(Student::all()->random(5));

@@ -3,65 +3,52 @@
         <table class="w-full bg-white border-x border-t border-collapse">
             <thead>
                 <tr class="bg-gray-100 text-center">
-                    <th colspan="8" class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">
-                        2024년 1학기 중간고사
+                    <th colspan="10" class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">
+                        {{ $testsheet->start_date->format('m월 d일') }} {{ $testsheet->name }}
                     </th>
                 </tr>
             </thead>
             <tbody>
                 <tr class="bg-gray-100 text-center">
-                    <th class="px-6 py-3  text-sm font-semibold text-gray-700 border-b">
-                        등수
-                    </th>
-                    <th class="px-6 py-3  text-sm font-semibold text-gray-700 border-b">
-                        학생명
-                    </th>
-                    <th class="px-6 py-3  text-sm font-semibold text-gray-700 border-b">
-                        개인점수
-                    </th>
-                    <th class="px-6 py-3  text-sm font-semibold text-gray-700 border-b">
-                        반평균
-                    </th>
-                    <th class="px-6 py-3  text-sm font-semibold text-gray-700 border-b">
-                        레벨평균
-                    </th>
-                    <th class="px-6 py-3  text-sm font-semibold text-gray-700 border-b">
-                        반별 등수
-                    </th>
-                    <th class="px-6 py-3  text-sm font-semibold text-gray-700 border-b">
-                        제출 시간
-                    </th>
-                    <th class="px-6 py-3  text-sm font-semibold text-gray-700 border-b">
-                    </th>
+                    <th class="px-4 py-3 text-sm font-semibold text-gray-700 border-b">등수</th>
+                    <th class="px-4 py-3 text-sm font-semibold text-gray-700 border-b">학생명</th>
+                    <th class="px-4 py-3 text-sm font-semibold text-gray-700 border-b">반명</th>
+                    <th class="px-4 py-3 text-sm font-semibold text-gray-700 border-b">개인점수</th>
+                    <th class="px-4 py-3 text-sm font-semibold text-gray-700 border-b">반평균</th>
+                    <th class="px-4 py-3 text-sm font-semibold text-gray-700 border-b">레벨평균</th>
+                    <th class="px-4 py-3 text-sm font-semibold text-gray-700 border-b">전체평균</th>
+                    <th class="px-4 py-3 text-sm font-semibold text-gray-700 border-b">반별 등수</th>
+                    <th class="px-4 py-3 text-sm font-semibold text-gray-700 border-b">레벨별 등수</th>
+                    <th class="px-4 py-3 text-sm font-semibold text-gray-700 border-b"></th>
                 </tr>
-                @for ($i = 1; $i <= 37; $i++)
+                @foreach (collect($testsheet->report)->sortBy('rank')->toArray() as $student)
                     <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center">
-                        <td class="px-6 py-3 border-b">{{ $i }}등</td>
-                        <td class="px-6 py-3 border-b">
-                            홍길동
+                        <td class="px-4 py-3 border-b">{{ $student['rank'] }}등</td>
+                        <td class="px-4 py-3 border-b">{{ $student['student_name'] }}</td>
+                        <td class="px-4 py-3 border-b text-xs">{{ $student['classroom_name'] }}</td>
+                        <td class="px-4 py-3 border-b">
+                            {{ $student['personal_score'] }}/{{ count($testsheet->questions) }}
+                            ({{ $student['personal_score_percentage'] }}%)
                         </td>
-                        <td class="px-6 py-3 border-b">
-                            7/14
-                            (50%)
+                        <td class="px-4 py-3 border-b">
+                            {{ round($student['classroom_average']) }}/{{ count($testsheet->questions) }}
+                            ({{ $student['classroom_average_percentage'] }}%)
                         </td>
-                        <td class="px-6 py-3 border-b">
-                            7/14
-                            (50%)
+                        <td class="px-4 py-3 border-b">
+                            {{ round($student['level_average']) }}/{{ count($testsheet->questions) }}
+                            ({{ $student['level_average_percentage'] }}%)
                         </td>
-                        <td class="px-6 py-3 border-b">
-                            7/14
-                            (50%)
+                        <td class="px-4 py-3 border-b">
+                            {{ round($student['total_average']) }}/{{ count($testsheet->questions) }}
+                            ({{ $student['total_average_percentage'] }}%)
                         </td>
-                        <td class="px-6 py-3 border-b">
-                            3등
-                        </td>
-                        <td class="px-6 py-3 border-b">
-                            07/14 12:00
-                        </td>
-                        <td class="px-6 py-3 border-b">
+                        <td class="px-4 py-3 border-b">{{ $student['classroom_rank'] }}등</td>
+                        <td class="px-4 py-3 border-b">{{ $student['level_rank'] }}등</td>
+                        <td class="px-4 py-3 border-b">
                             <button
                                 class="fi-link group/link relative inline-flex items-center justify-center outline-none fi-size-sm fi-link-size-sm gap-1 fi-color-custom fi-color-primary fi-ac-action fi-ac-link-action text-primary-500"
-                                type="button" wire:loading.attr="disabled" wire:click="mountAction('detail')">
+                                type="button" wire:loading.attr="disabled"
+                                wire:click="mountAction('detail', { student: {{ collect($student) }} })">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
                                     class="size-5">
                                     <path d="M8 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Z" />
@@ -77,7 +64,7 @@
                             </button>
                         </td>
                     </tr>
-                @endfor
+                @endforeach
             </tbody>
         </table>
         <x-filament-actions::modals />

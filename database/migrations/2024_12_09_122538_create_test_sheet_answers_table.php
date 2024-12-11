@@ -23,6 +23,7 @@ return new class extends Migration
             $table->integer('time')->default(0);
 
             $table->integer('correct_count')->nullable();
+            $table->json('correct_count_report')->nullable();
             $table->timestamps();
         });
     }

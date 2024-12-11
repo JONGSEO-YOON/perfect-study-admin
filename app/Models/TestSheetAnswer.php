@@ -12,7 +12,8 @@ class TestSheetAnswer extends Model
     protected $fillable = ['test_sheet_id', 'user_id', 'answers', 'correct_count'];
 
     protected $casts = [
-        'answers' => 'array'
+        'answers' => 'array',
+        'correct_count_report' => 'array'
     ];
 
     public function testSheet()
