@@ -28,7 +28,7 @@ class TestSheetResult extends Component
 
     $this->answers = $this->testSheetAnswer->answers;
     $this->correctCount = $this->testSheetAnswer->correct_count;
-    $this->totalQuestions = count($this->testsheet->questions);
+    $this->totalQuestions = $this->testsheet->total_score;
     $this->percentage = round(($this->correctCount / $this->totalQuestions) * 100);
   }
 

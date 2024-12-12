@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
@@ -13,6 +14,7 @@ class TestSheet extends Model
 
     protected $casts = [
         'display' => 'boolean',
+        'display' => 'use_score_table',
         'published_at' => 'datetime',
         'expired_at' => 'datetime',
         'target_grades' => 'array',
@@ -21,6 +23,8 @@ class TestSheet extends Model
         'target_students' => 'array',
         'lecture_info' => 'array',
         'attachments' => 'array',
+        'score_table' => 'array',
+        'parsed_score_table' => 'array',
         'scopes' => 'array',
         'questions' => 'array',
         'tags' => 'array',
@@ -46,12 +50,14 @@ class TestSheet extends Model
         });
     }
 
-    public function getTargetGradeNamesAttribute($value)
+    public function getTargetGradeNamesAttribute()
     {
+
         $grades = [];
         foreach ($this->target_grades as $grade) {
             $_grade = GradeSystem::find($grade);
             $grades[] = $_grade->display_name;
+            break;
         }
         return implode(', ', $grades);
     }
@@ -243,8 +249,8 @@ class TestSheet extends Model
     {
         return DB::transaction(function () {
             // 1. 전체 문제 수 계산
-            $totalQuestions = count($this->questions);
-            if ($totalQuestions === 0) return false;
+            $totalScore = $this->total_score;
+            if ($totalScore === 0) return false;
 
             $calculatePercentage = function ($value, $total) {
                 return $total > 0 ? round(($value / $total) * 100, 2) : 0;
@@ -438,13 +444,13 @@ class TestSheet extends Model
                     'student_name' => $data['name'],
                     'classroom_name' => $data['classroom_name'],
                     'personal_score' => $data['score'],
-                    'personal_score_percentage' => $calculatePercentage($data['score'], $totalQuestions),
+                    'personal_score_percentage' => $calculatePercentage($data['score'], $totalScore),
                     'classroom_average' => $classroomAverage,
-                    'classroom_average_percentage' => $calculatePercentage($classroomAverage, $totalQuestions),
+                    'classroom_average_percentage' => $calculatePercentage($classroomAverage, $totalScore),
                     'level_average' => $levelAverage,
-                    'level_average_percentage' => $calculatePercentage($levelAverage, $totalQuestions),
+                    'level_average_percentage' => $calculatePercentage($levelAverage, $totalScore),
                     'total_average' => $totalAverage,
-                    'total_average_percentage' => $calculatePercentage($totalAverage, $totalQuestions),
+                    'total_average_percentage' => $calculatePercentage($totalAverage, $totalScore),
                     'classroom_rank' => array_search($data['score'], $classroomScore) + 1,
                     'level_rank' => array_search($data['score'], $levelScore) + 1,
                     'question_types' => $questionTypeStats
@@ -528,5 +534,45 @@ class TestSheet extends Model
 
         // 4. 필터링된 학생들 반환
         return collect($targetStudents);
+    }
+
+
+    public function getTotalScoreAttribute()
+    {
+        if ($this->use_score_table) {
+            return $this->parsed_score_table['total_score'];
+        }
+
+        return count($this->questions);
+    }
+
+
+    public function getDueTextAttribute()
+    {
+        if (!$this->end_date) {
+            return null;
+        }
+
+        $now = Carbon::now();
+        $endDate = Carbon::parse($this->end_date);
+
+        // 이미 기한이 지난 경우
+        if ($now->gt($endDate)) {
+            return null;
+        }
+
+        $diffInDays = abs($endDate->diffInDays($now));
+        $diffInHours = abs($endDate->diffInHours($now));
+        $diffInMinutes = abs($endDate->diffInMinutes($now));
+
+        if ($diffInDays >= 1) {
+            return round($diffInDays) . "일";
+        } elseif ($diffInHours >= 1) {
+            return round($diffInHours) . "시간";
+        } else {
+            // 1분 미만이어도 최소 1분으로 표시
+            $minutes = max(1, round($diffInMinutes));
+            return "{$minutes}분";
+        }
     }
 }

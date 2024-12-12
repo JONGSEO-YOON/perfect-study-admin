@@ -9,6 +9,7 @@ use App\Models\QuestionCategory;
 use App\Models\Student;
 use App\Models\TempData;
 use App\Models\TestSheet;
+use Closure;
 use Faker\Provider\ar_EG\Text;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -20,11 +21,13 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Forms\Components\ViewField;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -72,6 +75,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
 
     public $data = [
         'name' => null,
+        'tags_toggle' => '기본',
         'tags' => [],
         'target_group' => 'grade',
         'target_grades' => [],
@@ -86,6 +90,8 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         'selected_page_index' => -1,
         'title' => '수학 영역(미적분)',
         'sub_title' => '2023년 대학수학능력시험 실전 모의고사 22회',
+        'use_score_table' => false,
+        'score_table' => [],
     ];
 
     public function form(Form $form): Form
@@ -286,7 +292,45 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                         })
                         ->default('default'),
 
+                ]),
+            Section::make('배점표')
+                ->label('배점표')
+                ->heading('3. 배점표')
+                ->columns(4)
+                ->schema([
+                    Toggle::make('use_score_table')
+                        ->label('배점표 사용')
+                        ->columnSpanFull()
+                        ->live()
+                        ->reactive()
+                        ->default(true),
+                    KeyValue::make('score_table')
+                        ->label('배점표')
+                        ->keyLabel('문항 번호')
+                        ->keyPlaceholder('1,2,3 혹은 1-3')
+                        ->valuePlaceholder('2')
+                        ->valueLabel('배점')
+                        ->columnSpanFull()
+                        ->visible(fn(Get $get) => $get('use_score_table'))
+                        ->rules([
+                            fn(): Closure => function (string $attribute, $value, Closure $fail) {
+                                foreach ($value as $key => $score) {
+                                    // 배점 검증 (양의 정수인지 확인)
+                                    if (!is_numeric($score) || intval($score) != $score || $score <= 0) {
+                                        $fail('유효하지 않은 배점표입니다.');
+                                        return;
+                                    }
+
+                                    // 문항 번호 형식 검증
+                                    if (!self::validateQuestionFormat($key)) {
+                                        $fail('유효하지 않은 배점표입니다.');
+                                        return;
+                                    }
+                                }
+                            },
+                        ])
                 ])
+
 
         ])
             ->statePath('data');
@@ -312,6 +356,8 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                 $this->data,
                 $testSheet->toArray()
             );
+            $this->data['tags'] = collect($this->data['tags'])->values()->toArray();
+            $this->data['tags_toggle'] = '';
         } else {
             $this->questions = self::selectRandomQuestions($query);
             $this->data = array_merge(
@@ -531,7 +577,6 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             return array_search($question->id, $orderedIds);
         })->values();
 
-
         $this->dispatch('onQuestionUpdated', $this->questions);
     }
 
@@ -539,7 +584,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
     {
         $this->questions = $this->questions->reject(function ($question) use ($questionId) {
             return $question->id == $questionId;
-        });
+        })->values();
         $this->summary = self::getDistributionSummary($this->questions);
         $this->dispatch('onQuestionUpdated', $this->questions);
     }
@@ -591,10 +636,9 @@ class CreateTestSheets extends Page implements HasForms, HasActions
     {
         return Action::make('addQuestion')
             ->modalHeading('새 문제 추가')
-            ->modalWidth('4xl')
+            ->modalWidth('6xl')
             ->icon('heroicon-m-plus-circle')
             ->label('새 문제 추가')
-            ->modalWidth('2xl')
             ->modalSubmitActionLabel('추가하기')
             ->fillForm(function () {
 
@@ -623,60 +667,67 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                 ];
             })
             ->form([
-                Grid::make(4)
+                Grid::make(2)
                     ->schema([
-                        ViewField::make('question_type_ids')
-                            ->label('문제 유형')
-                            ->view('filament.components.forms.question-type', [
-                                'multiple' => true,
-                                'event' => 'onQuestionTypeChanged',
-                            ])
-                            ->reactive()
-                            ->live()
-                            ->columnSpanFull(),
-                        Select::make('levels')
-                            ->label('레벨')
-                            ->options([
-                                1 => '1',
-                                2 => '2',
-                                3 => '3',
-                                4 => '4',
-                                5 => '5',
-                            ])
-                            ->columnSpan(2)
-                            ->multiple()
-                            ->live()
-                            ->afterStateUpdated(function (Get $get, Set $set) {
-                                $levels = $get('levels');
-                                $questionTypeIds = $get('question_type_ids');
-                                $isEvenDistribution = true;
-                                if (empty($levels) || empty($questionTypeIds)) {
-                                    $set('questions', collect());
-                                    return;
-                                }
-                                $questions = self::selectRandomQuestions([
-                                    'question_count' => 50,
-                                    'question_type_ids' => $questionTypeIds,
-                                    'levels' => $levels,
-                                    'is_even_distribution' => $isEvenDistribution,
-                                    'exclude_ids' => $this->questions->pluck('id')->toArray(),
-                                ]);
-                                $set('questions', $questions->toArray());
-                            }),
+                        Grid::make(4)
+                            ->schema([
+                                ViewField::make('question_type_ids')
+                                    ->label('문제 유형')
+                                    ->view('filament.components.forms.question-type', [
+                                        'multiple' => true,
+                                        'event' => 'onQuestionTypeChanged',
+                                    ])
+                                    ->reactive()
+                                    ->live()
+                                    ->columnSpanFull(),
+                                Select::make('levels')
+                                    ->label('레벨')
+                                    ->options([
+                                        1 => '1',
+                                        2 => '2',
+                                        3 => '3',
+                                        4 => '4',
+                                        5 => '5',
+                                    ])
+                                    ->columnSpan(2)
+                                    ->multiple()
+                                    ->live()
+                                    ->afterStateUpdated(function (Get $get, Set $set) {
+                                        $levels = $get('levels');
+                                        $questionTypeIds = $get('question_type_ids');
+                                        $isEvenDistribution = true;
+                                        if (empty($levels) || empty($questionTypeIds)) {
+                                            $set('questions', collect());
+                                            return;
+                                        }
+                                        $questions = self::selectRandomQuestions([
+                                            'question_count' => 50,
+                                            'question_type_ids' => $questionTypeIds,
+                                            'levels' => $levels,
+                                            'is_even_distribution' => $isEvenDistribution,
+                                            'exclude_ids' => $this->questions->pluck('id')->toArray(),
+                                        ]);
+                                        $set('questions', $questions->toArray());
+                                    }),
 
-                        ViewField::make('questions')
-                            ->label('문제 목록')
-                            ->reactive()
-                            ->view('filament.components.forms.question-list')
-                            ->live()
-                            ->columnSpanFull(),
-                        Hidden::make('question_ids')
-                            ->afterStateUpdated(function (Get $get, Set $set) {
-                                dd($get('question_ids'));
-                            })
-                            ->default([])
-                            ->required()
-                            ->columnSpanFull(),
+
+                            ])
+                            ->columnSpan(1),
+                        Grid::make(4)
+                            ->schema([
+                                ViewField::make('questions')
+                                    ->label('문제 목록')
+                                    ->reactive()
+                                    ->view('filament.components.forms.question-list')
+                                    ->live()
+                                    ->columnSpanFull(),
+                                Hidden::make('question_ids')
+                                    ->afterStateUpdated(function (Get $get, Set $set) {})
+                                    ->default([])
+                                    ->required()
+                                    ->columnSpanFull(),
+                            ])
+                            ->columnSpan(1)
                     ])
             ])
             ->action(function ($data) {
@@ -701,7 +752,8 @@ class CreateTestSheets extends Page implements HasForms, HasActions
     public function addQuestions($questionIds)
     {
         $questions = Question::whereIn('id', $questionIds)->get();
-        $this->questions = $this->questions->concat($questions);
+        $this->questions = $this->questions->concat($questions)->values();
+
         $this->dispatch('onQuestionUpdated', $this->questions);
 
         Notification::make()
@@ -725,15 +777,12 @@ class CreateTestSheets extends Page implements HasForms, HasActions
 
     public function createTestSheet()
     {
+        $this->form->validate();
         $formData = $this->data;
-
-        // 문제 데이터를 JSON으로 변환 가능한 형태로 준비
-        // dd($this->questions);
 
         $questionsData = $this->questions->map(function ($question) {
             return $question->toArray();
         })->toArray();
-
 
         $scopes = $this->questions
             ->map(fn($question) => $question->questionType->name)
@@ -746,6 +795,13 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         $tags_toggle = $formData['tags_toggle'] ?? '';
         if ($tags_toggle) {
             $tags = array_merge($tags, explode(',', $tags_toggle));
+            // 중복 제거
+            $tags = array_unique($tags);
+        }
+
+        $parsed_score_table = [];
+        if ($formData['use_score_table']) {
+            $parsed_score_table = self::parseScoreTable($formData['score_table'], count($questionsData));
         }
 
         $upsertData = [
@@ -768,6 +824,9 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             'questions' => $questionsData,
             'scopes' => $scopes,
             'temp_data_id' => $this->id,
+            'use_score_table' => $formData['use_score_table'],
+            'score_table' => $formData['score_table'],
+            'parsed_score_table' => $parsed_score_table,
         ];
         if ($this->test_sheet_id) {
             TestSheet::find($this->test_sheet_id)->update($upsertData);
@@ -786,5 +845,85 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         // 시험지 목록 페이지로 리다이렉트
         // return redirect()->route('filament.resources.test-sheets.index');
         return redirect('/admin/test-sheets');
+    }
+
+    /**
+     * 문항 번호 형식을 검증하는 함수
+     * @param string $key
+     * @return bool
+     */
+    public static function validateQuestionFormat(string $key): bool
+    {
+        // 단일 숫자 (예: "1")
+        if (preg_match('/^\d+$/', $key)) {
+            return true;
+        }
+
+        // 콤마로 구분된 숫자들 (예: "2,3")
+        if (preg_match('/^\d+(?:,\d+)+$/', $key)) {
+            $numbers = explode(',', $key);
+            return count(array_unique($numbers)) === count($numbers); // 중복 숫자 체크
+        }
+
+        // 범위 형식 (예: "4-6")
+        if (preg_match('/^\d+-\d+$/', $key)) {
+            list($start, $end) = explode('-', $key);
+            return intval($start) < intval($end); // 시작 숫자가 끝 숫자보다 작은지 확인
+        }
+
+        return false;
+    }
+
+    public static function parseScoreTable(array $scoreData, int $totalQuestions = 0): array
+    {
+        $result = [
+            'total_score' => 0,
+            'table' => []
+        ];
+
+        // 모든 문항에 기본값 1 할당
+        for ($i = 1; $i <= $totalQuestions; $i++) {
+            $result['table'][$i] = 1;
+            $result['total_score'] += 1;
+        }
+
+        // 배점표에 명시된 점수로 업데이트
+        foreach ($scoreData as $key => $score) {
+            $questionIndices = self::parseQuestionIndices($key);
+            foreach ($questionIndices as $index) {
+                // 총점에서 기존 점수(1)를 빼고 새로운 점수를 더함
+                $result['total_score'] -= $result['table'][$index];
+                $result['table'][$index] = intval($score);
+                $result['total_score'] += intval($score);
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * 문항 번호 문자열을 개별 인덱스 배열로 변환
+     * @param string $key 문항 번호 문자열
+     * @return array 개별 문항 번호 배열
+     */
+    public static function parseQuestionIndices(string $key): array
+    {
+        // 단일 숫자인 경우
+        if (preg_match('/^\d+$/', $key)) {
+            return [intval($key)];
+        }
+
+        // 콤마로 구분된 경우
+        if (str_contains($key, ',')) {
+            return array_map('intval', explode(',', $key));
+        }
+
+        // 범위인 경우
+        if (str_contains($key, '-')) {
+            list($start, $end) = array_map('intval', explode('-', $key));
+            return range($start, $end);
+        }
+
+        return [];
     }
 }

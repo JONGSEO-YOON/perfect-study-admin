@@ -27,19 +27,19 @@
                         <td class="px-4 py-3 border-b">{{ $student['student_name'] }}</td>
                         <td class="px-4 py-3 border-b text-xs">{{ $student['classroom_name'] }}</td>
                         <td class="px-4 py-3 border-b">
-                            {{ $student['personal_score'] }}/{{ count($testsheet->questions) }}
+                            {{ $student['personal_score'] }}/{{ $testsheet->total_score }}
                             ({{ $student['personal_score_percentage'] }}%)
                         </td>
                         <td class="px-4 py-3 border-b">
-                            {{ round($student['classroom_average']) }}/{{ count($testsheet->questions) }}
+                            {{ round($student['classroom_average']) }}/{{ $testsheet->total_score }}
                             ({{ $student['classroom_average_percentage'] }}%)
                         </td>
                         <td class="px-4 py-3 border-b">
-                            {{ round($student['level_average']) }}/{{ count($testsheet->questions) }}
+                            {{ round($student['level_average']) }}/{{ $testsheet->total_score }}
                             ({{ $student['level_average_percentage'] }}%)
                         </td>
                         <td class="px-4 py-3 border-b">
-                            {{ round($student['total_average']) }}/{{ count($testsheet->questions) }}
+                            {{ round($student['total_average']) }}/{{ $testsheet->total_score }}
                             ({{ $student['total_average_percentage'] }}%)
                         </td>
                         <td class="px-4 py-3 border-b">{{ $student['classroom_rank'] }}등</td>

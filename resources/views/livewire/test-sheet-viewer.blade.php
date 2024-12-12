@@ -54,9 +54,14 @@
             </div>
             <div wire:key="question-{{ $currentQuestionIndex }}" class="question-transition flex flex-col"
                 wire:transition.duration.300ms.slide-fade>
-                <h1 class="font-semibold py-2 md:py-4 mt-1 md:mt-2 text-lg border-b px-4 md:px-0">
+                <div class="flex flex-col font-semibold py-2 md:py-4 mt-1 md:mt-2 text-lg border-b px-4 md:px-0">
                     문제 {{ $progress['current'] }})
-                </h1>
+                    @if ($testsheet->use_score_table)
+                        <h1 class="text-gray-500 font-medium text-base mt-0.5">
+                            [{{ $testsheet->parsed_score_table['table'][$progress['current']] }}점]
+                        </h1>
+                    @endif
+                </div>
                 @if ($currentQuestion['question_display_type'] === 'image')
                     <img src="{{ Storage::url($currentQuestion['image_path']) }}"
                         class="w-[90%] md:w-[55%] full h-auto mt-8 px-4 md:px-0" alt="문제 이미지" />

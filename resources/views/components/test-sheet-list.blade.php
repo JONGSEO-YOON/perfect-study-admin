@@ -8,9 +8,7 @@
                 {{ $testsheet->target_grade_names }}
             </div>
             <h1 class="font-semibold ml-4 w-14 break-all">
-                @foreach ($testsheet->tags ?? [] as $item)
-                    {{ $item }}
-                @endforeach
+                {{ $testsheet->tags[0] ?? '' }}
             </h1>
             <div class="flex flex-col ml-6 gap-y-1.5 flex-1">
                 <h1 class="font-bold">
@@ -21,10 +19,12 @@
                 </h1>
             </div>
             <div class="flex flex-col gap-y-1">
-                <div class="hidden" class="font-medium text-sm text-[#7D7D92] flex flex-row justify-between gap-x-4">
-                    마감 기한
-                    <span><span class="text-[#F86363] font-bold mr-1">2</span>일남음</span>
-                </div>
+                @if ($testsheet->due_text && $testsheet->latestUserAnswer?->status !== 'completed')
+                    <div class="font-medium text-sm text-[#7D7D92] flex flex-row justify-between gap-x-4">
+                        마감 기한
+                        <span><span class="text-[#F86363] font-bold mr-1">{{ $testsheet->due_text }}</span></span>
+                    </div>
+                @endif
                 <div class="font-medium text-sm text-[#7D7D92] flex flex-row justify-between gap-x-4">
                     풀이된 문제
                     <span><span

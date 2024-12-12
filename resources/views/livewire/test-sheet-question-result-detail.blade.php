@@ -17,9 +17,15 @@
                 오답이에요.
             @endif
         </h1>
-        <h1 class="mt-3">
+        <h1 class="mt-3 flex items-center">
             문제 {{ $questionNo }})
+
         </h1>
+        @if ($testsheet->use_score_table)
+            <h1 class="text-gray-500 font-medium text-sm">
+                [{{ $testsheet->parsed_score_table['table'][$questionNo] }}점]
+            </h1>
+        @endif
     </div>
 
     @if ($question['question_display_type'] === 'image')

@@ -22,6 +22,11 @@ return new class extends Migration
             $table->json('target_classrooms')->nullable()->comment('대상 교실/반들'); // [1, 2, 3] (classroom_ids)
             $table->json('target_students')->nullable()->comment('대상 학생들'); // [1, 2, 3] (student_ids)
             $table->boolean('is_auto')->default(true)->comment('자동 출제 여부');
+
+            $table->boolean('use_score_table')->default(true)->comment('배점표 사용 여부');
+            $table->json('score_table')->nullable()->comment('배점표');
+            $table->json('parsed_score_table')->nullable()->comment('배점표');
+
             $table->timestamp('start_date')->nullable()->comment('출제일');
             $table->timestamp('end_date')->nullable()->comment('마감일');
             $table->string('template')->default('default')->comment('템플릿');

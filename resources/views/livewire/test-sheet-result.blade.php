@@ -6,7 +6,7 @@
                     {{ $testsheet->start_date->format('m월 d일') }} {{ $testsheet->name }}
                 </h1>
                 <h2 class="text-[#7D7D92] md:ml-4 text-sm">
-                    {{ $totalQuestions }}문제 | {{ $testsheet->scopes[0] }}
+                    {{ count($testsheet->questions) }}문제 | {{ $testsheet->scopes[0] }}
                 </h2>
             </div>
             <button wire:click="returnToMain"
@@ -63,8 +63,7 @@
                 </div>
             </div>
             <div class="flex flex-row gap-x-2 ">
-                <div
-                    class="grid grid-cols-5 gap-4 mt-4 px-5 md:px-0 md:grid-cols-1 md:min-h-[500px] h-fit  overflow-auto ">
+                <div class="grid grid-cols-5 gap-4 mt-4 px-5 md:px-0 md:grid-cols-1  h-fit  overflow-auto ">
                     @foreach ($answerStatuses as $index => $status)
                         <a href="/test-sheet-result/{{ $testsheet->id }}/{{ $index + 1 }}"
                             x-show="!showWrongOnly || !{{ $status['isCorrect'] }}"
@@ -78,8 +77,9 @@
                         </button>
                     @endforeach
                 </div>
+                <div class="ml-1 w-px bg-gray-200 h-full"></div>
                 <div
-                    class="hidden md:flex flex-1 bg-gray-200 m-4 rounded-lg items-center justify-center font-medium text-gray-400 overflow-auto">
+                    class="hidden md:flex flex-1 bg-gray-200 m-4 rounded-lg items-center justify-center font-medium text-gray-400 overflow-auto md:min-h-[500px]">
                     @if ($selectedQuestionNo)
                         <div class="bg-white w-full text-black">
                             <livewire:test-sheet-question-result-detail :testsheet="$testsheet" :question-no="$selectedQuestionNo"
@@ -90,8 +90,6 @@
                             문제 번호를 선택해주세요.
                         </div>
                     @endif
-                    {{-- 문제 번호를 선택해주세요. --}}
-                    {{-- <livewire:test-sheet-question-result-detail :testsheet="$testsheet" :question-no="$questionNo" /> --}}
                 </div>
             </div>
 

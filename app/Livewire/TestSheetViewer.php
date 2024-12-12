@@ -139,6 +139,7 @@ class TestSheetViewer extends Component
     return redirect('/');
   }
 
+
   public function completeTest()
   {
     // 답안이 하나도 없는지 체크
@@ -149,14 +150,13 @@ class TestSheetViewer extends Component
         break;
       }
     }
-
     if (!$hasAnyAnswer) {
       // 하나도 답을 작성하지 않은 경우
-      $this->dispatch('alert', [
-        'type' => 'error',
-        'message' => '최소 한 문제 이상 답안을 작성해주세요.'
-      ]);
-      return;
+      // $this->dispatch('alert', [
+      //   'type' => 'error',
+      //   'message' => '최소 한 문제 이상 답안을 작성해주세요.'
+      // ]);
+      // return;
     }
 
     // Calculate correct answers
@@ -165,6 +165,8 @@ class TestSheetViewer extends Component
 
     foreach ($this->answers as $index => $answer) {
       $questionType = $this->questions[$index]['question_type_id'];
+
+      // Initialize report entry if not exists
       if (!isset($correctCountReport[$questionType])) {
         $name = QuestionCategory::find($questionType)->name;
         $correctCountReport[$questionType] = [
@@ -176,12 +178,35 @@ class TestSheetViewer extends Component
 
       $correctCountReport[$questionType]['total']++;
 
-      if ($answer === $this->questions[$index]['answer']) {
-        $correctCount++;
-        $correctCountReport[$questionType]['correct']++;
+      // 정답 여부 체크
+      $isCorrect = $answer === $this->questions[$index]['answer'];
+
+      if ($isCorrect) {
+        // 배점표 사용 여부에 따른 점수 계산
+        if ($this->testsheet->use_score_table) {
+          $score = $this->testsheet->parsed_score_table['table'][$index + 1] ?? 1;
+          $correctCount += $score;
+          $correctCountReport[$questionType]['correct'] += $score;
+        } else {
+          $correctCount++;
+          $correctCountReport[$questionType]['correct']++;
+        }
       }
     }
 
+    // 만약 배점표를 사용한다면, correctCountReport의 total도 배점 기준으로 업데이트
+    if ($this->testsheet->use_score_table) {
+      foreach ($correctCountReport as $typeId => &$report) {
+        $typeTotal = 0;
+        foreach ($this->questions as $index => $question) {
+          if ($question['question_type_id'] == $typeId) {
+            $score = $this->testsheet->parsed_score_table['table'][$index + 1] ?? 1;
+            $typeTotal += $score;
+          }
+        }
+        $report['total'] = $typeTotal;
+      }
+    }
 
     // Update existing test sheet answer record
     TestSheetAnswer::where('test_sheet_id', $this->testsheet->id)
@@ -197,6 +222,8 @@ class TestSheetViewer extends Component
 
     return redirect("/test-sheet-result/{$this->testsheet->id}");
   }
+
+
 
   public function updateTimer()
   {
