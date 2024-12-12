@@ -11,6 +11,8 @@ class TestSheetViewer extends Component
 {
 
   public $id = null;
+
+  public $completed = false;
   public $testsheet = null;
   public $currentQuestionIndex = 0;
   public $questions = [];
@@ -104,6 +106,9 @@ class TestSheetViewer extends Component
 
   public function submitAnswer()
   {
+    if ($this->completed) {
+      return;
+    }
     if (strlen($this->currentAnswer) > 0) {
       $this->answers[$this->currentQuestionIndex] = intval($this->currentAnswer);
 
@@ -219,6 +224,7 @@ class TestSheetViewer extends Component
         'status' => 'completed',
         'time' => $this->elapsedTime
       ]);
+    $this->completed = true;
 
     return redirect("/test-sheet-result/{$this->testsheet->id}");
   }
@@ -227,10 +233,15 @@ class TestSheetViewer extends Component
 
   public function updateTimer()
   {
+    if ($this->completed) {
+      return;
+    }
+
     $this->elapsedTime++;
 
     // 5초마다 시간 저장
     if (time() - $this->lastSaveTime >= 5) {
+      // 
       TestSheetAnswer::updateOrCreate(
         [
           'test_sheet_id' => $this->testsheet->id,
