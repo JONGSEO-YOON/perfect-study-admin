@@ -18,6 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
             except: ['juso-popup']
         );
 
+        $middleware->trustProxies(at: '*');
+
         // 커스텀 미들웨어 등록
         $middleware->alias([
             'student.check' => StudentCheckMiddleware::class,
