@@ -4,6 +4,11 @@ import vue from '@vitejs/plugin-vue'
 import path from 'path'
 
 export default defineConfig({
+    server: {
+        hmr: {
+            host: process.env.HMR_HOST || "0.0.0.0",
+        },
+    },
     resolve: {
         alias: {
             "@mingle": path.resolve(__dirname, "/vendor/ijpatricio/mingle/resources/js"),
