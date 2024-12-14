@@ -24,7 +24,7 @@ export default defineConfig({
             },
         }),
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js'],
+            input: ['resources/css/app.css', 'resources/js/app.js', 'resources/js/QuestionCategorySelector.js', 'resources/js/ExamPrintLayout.js', 'resources/js/LectureVideoList.js', 'resources/js/PageSelector.js'],
             refresh: true,
         }),
     ],
