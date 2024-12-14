@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Category;
+use App\Models\Material;
 use App\Models\Question;
 use App\Models\QuestionCategory;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +13,15 @@ class QuestionSeeder extends Seeder
 {
     public function run()
     {
+        $material = Material::create([
+            'user_id' => 1,
+            'parent_id' => null,
+            'type' => 'book',
+            'name' => '2024년 12월 3일 수학 문제집',
+            'image_path' => null,
+            'is_public' => true,
+        ]);
+
         $questions = [
             [
                 'user_id' => 1,
@@ -33,6 +43,8 @@ class QuestionSeeder extends Seeder
                 'created_at' => '2024-12-03 15:20:22',
                 'updated_at' => '2024-12-03 15:20:22',
                 'deleted_at' => null,
+                'material_id' => $material->id,
+                'seq' => 1,
             ],
             [
                 'user_id' => 1,
@@ -54,6 +66,8 @@ class QuestionSeeder extends Seeder
                 'created_at' => '2024-12-03 15:20:22',
                 'updated_at' => '2024-12-03 15:20:22',
                 'deleted_at' => null,
+                'material_id' => $material->id,
+                'seq' => 2,
             ],
             [
                 'user_id' => 1,
@@ -75,6 +89,8 @@ class QuestionSeeder extends Seeder
                 'created_at' => '2024-12-03 15:20:22',
                 'updated_at' => '2024-12-03 15:20:22',
                 'deleted_at' => null,
+                'material_id' => $material->id,
+                'seq' => 3,
             ],
             [
                 'user_id' => 1,
@@ -96,6 +112,8 @@ class QuestionSeeder extends Seeder
                 'created_at' => '2024-12-03 15:20:22',
                 'updated_at' => '2024-12-03 15:20:22',
                 'deleted_at' => null,
+                'material_id' => $material->id,
+                'seq' => 4,
             ],
             [
                 'user_id' => 1,
@@ -117,6 +135,8 @@ class QuestionSeeder extends Seeder
                 'created_at' => '2024-12-03 15:20:22',
                 'updated_at' => '2024-12-03 15:20:22',
                 'deleted_at' => null,
+                'material_id' => $material->id,
+                'seq' => 5,
             ],
             [
                 'user_id' => 1,
@@ -138,6 +158,8 @@ class QuestionSeeder extends Seeder
                 'created_at' => '2024-12-03 15:20:22',
                 'updated_at' => '2024-12-03 15:20:22',
                 'deleted_at' => null,
+                // 'material_id' => $material->id,
+                // 'seq' => 6,
             ],
             [
                 'user_id' => 1,
@@ -159,6 +181,8 @@ class QuestionSeeder extends Seeder
                 'created_at' => '2024-12-03 15:20:22',
                 'updated_at' => '2024-12-03 15:20:22',
                 'deleted_at' => null,
+                // 'material_id' => $material->id,
+                // 'seq' => 7,
             ],
             [
                 'user_id' => 1,
@@ -180,6 +204,8 @@ class QuestionSeeder extends Seeder
                 'created_at' => '2024-12-04 10:30:03',
                 'updated_at' => '2024-12-04 12:31:52',
                 'deleted_at' => null,
+                'material_id' => $material->id,
+                'seq' => 8,
             ],
         ];
 

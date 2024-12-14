@@ -375,149 +375,198 @@ class CreateTestSheets extends Page implements HasForms, HasActions
     {
         $totalQuestionCount = $params['question_count'];
         $questionTypeIds = $params['question_type_ids'];
-        $isEvenDistribution = $params['is_even_distribution'];
-        $excludeIds = $params['exclude_ids'] ?? []; // 제외할 ID 목록, 없으면 빈 배열
-        $materialId = $params['material_id'] ?? null; // 자료 ID, 없으면 null
-        $isTagBase = $params['is_tag_based'] ?? false;
-        $tags = $params['tags'] ?? [];
+        $excludeIds = $params['exclude_ids'] ?? [];
 
         if ($params['should_exclude_recent_questions'] ?? false) {
-            $target_group = $params['target_group'] ?? 'grade';
-            $targetQuery = TestSheet::where('user_id', auth()->id())
-                ->where('created_at', '>=', now()->subMonth());
-
-            // 타겟 그룹별 조건 추가
-            switch ($target_group) {
-                case 'grade':
-                    $targetQuery->whereJsonContains('target_grades', $params['target_grades']);
-                    break;
-                case 'level':
-                    $targetQuery->whereJsonContains('target_grades', $params['target_grades'])
-                        ->whereJsonContains('target_levels', $params['target_levels']);
-                    break;
-                case 'classroom':
-                    $targetQuery->whereJsonContains('target_classrooms', $params['target_classrooms']);
-                    break;
-                case 'student':
-                    $targetQuery->whereJsonContains('target_students', $params['target_students']);
-                    break;
-            }
-
-            // 최근 출제된 문제들의 ID 수집
-            $recentQuestionIds = $targetQuery->get()
-                ->pluck('questions.*.id')
-                ->flatten()
-                ->filter()
-                ->unique()
-                ->values()
-                ->toArray();
-
-            // 기존 제외 ID들과 병합
-            $excludeIds = array_merge($excludeIds, $recentQuestionIds);
+            $excludeIds = array_merge($excludeIds, self::getRecentQuestionIds($params));
         }
-
 
         $result = collect();
 
-        if ($isEvenDistribution) {
-            // Even distribution case: 모든 레벨에서 동일한 수의 문제 추출
-            $levels = $params['levels'];
-            $questionsPerLevel = (int) floor($totalQuestionCount / count($levels));
-            $remainingQuestions = $totalQuestionCount % count($levels);
+        // 레벨 분포에 따른 문제 선택
+        if ($params['is_even_distribution']) {
+            $result = self::selectQuestionsWithEvenDistribution($params, $excludeIds);
+        } else {
+            $result = self::selectQuestionsWithWeightedDistribution($params, $excludeIds);
+        }
 
-            foreach ($levels as $levelIndex => $level) {
-                // 이 레벨에서 가져올 총 문제 수
-                $levelQuestionCount = $questionsPerLevel + ($levelIndex < $remainingQuestions ? 1 : 0);
-                // 각 타입별로 가져올 문제 수 계산
-                $questionsPerType = (int) floor($levelQuestionCount / count($questionTypeIds));
-                $remainingTypeQuestions = $levelQuestionCount % count($questionTypeIds);
+        // 부족한 문제 수를 채우기 위한 추가 선택
+        if ($result->count() < $totalQuestionCount) {
+            $remainingCount = $totalQuestionCount - $result->count();
+            $existingIds = $result->pluck('id')->merge($excludeIds)->unique()->values()->toArray();
+            $result = $result->concat(
+                self::selectAdditionalQuestions($params, $remainingCount, $existingIds)
+            );
+        }
+
+        // 교재가 지정된 경우 순서 정렬
+        if (!empty($params['material_id'])) {
+            $result = $result->sortBy('seq')->values();
+        }
+
+        return $result;
+    }
+
+    protected static function getRecentQuestionIds(array $params): array
+    {
+        $target_group = $params['target_group'] ?? 'grade';
+        $targetQuery = TestSheet::where('user_id', auth()->id())
+            ->where('created_at', '>=', now()->subMonth());
+
+        switch ($target_group) {
+            case 'grade':
+                $targetQuery->whereJsonContains('target_grades', $params['target_grades']);
+                break;
+            case 'level':
+                $targetQuery->whereJsonContains('target_grades', $params['target_grades'])
+                    ->whereJsonContains('target_levels', $params['target_levels']);
+                break;
+            case 'classroom':
+                $targetQuery->whereJsonContains('target_classrooms', $params['target_classrooms']);
+                break;
+            case 'student':
+                $targetQuery->whereJsonContains('target_students', $params['target_students']);
+                break;
+        }
+
+        return $targetQuery->get()
+            ->pluck('questions.*.id')
+            ->flatten()
+            ->filter()
+            ->unique()
+            ->values()
+            ->toArray();
+    }
+
+    protected static function buildBaseQuery($typeId, array $params, array $excludeIds, ?int $level = null)
+    {
+        // dd($params);
+        return Question::where('question_type_id', $typeId)
+            ->when($level !== null, function ($query) use ($level) {
+                return $query->where('level', $level);
+            })
+            ->whereNotIn('id', $excludeIds)
+            ->whereNull('parent_question_id')
+            ->when($params['is_tag_based'] ?? false, function ($query) use ($params) {
+                return $query->where(function ($q) use ($params) {
+                    $tags = is_array($params['tags']) ? $params['tags'] : [$params['tags']];
+                    foreach ($tags as $tag) {
+                        $q->whereJsonContains('tags', $tag);
+                    }
+                });
+            })
+            ->when($params['material_id'] ?? null, function ($query) use ($params) {
+                return $query->where('material_id', $params['material_id'])
+                    ->when($params['is_material_range'] ?? false, function ($query) use ($params) {
+                        return $query->whereBetween('seq', [
+                            $params['material_range_start'],
+                            $params['material_range_end']
+                        ]);
+                    })
+                    ->orderBy('seq');
+            }, function ($query) {
+                return $query
+                    ->where('material_id', null)
+                    ->inRandomOrder();
+            })
+            ->with('questionType', 'choices');
+    }
+
+    protected static function selectQuestionsForType($typeId, $questionCount, array $params, array $excludeIds, ?int $level = null): Collection
+    {
+        if ($questionCount <= 0) {
+            return collect();
+        }
+
+        return self::buildBaseQuery($typeId, $params, $excludeIds, $level)
+            ->take($questionCount)
+            ->get();
+    }
+
+    protected static function selectQuestionsWithEvenDistribution(array $params, array $excludeIds): Collection
+    {
+        $result = collect();
+        $levels = $params['levels'];
+        $questionTypeIds = $params['question_type_ids'];
+        $questionsPerLevel = (int) floor($params['question_count'] / count($levels));
+        $remainingQuestions = $params['question_count'] % count($levels);
+
+        foreach ($levels as $levelIndex => $level) {
+            $levelQuestionCount = $questionsPerLevel + ($levelIndex < $remainingQuestions ? 1 : 0);
+            $questionsPerType = (int) floor($levelQuestionCount / count($questionTypeIds));
+            $remainingTypeQuestions = $levelQuestionCount % count($questionTypeIds);
+
+            foreach ($questionTypeIds as $typeIndex => $typeId) {
+                $typeQuestionCount = $questionsPerType + ($typeIndex < $remainingTypeQuestions ? 1 : 0);
+                $questions = self::selectQuestionsForType($typeId, $typeQuestionCount, $params, $excludeIds, $level);
+                $result = $result->concat($questions);
+            }
+        }
+
+        return $result;
+    }
+
+    protected static function selectQuestionsWithWeightedDistribution(array $params, array $excludeIds): Collection
+    {
+        $result = collect();
+        $levelWeights = $params['level'];
+        $questionTypeIds = $params['question_type_ids'];
+        $totalWeight = array_sum($levelWeights);
+        $totalQuestionCount = $params['question_count'];
+
+        // 레벨별 문제 수 계산
+        $levelQuestionCounts = self::calculateWeightedQuestionCounts($levelWeights, $totalQuestionCount);
+
+        foreach ($levelQuestionCounts as $level => $count) {
+            if ($count > 0) {
+                $questionsPerType = (int) floor($count / count($questionTypeIds));
+                $remainingTypeQuestions = $count % count($questionTypeIds);
 
                 foreach ($questionTypeIds as $typeIndex => $typeId) {
                     $typeQuestionCount = $questionsPerType + ($typeIndex < $remainingTypeQuestions ? 1 : 0);
-                    if ($typeQuestionCount > 0) {
-
-                        $questions = Question::where('question_type_id', $typeId)
-                            ->where('level', $level)
-                            ->whereNotIn('id', $excludeIds) // 제외할 ID 필터링 추가
-                            ->whereNull('parent_question_id') // 부모 문제는 제외
-                            ->when($materialId, function ($query, $materialId) {
-                                return $query->where('material_id', $materialId);
-                            })
-                            ->when($isTagBase, function ($query) use ($tags) {
-                                return $query->where(function ($q) use ($tags) {
-                                    // if $tags is string set it in []
-                                    if (!is_array($tags)) {
-                                        $tags = [$tags];
-                                    }
-                                    foreach ($tags as $tag) {
-                                        $q->whereJsonContains('tags', $tag);
-                                    }
-                                });
-                            })
-                            ->with('questionType', 'choices')
-                            ->inRandomOrder()
-                            ->take($typeQuestionCount)
-                            ->get();
-                        $result = $result->concat($questions);
-                    }
-                }
-            }
-        } else {
-            // Weighted distribution case: 가중치에 따라 문제 추출
-            $levelWeights = $params['level'];
-            $totalWeight = array_sum($levelWeights);
-            // 각 레벨별 문제 수 계산 (전체 문제 수에서 가중치 비율대로)
-            $levelQuestionCounts = [];
-            $assignedQuestions = 0;
-
-            foreach ($levelWeights as $level => $weight) {
-                $levelCount = (int) round($totalQuestionCount * ($weight / $totalWeight));
-                $levelQuestionCounts[$level] = $levelCount;
-                $assignedQuestions += $levelCount;
-            }
-
-            // 반올림으로 인한 차이 보정
-            $diff = $totalQuestionCount - $assignedQuestions;
-            if ($diff != 0) {
-                $maxWeightLevel = array_keys($levelWeights, max($levelWeights))[0];
-                $levelQuestionCounts[$maxWeightLevel] += $diff;
-            }
-
-            // 각 레벨별로 문제 추출
-            foreach ($levelQuestionCounts as $level => $count) {
-                if ($count > 0) {
-                    // 이 레벨에서 각 타입별로 가져올 문제 수 계산
-                    $questionsPerType = (int) floor($count / count($questionTypeIds));
-                    $remainingTypeQuestions = $count % count($questionTypeIds);
-
-                    foreach ($questionTypeIds as $typeIndex => $typeId) {
-                        $typeQuestionCount = $questionsPerType + ($typeIndex < $remainingTypeQuestions ? 1 : 0);
-                        if ($typeQuestionCount > 0) {
-                            $questions = Question::where('question_type_id', $typeId)
-                                ->where('level', $level)
-                                ->whereNotIn('id', $excludeIds) // 제외할 ID 필터링 추가
-                                ->whereNull('parent_question_id') // 부모 문제는 제외
-                                ->when($materialId, function ($query, $materialId) {
-                                    return $query->where('material_id', $materialId);
-                                })
-                                ->when($isTagBase, function ($query) use ($tags) {
-                                    return $query->whereJsonContains('tags', $tags);
-                                })
-                                ->with('questionType', 'choices')
-                                ->inRandomOrder()
-                                ->take($typeQuestionCount)
-                                ->get();
-                            $result = $result->concat($questions);
-                        }
-                    }
+                    $questions = self::selectQuestionsForType($typeId, $typeQuestionCount, $params, $excludeIds, $level);
+                    $result = $result->concat($questions);
                 }
             }
         }
 
-        // 교재가 지정된 경우에만 순서 보존 
-        if (!empty($materialId)) {
-            // sort by question->seq
-            $result = $result->sortBy('seq')->values();
+        return $result;
+    }
+
+    protected static function calculateWeightedQuestionCounts(array $levelWeights, int $totalQuestionCount): array
+    {
+        $totalWeight = array_sum($levelWeights);
+        $levelQuestionCounts = [];
+        $assignedQuestions = 0;
+
+        foreach ($levelWeights as $level => $weight) {
+            $levelCount = (int) round($totalQuestionCount * ($weight / $totalWeight));
+            $levelQuestionCounts[$level] = $levelCount;
+            $assignedQuestions += $levelCount;
+        }
+
+        // 반올림으로 인한 차이 보정
+        $diff = $totalQuestionCount - $assignedQuestions;
+        if ($diff != 0) {
+            $maxWeightLevel = array_keys($levelWeights, max($levelWeights))[0];
+            $levelQuestionCounts[$maxWeightLevel] += $diff;
+        }
+
+        return $levelQuestionCounts;
+    }
+
+    protected static function selectAdditionalQuestions(array $params, int $remainingCount, array $excludeIds): Collection
+    {
+        $result = collect();
+        $questionTypeIds = $params['question_type_ids'];
+
+        $questionsPerType = (int) floor($remainingCount / count($questionTypeIds));
+        $remainingTypeQuestions = $remainingCount % count($questionTypeIds);
+
+        foreach ($questionTypeIds as $typeIndex => $typeId) {
+            $typeQuestionCount = $questionsPerType + ($typeIndex < $remainingTypeQuestions ? 1 : 0);
+            $questions = self::selectQuestionsForType($typeId, $typeQuestionCount, $params, $excludeIds);
+            $result = $result->concat($questions);
         }
 
         return $result;

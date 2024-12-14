@@ -46,9 +46,56 @@ class ListTestSheets extends ListRecords
                         ->options(
                             \App\Models\Material::where('type', 'book')->get()->pluck('name', 'id')
                         )
+                        ->live()
                         ->searchable()
                         ->columnStart(1),
-
+                    Grid::make(4)
+                        ->schema([
+                            Checkbox::make('is_material_range')
+                                ->default(false)
+                                ->columnSpanFull()
+                                ->live()
+                                ->visible(fn(Get $get) => $get('material_id'))
+                                ->label('교재 범위 지정'),
+                            TextInput::make('material_range_start')
+                                ->label('시작 문제 번호')
+                                ->required()
+                                ->integer()
+                                ->default(1)
+                                ->visible(fn(Get $get) => $get('is_material_range'))
+                                ->columnStart(1)
+                                ->afterStateUpdated(function (Get $get, Set $set, $state) {
+                                    $count = $get('material_range_end') - $state + 1;
+                                    if ($count) {
+                                        $set('question_count', $count);
+                                        if ($get('question_count') == 25 || $get('question_count') == 50 || $get('question_count') == 75 || $get('question_count') == 100) {
+                                            $set('question_count_choice', $count);
+                                        } else {
+                                            $set('question_count_choice', null);
+                                        }
+                                    }
+                                })
+                                ->live(),
+                            TextInput::make('material_range_end')
+                                ->label('끝 문제 번호')
+                                ->required()
+                                ->integer()
+                                ->visible(fn(Get $get) => $get('is_material_range'))
+                                ->default(50)
+                                ->afterStateUpdated(function (Get $get, Set $set, $state) {
+                                    $count = $state - $get('material_range_start') + 1;
+                                    if ($count) {
+                                        $set('question_count', $count);
+                                        if ($get('question_count') == 25 || $get('question_count') == 50 || $get('question_count') == 75 || $get('question_count') == 100) {
+                                            $set('question_count_choice', $count);
+                                        } else {
+                                            $set('question_count_choice', null);
+                                        }
+                                    }
+                                })
+                                ->live(),
+                        ])
+                        ->visible(fn(Get $get) => $get('material_id')),
                     Grid::make(4)
                         ->schema([
                             Radio::make('target_group')
