@@ -438,10 +438,14 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             ->toArray();
     }
 
-    protected static function buildBaseQuery($typeId, array $params, array $excludeIds, ?int $level = null)
+    protected static function buildBaseQuery($typeId = null, array $params, array $excludeIds, ?int $level = null)
     {
-        // dd($params);
-        return Question::where('question_type_id', $typeId)
+        return Question::when($typeId !== null, function ($query) use ($typeId) {
+            if (is_array($typeId)) {
+                return $query->whereIn('question_type_id', $typeId);
+            }
+            return $query->where('question_type_id', $typeId);
+        })
             ->when($level !== null, function ($query) use ($level) {
                 return $query->where('level', $level);
             })
@@ -471,6 +475,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             })
             ->with('questionType', 'choices');
     }
+
 
     protected static function selectQuestionsForType($typeId, $questionCount, array $params, array $excludeIds, ?int $level = null): Collection
     {
@@ -557,19 +562,9 @@ class CreateTestSheets extends Page implements HasForms, HasActions
 
     protected static function selectAdditionalQuestions(array $params, int $remainingCount, array $excludeIds): Collection
     {
-        $result = collect();
-        $questionTypeIds = $params['question_type_ids'];
-
-        $questionsPerType = (int) floor($remainingCount / count($questionTypeIds));
-        $remainingTypeQuestions = $remainingCount % count($questionTypeIds);
-
-        foreach ($questionTypeIds as $typeIndex => $typeId) {
-            $typeQuestionCount = $questionsPerType + ($typeIndex < $remainingTypeQuestions ? 1 : 0);
-            $questions = self::selectQuestionsForType($typeId, $typeQuestionCount, $params, $excludeIds);
-            $result = $result->concat($questions);
-        }
-
-        return $result;
+        return self::buildBaseQuery($params['question_type_ids'], $params, $excludeIds)
+            ->take($remainingCount)
+            ->get();
     }
 
     /**

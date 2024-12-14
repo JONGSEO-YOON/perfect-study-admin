@@ -205,7 +205,7 @@ class QuestionSeeder extends Seeder
                 'updated_at' => '2024-12-04 12:31:52',
                 'deleted_at' => null,
                 'material_id' => $material->id,
-                'seq' => 8,
+                'seq' => 6,
             ],
         ];
 
