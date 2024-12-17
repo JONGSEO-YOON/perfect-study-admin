@@ -620,21 +620,21 @@ class TestSheet extends Model
                     $typeLevelScores = $typeScores[$type]['level'][$data['level']] ?? [];
 
                     // 각 범주별 평균 계산
-                    $calculateTypeAverage = function ($scoresArray) {
-                        if (empty($scoresArray)) return ['correct' => 0, 'total' => 0];
+                    $calculateTypeAverage = function ($scoresArray, $total) {
+                        if (empty($scoresArray)) return 0;
 
+                        // 각 학생의 맞은 개수만 추출하여 평균 계산
                         $totalCorrect = array_sum(array_column($scoresArray, 'correct'));
-                        $totalQuestions = array_sum(array_column($scoresArray, 'total'));
+                        $studentCount = count($scoresArray);
 
-                        return [
-                            'correct' => $totalCorrect,
-                            'total' => $totalQuestions
-                        ];
+                        // 학생 수로 나누어 평균 계산
+                        return $studentCount > 0 ? $totalCorrect / $studentCount : 0;
                     };
 
-                    $typeAllAvg = $calculateTypeAverage($typeAllScores);
-                    $typeClassroomAvg = $calculateTypeAverage($typeClassroomScores);
-                    $typeLevelAvg = $calculateTypeAverage($typeLevelScores);
+                    $typeAllAvg = $calculateTypeAverage($typeAllScores, $scores['total']);
+                    $typeClassroomAvg = $calculateTypeAverage($typeClassroomScores, $scores['total']);
+                    $typeLevelAvg = $calculateTypeAverage($typeLevelScores, $scores['total']);
+
 
                     // 순위 계산을 위한 점수 배열
                     $getScoreArray = function ($scoresArray) {
@@ -654,15 +654,15 @@ class TestSheet extends Model
                         'personal_score' => $scores['correct'],
                         'personal_total' => $scores['total'],
                         'personal_score_percentage' => $calculatePercentage($scores['correct'], $scores['total']),
-                        'classroom_average' => $typeClassroomAvg['correct'],
-                        'classroom_total' => $typeClassroomAvg['total'],
-                        'classroom_average_percentage' => $calculatePercentage($typeClassroomAvg['correct'], $typeClassroomAvg['total']),
-                        'level_average' => $typeLevelAvg['correct'],
-                        'level_total' => $typeLevelAvg['total'],
-                        'level_average_percentage' => $calculatePercentage($typeLevelAvg['correct'], $typeLevelAvg['total']),
-                        'total_average' => $typeAllAvg['correct'],
-                        'total_total' => $typeAllAvg['total'],
-                        'total_average_percentage' => $calculatePercentage($typeAllAvg['correct'], $typeAllAvg['total']),
+                        'classroom_average' => $typeClassroomAvg,
+                        'classroom_total' => $scores['total'], // 총 문제 수는 동일
+                        'classroom_average_percentage' => $calculatePercentage($typeClassroomAvg, $scores['total']),
+                        'level_average' => $typeLevelAvg,
+                        'level_total' => $scores['total'], // 총 문제 수는 동일
+                        'level_average_percentage' => $calculatePercentage($typeLevelAvg, $scores['total']),
+                        'total_average' => $typeAllAvg,
+                        'total_total' => $scores['total'], // 총 문제 수는 동일
+                        'total_average_percentage' => $calculatePercentage($typeAllAvg, $scores['total']),
                         'classroom_rank' => array_search($scores['correct'], $classroomScoreArray) + 1,
                         'level_rank' => array_search($scores['correct'], $levelScoreArray) + 1
                     ];
