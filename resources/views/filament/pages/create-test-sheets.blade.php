@@ -126,7 +126,8 @@
                     </div>
                 </div>
                 <div class="flex flex-1">
-                    <div class="flex flex-col bg-gray-100 p-4 rounded-lg gap-y-3 h-[calc(100vh)] overflow-auto ">
+                    <div
+                        class="flex flex-col bg-gray-100 p-4 rounded-lg gap-y-3 h-[calc(100vh)] overflow-auto min-w-[600px]">
                         <h1 class="text-base font-bold text-gray-800">선택된 문제 목록</h1>
                         @foreach ($questions as $number => $question)
                             <div class="bg-white shadow flex flex-col rounded-lg">

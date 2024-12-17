@@ -45,8 +45,15 @@ class Question extends Model
         parent::boot();
 
         static::creating(function ($model) {
+            // user_id 설정
             if (!$model->user_id && auth()->check()) {
                 $model->user_id = auth()->id();
+            }
+
+            // material_id가 있고 seq가 설정되지 않은 경우에만 seq 설정
+            if ($model->material_id && !$model->seq) {
+                $maxSeq = static::where('material_id', $model->material_id)->max('seq') ?? 0;
+                $model->seq = $maxSeq + 1;
             }
         });
     }
