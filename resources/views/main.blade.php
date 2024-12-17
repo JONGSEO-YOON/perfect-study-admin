@@ -95,7 +95,7 @@
                 </a>
                 <img src="/logo.png" class="h-[40px] ml-4" />
             </div>
-            <div class="flex-1 flex flex-col">
+            <div class="flex-1 flex flex-col h-0">
                 <div class="border-b flex flex-row px-5 gap-x-1">
                     <a href="/"
                         class="text-xl md:text-2xl {{ $type !== 'homework' ? 'border-b-[3px] border-[#7256C2] font-bold' : 'text-[#A3A3A3] font-semibold' }} py-2.5 md:py-4 px-3">
@@ -112,7 +112,7 @@
                         @endif
                     </a>
                 </div>
-                <div class="flex-1 overflow-auto ">
+                <div class="flex-1 overflow-auto h-0">
                     <div class="max-w-[740px] mx-auto w-full px-5 py-4">
                         @if ($testsheets->isEmpty())
                             <div class="flex flex-col items-center justify-center h-[200px]">

@@ -131,6 +131,9 @@ class QuestionResource extends Resource
                 ->heading('1. 문제 정보')
                 ->collapsible(true)
                 ->schema([
+                    Hidden::make('question_type_id')
+                        ->hidden(fn(Get $get) => !$get('is_sub_question'))
+                        ->required(),
                     ViewField::make('question_type_id')
                         ->label('문제 유형')
                         ->view('filament.components.forms.question-type')
@@ -465,6 +468,7 @@ class QuestionResource extends Resource
                                 ];
                             }
                             return [
+                                'question_type_id' => $record->question_type_id,
                                 'choices' => [],
                                 'choices_count' => 4,
                                 'question_display_type' => 'image',
@@ -514,6 +518,7 @@ class QuestionResource extends Resource
                                 ];
                             }
                             return [
+                                'question_type_id' => $record->question_type_id,
                                 'question_display_type' => 'image',
                                 'answer_type' => 'multiple_choice',
                                 'choices_display_type' => 'in_question',

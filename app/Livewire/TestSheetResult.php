@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\TestSheet;
 use App\Models\TestSheetAnswer;
+use App\Models\WrongAnswerTestSheet;
 use Livewire\Component;
 
 class TestSheetResult extends Component
@@ -60,5 +61,43 @@ class TestSheetResult extends Component
   public function selectQuestion($questionNo)
   {
     $this->selectedQuestionNo = $questionNo;
+  }
+
+  public function shouldShowRetestButton()
+  {
+    // 원본 시험지인지 확인
+    if (!$this->testsheet->isOriginal()) {
+      return false;
+    }
+
+    // 1차 오답 테스트 조회
+    $firstRetryTest = WrongAnswerTestSheet::where('original_test_sheet_id', $this->testsheet->id)
+      ->where('user_id', auth()->id())
+      ->where('retry_count', 1)
+      ->first();
+
+    if (!$firstRetryTest) {
+      return false;
+    }
+
+    // 1차 오답 테스트의 답안 조회하여 완료 여부 확인
+    $firstRetryAnswer = TestSheetAnswer::where('test_sheet_id', $firstRetryTest->test_sheet_id)
+      ->where('user_id', auth()->id())
+      ->where('status', 'completed')
+      ->exists();
+
+    // 1차 오답 테스트가 있고 아직 완료되지 않은 경우에만 true 반환
+    return !$firstRetryAnswer;
+  }
+
+
+  public function retest()
+  {
+    $firstRetryTest = WrongAnswerTestSheet::where('original_test_sheet_id', $this->testsheet->id)
+      ->where('user_id', auth()->id())
+      ->where('retry_count', 1)
+      ->firstOrFail();
+
+    return redirect('/test-sheet/' .  $firstRetryTest->test_sheet_id);
   }
 }

@@ -9,12 +9,16 @@ use App\Models\GradeSystem;
 use App\Models\Student;
 use App\Models\TestSheet;
 use App\Models\User;
+use App\Models\WrongAnswerTestSheet;
 use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Tabs;
+use Filament\Forms\Components\Tabs\Tab;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\View;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -54,6 +58,9 @@ class TestSheetResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(function ($query) {
+                return $query->originals();
+            })
             ->defaultSort('id', 'desc')
             ->columns([
                 TextColumn::make('id')
@@ -105,24 +112,56 @@ class TestSheetResource extends Resource
                 TextColumn::make('status')
                     ->label('출제 상태')
                     ->formatStateUsing(function ($record) {
-                        $auto = $record->is_auto ? '(자동 출제)' : '';
-                        if ($record->status === 'pending') {
-                            return '출제 대기 ' . $auto;
-                        } else if ($record->status === 'progress') {
-                            return '출제 중 ' . $auto;
-                        } else if ($record->status === 'completed') {
-                            return '출제 종료 ' . $auto;
+                        // 2차 오답 테스트 확인
+                        $secondRetryTest = WrongAnswerTestSheet::where('original_test_sheet_id', $record->id)
+                            ->where('retry_count', 2)
+                            ->with('testSheet')  // N+1 방지를 위해 with 사용
+                            ->first();
+
+                        $auto = ($record->is_auto) ? '(자동 출제)' : '';
+
+                        if ($secondRetryTest) {
+                            $status = $secondRetryTest->testSheet->status;
+
+                            if ($status === 'pending') {
+                                return '출제 대기 (오답테스트)';
+                            } else if ($status === 'progress') {
+                                return '출제 중 (오답테스트)';
+                            } else if ($status === 'completed') {
+                                return '출제 종료 (오답테스트)';
+                            }
+                        } else {
+                            if ($record->status === 'pending') {
+                                return '출제 대기 ' . $auto;
+                            } else if ($record->status === 'progress') {
+                                return '출제 중 ' . $auto;
+                            } else if ($record->status === 'completed') {
+                                return '출제 종료 ' . $auto;
+                            }
                         }
                     })
                     ->sortable()
                     ->badge()
-                    ->color(fn(string $state): string => match ($state) {
-                        'pending' => 'gray',
-                        'draft' => 'gray',
-                        'progress' => 'primary',
-                        'completed' => 'success',
-                        default => 'gray',
-                    }),
+                    ->color(function (string $state, $record) {
+                        // 2차 오답 테스트 확인
+                        $secondRetryTest = WrongAnswerTestSheet::where('original_test_sheet_id', $record->id)
+                            ->where('retry_count', 2)
+                            ->with('testSheet')
+                            ->first();
+
+                        // 실제 상태 결정 (2차 오답 테스트가 있으면 그것의 상태, 없으면 record의 상태)
+                        $actualStatus = $secondRetryTest
+                            ? $secondRetryTest->testSheet->status
+                            : $record->status;
+
+                        return match ($actualStatus) {
+                            'pending' => 'gray',
+                            'draft' => 'gray',
+                            'progress' => 'primary',
+                            'completed' => 'success',
+                            default => 'gray',
+                        };
+                    })
             ])
             ->filters([
                 Filter::make('duration')
@@ -190,6 +229,38 @@ class TestSheetResource extends Resource
                         'status' => 'progress',
                         'start_date' => now(),
                     ])),
+                Tables\Actions\Action::make('start-second-test-sheet')
+                    ->label('오답 테스트 출제')
+                    ->visible(function ($record) {
+                        // 원본 테스트이고 마감 상태인지 확인
+                        if (!$record->isOriginal() || $record->status !== 'completed') {
+                            return false;
+                        }
+
+                        //  2차 오답 테스트 존재 여부와 상태 확인
+                        return WrongAnswerTestSheet::where('original_test_sheet_id', $record->id)
+                            ->where('retry_count', 2)
+                            ->whereHas('testSheet', function ($query) {
+                                $query->where('status', 'pending');
+                            })
+                            ->exists();
+                    })
+                    ->icon('heroicon-m-check')
+                    ->modalHeading('문제지 출제')
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
+                        // 해당하는 모든 2차 오답 테스트 업데이트
+                        TestSheet::query()
+                            ->whereHas('wrongAnswerTestSheets', function ($query) use ($record) {
+                                $query->where('original_test_sheet_id', $record->id)
+                                    ->where('retry_count', 2);
+                            })
+                            ->update([
+                                'status' => 'progress',
+                                'start_date' => now(),
+                            ]);
+                    }),
+
                 Tables\Actions\Action::make('end-test-sheet')
                     ->label('문제지 마감')
                     ->color('danger')
@@ -198,14 +269,99 @@ class TestSheetResource extends Resource
                     ->modalHeading('문제지 마감')
                     ->requiresConfirmation()
                     ->action(fn($record) => $record->complete()),
+                Tables\Actions\Action::make('end-retry-test-sheets')
+                    ->label('오답테스트 마감')
+                    ->color('danger')
+                    ->visible(function ($record) {
+                        return WrongAnswerTestSheet::where('original_test_sheet_id', $record->id)
+                            ->where('retry_count', 2)
+                            ->whereHas('testSheet', function ($query) {
+                                $query->where('status', 'progress');
+                            })
+                            ->exists();
+                    })
+                    ->icon('heroicon-m-check')
+                    ->modalHeading('오답테스트 마감')
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
+                        TestSheet::query()
+                            ->whereHas('wrongAnswerTestSheets', function ($query) use ($record) {
+                                $query->where('original_test_sheet_id', $record->id)
+                                    ->where('retry_count', 2);
+                            })
+                            ->where('status', 'progress')
+                            ->get()
+                            ->each(function ($testSheet) {
+                                $testSheet->complete();
+                            });
+                    }),
                 Tables\Actions\Action::make('view-report-card')
                     ->label('성적표')
                     ->icon('heroicon-m-newspaper')
-                    ->modalHeading('결과 조회')
+                    ->modalHeading(null)
                     ->modalSubmitAction(false)
-                    ->modalContent(fn($record) => view('filament.components.modals.test-sheet-report-card-modal', [
-                        'record' => $record,
-                    ]))
+                    ->form(function ($record) {
+                        return [
+                            Tabs::make('Tabs')
+                                ->tabs([
+                                    Tab::make('Tab1')
+                                        ->label('문제지')
+                                        ->schema([
+                                            View::make('filament.components.modals.test-sheet-report-card-modal')
+                                                ->viewData([
+                                                    'record' => $record,
+                                                ]),
+                                        ]),
+                                    Tab::make('Tab2')
+                                        ->label('오답 문풀 분석표')
+                                        ->columns(4)
+                                        ->visible(function ($record) {
+
+                                            // 2차 오답 테스트들을 조회
+                                            $secondRetryTests = WrongAnswerTestSheet::query()
+                                                ->where('original_test_sheet_id', $record->id)
+                                                ->where('retry_count', 2)
+                                                ->with('testSheet')
+                                                ->get();
+
+                                            // 2차 오답 테스트가 없으면 보이지 않음
+                                            if ($secondRetryTests->isEmpty()) {
+                                                return false;
+                                            }
+
+                                            // 모든 2차 오답 테스트가 completed 상태인지 확인
+                                            return $secondRetryTests->every(function ($retryTest) {
+                                                return $retryTest->testSheet->status === 'completed';
+                                            });
+                                        })
+                                        ->schema([
+                                            Select::make('student_id')
+                                                ->options(function ($record) {
+                                                    return $record->getTargetStudents()
+                                                        ->map(
+                                                            fn($student) => ['id' => $student->id, 'name' => $student->user->name]
+                                                        )
+                                                        ->pluck('name', 'id');
+                                                })
+                                                ->searchable()
+                                                ->preload()
+                                                ->placeholder('학생 선택')
+                                                ->label('학생')
+                                                ->live()
+                                                ->afterStateUpdated(function ($livewire, $state) {
+                                                    $livewire->dispatch('studentChanged', $state);
+                                                }),
+                                            View::make('filament.components.modals.test-sheet-wrong-report-card-modal')
+                                                ->viewData([
+                                                    'record' => $record,
+                                                ])->columnSpanFull(),
+                                        ])
+                                ])
+                        ];
+                    })
+                    // ->modalContent(fn($record) => view('filament.components.modals.test-sheet-report-card-modal', [
+                    //     'record' => $record,
+                    // ]))
                     ->visible(fn($record) => $record->status === 'completed')
                     ->modalWidth('6xl'),
                 Tables\Actions\Action::make('edit-test-sheet')

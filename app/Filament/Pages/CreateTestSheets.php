@@ -476,7 +476,6 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             ->with('questionType', 'choices');
     }
 
-
     protected static function selectQuestionsForType($typeId, $questionCount, array $params, array $excludeIds, ?int $level = null): Collection
     {
         if ($questionCount <= 0) {

@@ -54,10 +54,18 @@ class TestSheet extends Model
     {
 
         $grades = [];
-        foreach ($this->target_grades as $grade) {
+        foreach ($this->target_grades ?? [] as $grade) {
             $_grade = GradeSystem::find($grade);
             $grades[] = $_grade->display_name;
             break;
+        }
+        // if empty, than use users grade
+        if (empty($grades)) {
+            $grades = auth()->user()->userable->classrooms->pluck('target_grades')
+                ->map(function ($grade) {
+                    return GradeSystem::find($grade[0])->display_name;
+                });
+            return $grades[0] ?? '';
         }
         return implode(', ', $grades);
     }
@@ -109,7 +117,6 @@ class TestSheet extends Model
             $query->where('status', 'progress');
         });
     }
-
 
     /**
      * 진행중이거나 완료된 시험지 조회 스코프
@@ -164,9 +171,9 @@ class TestSheet extends Model
             // 학생 대상
             ->orWhere(function ($subQ) use ($student) {
                 $subQ->where('target_group', 'student')
-                    ->where(function ($jsonQ) {
-                        $jsonQ->whereJsonContains('target_students', auth()->id())
-                            ->orWhereJsonContains('target_students', (string)auth()->id());
+                    ->where(function ($jsonQ) use ($student) {
+                        $jsonQ->whereJsonContains('target_students', $student->user->id)
+                            ->orWhereJsonContains('target_students', (string)$student->user->id);
                     });
             });
 
@@ -199,24 +206,160 @@ class TestSheet extends Model
         }
     }
 
+
+    public function submitAnswer(array $answers, int $userId, int $elapsedTime = 0): bool
+    {
+        return DB::transaction(function () use ($answers, $userId, $elapsedTime) {
+            // 1. 채점 및 리포트 생성
+            $result = $this->grade($answers);
+
+            // 2. 답안 업데이트 또는 생성
+            TestSheetAnswer::updateOrCreate(
+                [
+                    'test_sheet_id' => $this->id,
+                    'user_id' => $userId,
+                    'status' => 'pending'
+                ],
+                [
+                    'answers' => $answers,
+                    'correct_count' => $result['correctCount'],
+                    'correct_count_report' => $result['correctCountReport'],
+                    'status' => 'completed',
+                    'time' => $elapsedTime
+                ]
+            );
+
+            // 3. 원본 테스트인 경우에만 1차 오답 테스트 생성
+            if ($this->isOriginal() && !empty($result['wrongQuestions'])) {
+                $this->createFirstRetryTest($result['wrongQuestions'], $userId);
+            }
+
+            return true;
+        });
+    }
+
+    protected function grade(array $answers): array
+    {
+        $correctCount = 0;
+        $correctCountReport = [];
+        $wrongQuestions = [];
+
+        foreach ($answers as $index => $answer) {
+            $question = $this->questions[$index];
+            $questionType = $question['question_type_id'];
+
+            // Initialize report entry if not exists
+            if (!isset($correctCountReport[$questionType])) {
+                $name = QuestionCategory::find($questionType)->name;
+                $correctCountReport[$questionType] = [
+                    'name' => $name,
+                    'total' => 0,
+                    'correct' => 0
+                ];
+            }
+            $correctCountReport[$questionType]['total']++;
+
+            // 정답 여부 체크
+            $isCorrect = $answer === $question['answer'];
+            if ($isCorrect) {
+                if ($this->use_score_table) {
+                    $score = $this->parsed_score_table['table'][$index + 1] ?? 1;
+                    $correctCount += $score;
+                    $correctCountReport[$questionType]['correct'] += $score;
+                } else {
+                    $correctCount++;
+                    $correctCountReport[$questionType]['correct']++;
+                }
+            } else {
+                // 오답인 경우 저장
+                $wrongQuestions[] = [
+                    'original_question_seq' => $index,
+                    'original_question_id' => $question['id'],
+                ];
+            }
+        }
+
+        // 배점표 사용 시 업데이트
+        if ($this->use_score_table) {
+            foreach ($correctCountReport as $typeId => &$report) {
+                $typeTotal = 0;
+                foreach ($this->questions as $index => $question) {
+                    if ($question['question_type_id'] == $typeId) {
+                        $score = $this->parsed_score_table['table'][$index + 1] ?? 1;
+                        $typeTotal += $score;
+                    }
+                }
+                $report['total'] = $typeTotal;
+            }
+        }
+
+        return [
+            'correctCount' => $correctCount,
+            'correctCountReport' => $correctCountReport,
+            'wrongQuestions' => $wrongQuestions
+        ];
+    }
+
+    protected function createFirstRetryTest(array $wrongQuestions, int $userId): void
+    {
+        // 각 틀린 문제의 첫 번째 child 문제 찾기
+        $validQuestions = [];
+        $validMappings = [];
+        foreach ($wrongQuestions as $wrong) {
+            $childQuestion = Question::where('parent_question_id', $wrong['original_question_id'])
+                ->orderBy('id', 'asc')
+                ->first();
+
+            if ($childQuestion) {
+                $wrong['new_question_seq'] = count($validQuestions);
+                $wrong['new_question_id'] = $childQuestion->id;
+                $validMappings[] = $wrong;
+                $validQuestions[] = $childQuestion->toArray();
+            }
+        }
+
+        // 새로운 테스트 시트 생성
+        $newTestSheet = new static([
+            ...$this->only(['title', 'sub_title', 'scopes', 'user_id', 'tags']),
+            'use_score_table' => false,
+            'name' => $this->name . ' (오답 유사 유형)',
+            'target_group' => 'student',
+            'target_students' => [$userId],
+            'questions' => $validQuestions,
+            'is_auto' => false,
+            'status' => 'progress',
+            'start_date' => now(),
+            'end_date' => $this->end_date,
+            'target_grades' => [],
+            'target_levels' => [],
+            'target_classrooms' => [],
+        ]);
+        $newTestSheet->save();
+
+        // WrongAnswerTestSheet 생성
+        WrongAnswerTestSheet::create([
+            'original_test_sheet_id' => $this->id,
+            'test_sheet_id' => $newTestSheet->id,
+            'user_id' => $userId,
+            'retry_count' => 1,
+            'is_linked_to_original' => true,
+            'wrong_answer_questions' => $validMappings
+        ]);
+    }
+
     /**
      * 시험지를 마감하고 모든 대상 학생들의 답안 상태를 업데이트합니다.
-     * 
-     * @return bool
      */
     public function complete(): bool
     {
-        // 트랜잭션 시작
         return DB::transaction(function () {
             // 1. 시험지 상태를 completed로 변경
             $this->status = 'completed';
             $this->end_date = now();
             $this->save();
 
-            // 2. 대상 학생들 수집
+            // 2. 대상 학생들의 답안 처리
             $targetStudents = $this->getTargetStudents();
-
-            // 3. 각 학생별로 답안 상태 업데이트 또는 생성
             foreach ($targetStudents as $student) {
                 $answer = TestSheetAnswer::where([
                     'test_sheet_id' => $this->id,
@@ -224,25 +367,112 @@ class TestSheet extends Model
                 ])->first();
 
                 if (!$answer) {
-                    // 기존 답안이 없는 경우에만 새로 생성
-                    TestSheetAnswer::create([
-                        'test_sheet_id' => $this->id,
-                        'user_id' => $student->user->id,
-                        'status' => 'completed',
-                        'answers' => [], // 빈 배열로 초기화
-                        'correct_count' => 0 // 0점으로 초기화
-                    ]);
-                } else {
-                    // 기존 답안이 있는 경우 status만 업데이트
-                    $answer->update([
-                        'status' => 'completed'
-                    ]);
+                    // 답안이 없는 경우 빈 답안으로 제출 처리
+                    $emptyAnswers = array_fill(0, count($this->questions), null);
+                    $this->submitAnswer($emptyAnswers, $student->user->id, 0);
+                } else if ($answer->status === 'pending') {
+                    // 진행 중인 답안이 있는 경우 현재 상태로 제출 처리
+                    $this->submitAnswer($answer->answers, $student->user->id, $answer->time);
                 }
             }
+            if ($this->isOriginal()) {
 
-            // 4. 리포트 생성
-            return $this->generateReport();
+                // 3. 리포트 생성
+                $this->generateReport();
+
+                // 4. 연관된 1차 오답 테스트들도 함께 마감
+                $firstRetryTests = $this->originalWrongAnswerTest()
+                    ->where('retry_count', 1)
+                    ->get();
+
+                foreach ($firstRetryTests as $firstRetryTest) {
+                    $firstRetryTest->testSheet->complete();
+                }
+
+                // 5. 2차 오답 테스트 생성 (pending 상태로)
+                foreach ($firstRetryTests as $firstRetryTest) {
+                    $this->createSecondRetryTest($firstRetryTest);
+                }
+            } else if ($this->wrongAnswerTestSheets()->where('retry_count', 2)->exists()) {
+                $this->generateSecondRetryReport();
+            }
+
+            return true;
         });
+    }
+
+    public function completeSecondRetryTests(): void
+    {
+        // 이 시험지의 1차 오답 테스트들을 통해 2차 오답 테스트들을 찾습니다
+        $secondRetryTests = WrongAnswerTestSheet::query()
+            ->where('original_test_sheet_id', $this->id)
+            ->where('retry_count', 2)
+            ->with('testSheet')
+            ->get();
+
+        // 각 2차 오답 테스트를 마감합니다
+        foreach ($secondRetryTests as $retryTest) {
+            if ($retryTest->testSheet) {
+                $retryTest->testSheet->complete();
+            }
+        }
+    }
+
+    protected function createSecondRetryTest(WrongAnswerTestSheet $firstRetryTest): void
+    {
+        $originalWrongQuestions = $firstRetryTest->wrong_answer_questions;
+
+        // 각 원본 오답 문제의 두 번째 child 문제 찾기
+        $validQuestions = [];
+        $validMappings = [];
+        if (!empty($originalWrongQuestions)) {
+            foreach ($originalWrongQuestions as $originalWrong) {
+                $childQuestion = Question::where('parent_question_id', $originalWrong['original_question_id'])
+                    ->orderBy('id', 'asc')
+                    ->skip(1)
+                    ->first();
+
+                $mapping = [
+                    'original_question_seq' => $originalWrong['original_question_seq'],
+                    'original_question_id' => $originalWrong['original_question_id'],
+                    'new_question_seq' => $childQuestion ? count($validQuestions) : null,
+                    'new_question_id' => $childQuestion ? $childQuestion->id : null
+                ];
+                $validMappings[] = $mapping;
+
+                if ($childQuestion) {
+                    $validQuestions[] = $childQuestion->toArray();
+                }
+            }
+        }
+
+        // 새로운 테스트 시트 생성
+        $newTestSheet = new static([
+            ...$firstRetryTest->originalTestSheet->only(['title', 'sub_title', 'scopes', 'user_id', 'tags']),
+            'name' => $firstRetryTest->originalTestSheet->name . ' (오답 테스트)',
+            'target_group' => 'student',
+            'target_students' => [$firstRetryTest->user_id],
+            'questions' => $validQuestions,
+            'status' => 'pending',  // 수동 출제를 위해 pending으로 설정
+            'use_score_table' => false,
+            'is_auto' => false,
+            'start_date' => null,
+            'end_date' => null,
+            'target_grades' => [],
+            'target_levels' => [],
+            'target_classrooms' => [],
+        ]);
+        $newTestSheet->save();
+
+        // WrongAnswerTestSheet 생성
+        WrongAnswerTestSheet::create([
+            'original_test_sheet_id' => $firstRetryTest->original_test_sheet_id,
+            'test_sheet_id' => $newTestSheet->id,
+            'user_id' => $firstRetryTest->user_id,
+            'retry_count' => 2,
+            'is_linked_to_original' => false,
+            'wrong_answer_questions' => $validMappings
+        ]);
     }
 
     public function generateReport(): bool
@@ -463,6 +693,79 @@ class TestSheet extends Model
         });
     }
 
+    public function generateSecondRetryReport(): bool
+    {
+        return DB::transaction(function () {
+            // 1. 이 시험지가 2차 오답 테스트인지 확인
+            $wrongAnswerTest = $this->wrongAnswerTestSheets()
+                ->where('retry_count', 2)
+                ->first();
+
+            if (!$wrongAnswerTest) {
+                return false;
+            }
+
+            // 2. 연관된 테스트들 조회
+            $originalTestSheet = TestSheet::find($wrongAnswerTest->original_test_sheet_id);
+            $firstRetryTest = WrongAnswerTestSheet::where('original_test_sheet_id', $wrongAnswerTest->original_test_sheet_id)
+                ->where('user_id', $wrongAnswerTest->user_id)
+                ->where('retry_count', 1)
+                ->with('testSheet')
+                ->first();
+
+            if (!$originalTestSheet || !$firstRetryTest) {
+                return false;
+            }
+
+            // 3. 각 테스트의 답안 조회
+            $originalAnswer = TestSheetAnswer::where('test_sheet_id', $originalTestSheet->id)
+                ->where('user_id', $wrongAnswerTest->user_id)
+                ->first();
+
+            $firstRetryAnswer = TestSheetAnswer::where('test_sheet_id', $firstRetryTest->testSheet->id)
+                ->where('user_id', $wrongAnswerTest->user_id)
+                ->first();
+
+            $secondRetryAnswer = TestSheetAnswer::where('test_sheet_id', $this->id)
+                ->where('user_id', $wrongAnswerTest->user_id)
+                ->first();
+
+            if (!$originalAnswer || !$firstRetryAnswer || !$secondRetryAnswer) {
+                return false;
+            }
+
+            // 4. 리포트 생성
+            $report = [];
+            foreach ($wrongAnswerTest->wrong_answer_questions as $question) {
+                $originalSeq = $question['original_question_seq'];
+
+                // 원본 문제의 오답 여부는 이미 알고 있음 (틀렸기 때문에 2차까지 왔음)
+                // 1차 테스트 정답 확인
+                $firstRetryQuestionMapping = collect($firstRetryTest->wrong_answer_questions)
+                    ->firstWhere('original_question_seq', $originalSeq);
+                $firstRetrySeq = $firstRetryQuestionMapping['new_question_seq'];
+                $firstRetryCorrect = $firstRetryAnswer->answers[$firstRetrySeq] ===
+                    $firstRetryTest->testSheet->questions[$firstRetrySeq]['answer'];
+
+                // 2차 테스트 정답 확인
+                $secondRetrySeq = $question['new_question_seq'];
+                $secondRetryCorrect = $secondRetrySeq !== null ?
+                    ($secondRetryAnswer->answers[$secondRetrySeq] === $this->questions[$secondRetrySeq]['answer']) :
+                    null;
+
+                $report[] = [
+                    'original_seq' => $originalSeq + 1, // 1부터 시작하는 번호로 표시
+                    'first_retry_correct' => $firstRetryCorrect,
+                    'second_retry_correct' => $secondRetryCorrect ?? '없음'
+                ];
+            }
+
+            // 5. 리포트 저장
+            $this->report = $report;
+            return $this->save();
+        });
+    }
+
     protected function getRepresentativeClassroom(Student $student): ?Classroom
     {
         $classrooms = $student->classrooms;
@@ -508,7 +811,7 @@ class TestSheet extends Model
         }
     }
 
-    protected function getTargetStudents()
+    public function getTargetStudents()
     {
         $allStudents = Student::with(['user', 'classrooms.teacher.user'])
             ->whereHas('classrooms.teacher.user', function ($query) {
@@ -536,7 +839,6 @@ class TestSheet extends Model
         return collect($targetStudents);
     }
 
-
     public function getTotalScoreAttribute()
     {
         if ($this->use_score_table) {
@@ -545,7 +847,6 @@ class TestSheet extends Model
 
         return count($this->questions);
     }
-
 
     public function getDueTextAttribute()
     {
@@ -574,5 +875,30 @@ class TestSheet extends Model
             $minutes = max(1, round($diffInMinutes));
             return "{$minutes}분";
         }
+    }
+
+    public function wrongAnswerTestSheets()
+    {
+        return $this->hasMany(WrongAnswerTestSheet::class, 'test_sheet_id');
+    }
+
+    public function originalWrongAnswerTest()
+    {
+        return $this->hasMany(WrongAnswerTestSheet::class, 'original_test_sheet_id');
+    }
+
+    public function isOriginal(): bool
+    {
+        return !$this->wrongAnswerTestSheets()->exists();
+    }
+
+    public function hasWrongAnswerTests(): bool
+    {
+        return $this->originalWrongAnswerTest()->exists();
+    }
+
+    public function scopeOriginals($query)
+    {
+        return $query->whereDoesntHave('wrongAnswerTestSheets');
     }
 }
