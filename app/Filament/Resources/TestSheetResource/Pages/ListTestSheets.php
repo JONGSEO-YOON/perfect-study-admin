@@ -10,6 +10,7 @@ use App\Models\TempData;
 use Filament\Actions;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
@@ -34,15 +35,15 @@ class ListTestSheets extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()
+            Actions\CreateAction::make('create-test-sheet-by-book')
                 ->icon('heroicon-m-plus-circle')
-                ->modalHeading('문제지 추가하기')
+                ->modalHeading('교재 문제지 추가하기')
                 ->modalWidth('2xl')
                 ->createAnother(false)
-                ->label('문제지 추가하기')
+                ->label('교재 문제지 추가하기')
                 ->form([
                     Select::make('material_id')
-                        ->label('교재 선택 (선택시에는 해당 교재의 문제만 추가됩니다.)')
+                        ->label('교재 선택')
                         ->options(
                             \App\Models\Material::where('type', 'book')->get()->pluck('name', 'id')
                         )
@@ -51,18 +52,11 @@ class ListTestSheets extends ListRecords
                         ->columnStart(1),
                     Grid::make(4)
                         ->schema([
-                            Checkbox::make('is_material_range')
-                                ->default(false)
-                                ->columnSpanFull()
-                                ->live()
-                                ->visible(fn(Get $get) => $get('material_id'))
-                                ->label('교재 범위 지정'),
                             TextInput::make('material_range_start')
                                 ->label('시작 문제 번호')
                                 ->required()
                                 ->integer()
                                 ->default(1)
-                                ->visible(fn(Get $get) => $get('is_material_range'))
                                 ->columnStart(1)
                                 ->afterStateUpdated(function (Get $get, Set $set, $state) {
                                     $count = $get('material_range_end') - $state + 1;
@@ -80,7 +74,6 @@ class ListTestSheets extends ListRecords
                                 ->label('끝 문제 번호')
                                 ->required()
                                 ->integer()
-                                ->visible(fn(Get $get) => $get('is_material_range'))
                                 ->default(50)
                                 ->afterStateUpdated(function (Get $get, Set $set, $state) {
                                     $count = $state - $get('material_range_start') + 1;
@@ -94,8 +87,93 @@ class ListTestSheets extends ListRecords
                                     }
                                 })
                                 ->live(),
-                        ])
-                        ->visible(fn(Get $get) => $get('material_id')),
+                        ]),
+                    Grid::make(4)
+                        ->schema([
+                            Radio::make('target_group')
+                                ->label('출제 대상')
+                                ->required()
+                                ->live()
+                                ->reactive()
+                                ->options([
+                                    'grade' => '학년',
+                                    'level' => '레벨',
+                                    'classroom' => '교실/반',
+                                    'student' => '학생',
+                                ])
+                                ->default('grade')
+                                ->columns(4)
+                                ->columnSpanFull()
+                        ])->columnSpanFull(),
+                    Grid::make(2)
+                        ->schema([
+                            Select::make('target_grades')
+                                ->label('학년')
+                                ->multiple()
+                                ->required()
+                                ->options(function () {
+                                    return GradeSystem::query()
+                                        ->orderBy('sequential_order')
+                                        ->pluck(
+                                            'display_name',
+                                            'id',
+                                        );
+                                })
+                                ->visible(fn(Get $get) => $get('target_group') === 'grade' || $get('target_group') === 'level'),
+                            Select::make('target_levels')
+                                ->label('레벨')
+                                ->multiple()
+                                ->required()
+                                ->options([
+                                    'A' => 'A',
+                                    'M' => 'M',
+                                    'S' => 'S',
+                                ])
+                                ->visible(fn(Get $get) => $get('target_group') === 'level'),
+                            Select::make('target_classrooms')
+                                ->label('반')
+                                ->multiple()
+                                ->required()
+                                ->options(function () {
+                                    return Classroom::query()
+                                        ->orderBy('name')
+                                        ->pluck('name', 'id');
+                                })
+                                ->visible(fn(Get $get) => $get('target_group') === 'classroom'),
+                            Select::make('target_students')
+                                ->label('학생')
+                                ->multiple()
+                                ->required()
+                                ->options(function () {
+                                    $classroomIds = Classroom::query()
+                                        ->orderBy('name')
+                                        ->pluck('id');
+                                    return Student::query()
+                                        ->whereHas('classrooms', function ($q) use ($classroomIds) {
+                                            $q->whereIn('classrooms.id', $classroomIds);
+                                        })
+                                        ->get()
+                                        ->mapWithKeys(fn($student) => [$student->user->id => $student->user->name]);
+                                })
+                                ->visible(fn(Get $get) => $get('target_group') === 'student'),
+                        ]),
+                    Hidden::make('question_count')
+                        ->default(50),
+                ])
+                ->action(function ($data) {
+                    $tempData = TempData::create([
+                        'value' => $data,
+                    ]);
+                    redirect('/admin/test-sheets/create/' . $tempData->id);
+                })
+                ->modalSubmitActionLabel('문제 선택'),
+            Actions\CreateAction::make()
+                ->icon('heroicon-m-plus-circle')
+                ->modalHeading('문제지 추가하기')
+                ->modalWidth('2xl')
+                ->createAnother(false)
+                ->label('문제지 추가하기')
+                ->form([
                     Grid::make(4)
                         ->schema([
                             Radio::make('target_group')

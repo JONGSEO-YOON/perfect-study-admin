@@ -374,8 +374,11 @@ class CreateTestSheets extends Page implements HasForms, HasActions
     public static function selectRandomQuestions(array $params): Collection
     {
         $totalQuestionCount = $params['question_count'];
-        $questionTypeIds = $params['question_type_ids'];
         $excludeIds = $params['exclude_ids'] ?? [];
+
+        if (!empty($params['material_id'])) {
+            return self::selectMaterialQuestions($params, $excludeIds);
+        }
 
         if ($params['should_exclude_recent_questions'] ?? false) {
             $excludeIds = array_merge($excludeIds, self::getRecentQuestionIds($params));
@@ -484,6 +487,23 @@ class CreateTestSheets extends Page implements HasForms, HasActions
 
         return self::buildBaseQuery($typeId, $params, $excludeIds, $level)
             ->take($questionCount)
+            ->get();
+    }
+
+    protected static function selectMaterialQuestions(array $params, array $excludeIds): Collection
+    {
+        return Question::where('material_id', $params['material_id'])
+            ->when($params['material_range_start'] ?? false, function ($query) use ($params) {
+                return $query->whereBetween('seq', [
+                    $params['material_range_start'],
+                    $params['material_range_end']
+                ]);
+            })
+            ->whereNotIn('id', $excludeIds)
+            ->whereNull('parent_question_id')
+            ->orderBy('seq')
+            ->with('questionType', 'choices')
+            ->take($params['question_count'])
             ->get();
     }
 
@@ -685,8 +705,8 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             ->modalSubmitActionLabel('추가하기')
             ->fillForm(function () {
 
-                $levels = $this->query['levels'];
-                $questionTypeIds = $this->query['question_type_ids'];
+                $levels = $this->query['levels'] ?? [];
+                $questionTypeIds = $this->query['question_type_ids'] ?? [];
                 if ($this->arguments['question']['question_type_id'] ?? false) {
                     $questionTypeIds = [$this->arguments['question']['question_type_id']];
                 }
