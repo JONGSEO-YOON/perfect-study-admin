@@ -300,6 +300,7 @@ class TestSheet extends Model
         ];
     }
 
+
     protected function createFirstRetryTest(array $wrongQuestions, int $userId): void
     {
         // 각 틀린 문제의 첫 번째 child 문제 찾기
@@ -900,5 +901,13 @@ class TestSheet extends Model
     public function scopeOriginals($query)
     {
         return $query->whereDoesntHave('wrongAnswerTestSheets');
+    }
+
+    /**
+     * 문제가 1개 이상인 시험지 조회 스코프
+     */
+    public function scopeHasQuestions(Builder $query): Builder
+    {
+        return $query->whereJsonLength('questions', '>', 0);
     }
 }

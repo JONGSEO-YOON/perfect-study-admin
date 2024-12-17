@@ -74,6 +74,9 @@ class TestSheetResult extends Component
     $firstRetryTest = WrongAnswerTestSheet::where('original_test_sheet_id', $this->testsheet->id)
       ->where('user_id', auth()->id())
       ->where('retry_count', 1)
+      ->whereHas('testSheet', function ($query) {
+        $query->hasQuestions();
+      })
       ->first();
 
     if (!$firstRetryTest) {

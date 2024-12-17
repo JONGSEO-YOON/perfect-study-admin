@@ -74,6 +74,7 @@ class UserWebController extends Controller implements HasMiddleware
     $type = request('type', 'test');
 
     $testsheets = TestSheet::inProgressOrCompleted()
+      ->hasQuestions()
       ->availableFor($student)
       ->when($type === 'homework', function ($query) {
         return $query->whereJsonContains('tags', '숙제');
@@ -103,6 +104,7 @@ class UserWebController extends Controller implements HasMiddleware
   {
     $base_query = TestSheet::inProgress()
       ->availableFor($student)
+      ->hasQuestions()
       ->whereDoesntHave('latestUserAnswer', function ($query) use ($student) {
         $query->where('status', 'completed');
       });
