@@ -462,20 +462,20 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                     }
                 });
             })
-            ->when($params['material_id'] ?? null, function ($query) use ($params) {
-                return $query->where('material_id', $params['material_id'])
-                    ->when($params['is_material_range'] ?? false, function ($query) use ($params) {
-                        return $query->whereBetween('seq', [
-                            $params['material_range_start'],
-                            $params['material_range_end']
-                        ]);
-                    })
-                    ->orderBy('seq');
-            }, function ($query) {
-                return $query
-                    ->where('material_id', null)
-                    ->inRandomOrder();
-            })
+            // ->when($params['material_id'] ?? null, function ($query) use ($params) {
+            //     return $query->where('material_id', $params['material_id'])
+            //         ->when($params['is_material_range'] ?? false, function ($query) use ($params) {
+            //             return $query->whereBetween('seq', [
+            //                 $params['material_range_start'],
+            //                 $params['material_range_end']
+            //             ]);
+            //         })
+            //         ->orderBy('seq');
+            // }, function ($query) {
+            //     return $query
+            // })
+            ->where('material_id', null)
+            ->inRandomOrder()
             ->with('questionType', 'choices');
     }
 
@@ -494,10 +494,8 @@ class CreateTestSheets extends Page implements HasForms, HasActions
     {
         return Question::where('material_id', $params['material_id'])
             ->when($params['material_range_start'] ?? false, function ($query) use ($params) {
-                return $query->whereBetween('seq', [
-                    $params['material_range_start'],
-                    $params['material_range_end']
-                ]);
+                return $query->skip($params['material_range_start'] - 1)
+                    ->take($params['material_range_end'] - $params['material_range_start'] + 1);
             })
             ->whereNotIn('id', $excludeIds)
             ->whereNull('parent_question_id')
