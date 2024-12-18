@@ -147,9 +147,9 @@ const handleSelect = (event) => {
                     (e) =>
                         multiple || item.type !== 'scope' ? handleSelect(e) : ''
                 "
-                class="flex-1"
-                >{{ item.name }}</span
-            >
+                class="flex-1 flex flex-row items-center"
+                v-html="item.name"
+            ></span>
         </div>
         <div v-if="isExpanded" class="pl-6">
             <QuestionCategoryItem

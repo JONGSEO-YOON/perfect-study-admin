@@ -12,7 +12,7 @@ return new class extends Migration
         // 범위와 문제 유형을 모두 관리하는 테이블
         Schema::create('question_categories', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->text('name');
             $table->enum('type', ['scope', 'question_type'])
                 ->comment('scope: 범위(중1-1, 소인수분해 등), question_type: 문제 유형(약수와 배수의 성질 등)');
             $table->integer('depth')->default(0);
