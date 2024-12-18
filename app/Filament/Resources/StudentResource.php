@@ -408,8 +408,9 @@ class StudentResource extends Resource
                     ->icon('heroicon-m-newspaper')
                     ->modalHeading('성적표 조회')
                     ->modalSubmitAction(false)
-                    ->modalContent(fn($record) => view('filament.components.modals.student-report-card', [
+                    ->modalContent(fn($record, $livewire) => view('filament.components.modals.student-report-card', [
                         'record' => $record,
+                        'classroomId' => $livewire->tableFilters['classroom_id']['value'] ?? null,
                     ]))
                     ->modalWidth('7xl'),
 

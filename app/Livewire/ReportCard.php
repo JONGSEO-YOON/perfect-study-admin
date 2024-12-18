@@ -24,6 +24,9 @@ class ReportCard extends Component implements HasForms, HasActions
   use InteractsWithForms;
   use InteractsWithActions;
 
+  public $student = null;
+  public $classroomId = null;
+
   public $data = [
     'date' => null,
     'date_from' => null,
@@ -39,6 +42,7 @@ class ReportCard extends Component implements HasForms, HasActions
     $endOfWeek = $now->endOfWeek(7)->format('Y-m-d');
     $this->data['date_from'] = "{$startOfWeek}/{$endOfWeek}";
     $this->data['date_until'] = "{$startOfWeek}/{$endOfWeek}";
+    $this->data['classroom_id'] = $this->classroomId ?? $this->student->classrooms->first()?->id ?? null;
   }
 
   public function render()
@@ -79,18 +83,35 @@ class ReportCard extends Component implements HasForms, HasActions
           ->schema([
             Select::make('date_from')
               ->label('조회 시작 기간')
-              ->options(static::getWeekOptions()),
+              ->live()
+              ->options(static::getWeekOptions())
+              ->afterStateUpdated(function ($get, $livewire) {
+                $livewire->dispatch('reportFormChange', [
+                  ...$this->data,
+                ]);
+              }),
 
             Select::make('date_until')
               ->label('조회 종료 기간')
-              ->options(static::getWeekOptions()),
+              ->live()
+              ->options(static::getWeekOptions())
+              ->afterStateUpdated(function ($get, $livewire) {
+                $livewire->dispatch('reportFormChange', [
+                  ...$this->data,
+                ]);
+              }),
+
             Select::make('classroom_id')
+              ->live()
               ->label('반')
-              ->disabled()
-              ->options([
-                0 => 'A반',
-              ])
-              ->default(0),
+              ->options(function () {
+                return $this->student->classrooms->pluck('name', 'id')->toArray();
+              })
+              ->afterStateUpdated(function ($get, $livewire) {
+                $livewire->dispatch('reportFormChange', [
+                  ...$this->data,
+                ]);
+              }),
           ]),
         Tabs::make('Tabs')
           ->activeTab(1)
@@ -100,7 +121,13 @@ class ReportCard extends Component implements HasForms, HasActions
               ->label('주간 학습표')
               ->schema([
                 ViewField::make('view')
-                  ->view('livewire.report-card-tab3'),
+                  ->viewData([
+                    'student' => $this->student,
+                    'date_from' => $this->data['date_from'],
+                    'date_until' => $this->data['date_until'],
+                    'classroom_id' => $this->data['classroom_id'],
+                  ])
+                  ->view('livewire.report-card-tab3-wrapper'),
               ]),
             Tab::make('Tab 1')
               ->label('오답 유형분석표')

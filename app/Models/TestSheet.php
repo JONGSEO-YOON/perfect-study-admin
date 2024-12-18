@@ -254,10 +254,15 @@ class TestSheet extends Model
                 $correctCountReport[$questionType] = [
                     'name' => $name,
                     'total' => 0,
-                    'correct' => 0
+                    'correct' => 0,
+                    'attempt' => 0  // 추가
                 ];
             }
             $correctCountReport[$questionType]['total']++;
+
+            if ($answer !== null) {
+                $correctCountReport[$questionType]['attempt']++;
+            }
 
             // 정답 여부 체크
             $isCorrect = $answer === $question['answer'];
@@ -380,6 +385,12 @@ class TestSheet extends Model
 
                 // 3. 리포트 생성
                 $this->generateReport();
+
+                // 3-1. 개인별 주간 리포트 생성
+                $this->generateWeeklyReport();
+
+                // 3-2. 개인별 숙제 주간 리포트 생성
+                $this->generateHomeworkWeeklyReport();
 
                 // 4. 연관된 1차 오답 테스트들도 함께 마감
                 $firstRetryTests = $this->originalWrongAnswerTest()
@@ -558,10 +569,17 @@ class TestSheet extends Model
 
                         $typeStats[$typeName] = [
                             'correct' => $typeCorrect,
-                            'total' => $typeTotal
+                            'total' => $typeTotal,
+                            'attempt' => $typeData['attempt'] ?? 0
                         ];
                     }
                 }
+
+                // 이행도 계산 추가
+                $attemptedCount = count(array_filter($answer->answers, function ($ans) {
+                    return $ans !== null;
+                }));
+                $totalQuestions = count($this->questions);
 
                 // 학생 데이터 저장
                 $studentData[] = [
@@ -572,7 +590,10 @@ class TestSheet extends Model
                     'classroom_id' => $classroom->id,
                     'classroom_name' => $classroom->name,
                     'level' => $classroom->target_level,
-                    'type_scores' => $typeStats
+                    'type_scores' => $typeStats,
+                    'attempted_count' => $attemptedCount,
+                    'total_questions' => $totalQuestions,
+                    'attempt_rate' => $calculatePercentage($attemptedCount, $totalQuestions),
                 ];
 
                 // 반별 점수 집계
@@ -664,15 +685,19 @@ class TestSheet extends Model
                         'total_total' => $scores['total'], // 총 문제 수는 동일
                         'total_average_percentage' => $calculatePercentage($typeAllAvg, $scores['total']),
                         'classroom_rank' => array_search($scores['correct'], $classroomScoreArray) + 1,
-                        'level_rank' => array_search($scores['correct'], $levelScoreArray) + 1
+                        'level_rank' => array_search($scores['correct'], $levelScoreArray) + 1,
+                        'attempt_count' => $scores['attempt'] ?? 0,
+                        'attempt_rate' => $calculatePercentage($scores['attempt'] ?? 0, $scores['total']),
                     ];
                 }
 
                 $report['students'][] = [
+                    'test_sheet_id' => $this->id,  // 추가
                     'rank' => array_search($data['score'], $allScores) + 1,
                     'student_id' => $data['student_id'],
                     'user_id' => $data['user_id'],
                     'student_name' => $data['name'],
+                    'classroom_id' => $data['classroom_id'],
                     'classroom_name' => $data['classroom_name'],
                     'personal_score' => $data['score'],
                     'personal_score_percentage' => $calculatePercentage($data['score'], $totalScore),
@@ -684,7 +709,10 @@ class TestSheet extends Model
                     'total_average_percentage' => $calculatePercentage($totalAverage, $totalScore),
                     'classroom_rank' => array_search($data['score'], $classroomScore) + 1,
                     'level_rank' => array_search($data['score'], $levelScore) + 1,
-                    'question_types' => $questionTypeStats
+                    'question_types' => $questionTypeStats,
+                    'attempted_count' => $data['attempted_count'],
+                    'total_questions' => $data['total_questions'],
+                    'attempt_rate' => $data['attempt_rate'],
                 ];
             }
 
@@ -692,6 +720,193 @@ class TestSheet extends Model
             $this->report = $report['students'];
             return $this->save();
         });
+    }
+
+
+    public function generateWeeklyReport(): void
+    {
+        // 숙제 태그가 있는 경우 제외
+        if (in_array('숙제', $this->tags ?? [])) {
+            return;
+        }
+
+        // 보고서가 없는 경우 제외
+        if (empty($this->report)) {
+            return;
+        }
+
+        $startDate = Carbon::parse($this->start_date);
+        $year = $startDate->year;
+        $week = $startDate->isoWeek();
+
+        // 시험 범위 정리
+        $scopes = collect($this->scopes ?? [])
+            ->map(function ($scope) {
+                return QuestionCategory::find($scope)->name ?? '';
+            })
+            ->filter()
+            ->join(', ');
+
+        foreach ($this->report as $studentReport) {
+
+            $student = Student::find($studentReport['student_id']);
+            if (!$student) continue;
+
+            $classroom = Classroom::find($studentReport['classroom_id'] ?? null);
+
+            if (!$classroom) continue;
+
+            // 테스트 결과 데이터 구성
+            $testData = [
+                'test_sheet_id' => $this->id,  // 추가
+                'date' => $startDate->format('Y-m-d'),
+                'test_name' => $this->name,
+                'scopes' => $scopes,
+                'total' => [
+                    'personal_score' => $studentReport['personal_score'],
+                    'classroom_average' => $studentReport['classroom_average'],
+                    'level_average' => $studentReport['level_average'],
+                    'classroom_rank' => $studentReport['classroom_rank']
+                ],
+                'by_types' => []
+            ];
+
+            // 문제 유형별 상세 데이터 추가
+            foreach ($studentReport['question_types'] as $typeData) {
+                $testData['by_types'][] = [
+                    'name' => $typeData['name'],
+                    'scores' => [
+                        'personal_score' => $typeData['personal_score'],
+                        'classroom_average' => $typeData['classroom_average'],
+                        'level_average' => $typeData['level_average'],
+                        'classroom_rank' => $typeData['classroom_rank']
+                    ]
+                ];
+            }
+
+            // 주간 보고서 조회
+            $weeklyReport = WeeklyTestReport::firstOrNew([
+                'student_id' => $student->id,
+                'classroom_id' => $classroom->id,
+                'year' => $year,
+                'week' => $week,
+                'type' => 'test'
+            ]);
+
+            // 현재 저장된 리포트 데이터 가져오기
+            $reportData = $weeklyReport->report ?? [];
+
+            // 중복 체크 부분
+            $exists = false;
+            foreach ($reportData as $key => $existingTest) {
+                if (($existingTest['test_sheet_id'] ?? null) === $testData['test_sheet_id']) {
+                    // 기존 데이터 업데이트
+                    $reportData[$key] = $testData;
+                    $exists = true;
+                    break;
+                }
+            }
+
+            // 동일한 테스트가 없으면 새로 추가
+            if (!$exists) {
+                $reportData[] = $testData;
+            }
+
+            // 보고서 저장
+            $weeklyReport->report = $reportData;
+            $weeklyReport->save();
+        }
+    }
+
+    public function generateHomeworkWeeklyReport(): void
+    {
+        // 숙제 태그가 없는 경우 제외
+        if (!in_array('숙제', $this->tags ?? [])) {
+            return;
+        }
+
+        // 보고서가 없는 경우 제외
+        if (empty($this->report)) {
+            return;
+        }
+
+        $startDate = Carbon::parse($this->start_date);
+        $year = $startDate->year;
+        $week = $startDate->isoWeek();
+
+        // 시험 범위 정리
+        $scopes = collect($this->scopes ?? [])
+            ->map(function ($scope) {
+                return QuestionCategory::find($scope)->name ?? '';
+            })
+            ->filter()
+            ->join(', ');
+
+        foreach ($this->report as $studentReport) {
+            $student = Student::find($studentReport['student_id']);
+            if (!$student) continue;
+
+            $classroom = Classroom::find($studentReport['classroom_id'] ?? null);
+            if (!$classroom) continue;
+
+            // 숙제 결과 데이터 구성
+            $homeworkData = [
+                'test_sheet_id' => $this->id,  // 추가
+                'date' => $startDate->format('Y-m-d'),
+                'homework_name' => $this->name,
+                'scopes' => $scopes,
+                'total' => [
+                    'correct_count' => $studentReport['personal_score'],
+                    'total_count' => $studentReport['total_questions'],
+                    'attempt_rate' => $studentReport['attempt_rate'],
+                    'correct_rate' => $studentReport['personal_score_percentage']
+                ],
+                'by_types' => []
+            ];
+
+            // 문제 유형별 상세 데이터 추가
+            foreach ($studentReport['question_types'] as $typeData) {
+                $homeworkData['by_types'][] = [
+                    'name' => $typeData['name'],
+                    'correct_count' => $typeData['personal_score'],
+                    'total_count' => $typeData['personal_total'],
+                    'attempt_rate' => $typeData['attempt_rate'],
+                    'correct_rate' => $typeData['personal_score_percentage']
+                ];
+            }
+
+            // 주간 보고서 조회
+            $weeklyReport = WeeklyTestReport::firstOrNew([
+                'student_id' => $student->id,
+                'classroom_id' => $classroom->id,
+                'year' => $year,
+                'week' => $week,
+                'type' => 'homework'
+            ]);
+
+            // 현재 저장된 리포트 데이터 가져오기
+            $reportData = $weeklyReport->report ?? [];
+
+            // 중복 체크 부분
+            $exists = false;
+            foreach ($reportData as $key => $existingHomework) {
+                if (($existingHomework['test_sheet_id'] ?? null) === $homeworkData['test_sheet_id']) {
+                    // 기존 데이터 업데이트
+                    $reportData[$key] = $homeworkData;
+                    $exists = true;
+                    break;
+                }
+            }
+
+            // 동일한 숙제가 없으면 새로 추가
+            if (!$exists) {
+                $reportData[] = $homeworkData;
+            }
+
+            // 보고서 저장
+            $weeklyReport->report = $reportData;
+            $weeklyReport->save();
+        }
     }
 
     public function generateSecondRetryReport(): bool
