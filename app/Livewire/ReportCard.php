@@ -120,7 +120,7 @@ class ReportCard extends Component implements HasForms, HasActions
             Tab::make('Tab 4')
               ->label('주간 학습표')
               ->schema([
-                ViewField::make('view')
+                ViewField::make('tab3')
                   ->viewData([
                     'student' => $this->student,
                     'date_from' => $this->data['date_from'],
@@ -131,21 +131,41 @@ class ReportCard extends Component implements HasForms, HasActions
               ]),
             Tab::make('Tab 1')
               ->label('오답 유형분석표')
+              ->visible(fn() => $this->student->gradeSystem->display_name != '고3')
               ->schema([
-                ViewField::make('view')
-                  ->view('livewire.report-card-tab1'),
+                ViewField::make('tab1')
+                  ->viewData([
+                    'student' => $this->student,
+                    'date_from' => $this->data['date_from'],
+                    'date_until' => $this->data['date_until'],
+                    'classroom_id' => $this->data['classroom_id'],
+                  ])
+                  ->view('livewire.report-card-tab1-wrapper'),
               ]),
             Tab::make('Tab 2')
               ->label('오답 유형분석표 (고3)')
+              ->visible(fn() => $this->student->gradeSystem->display_name == '고3')
               ->schema([
-                ViewField::make('view')
-                  ->view('livewire.report-card-tab1-type2'),
+                ViewField::make('tab1-2')
+                  ->viewData([
+                    'student' => $this->student,
+                    'date_from' => $this->data['date_from'],
+                    'date_until' => $this->data['date_until'],
+                    'classroom_id' => $this->data['classroom_id'],
+                  ])
+                  ->view('livewire.report-card-tab1-type2-wrapper'),
               ]),
             Tab::make('Tab 3')
-              ->label('오답 문풀 문석표')
+              ->label('오답 문풀 분석표')
               ->schema([
-                ViewField::make('view')
-                  ->view('livewire.report-card-tab2'),
+                ViewField::make('tab2')
+                  ->viewData([
+                    'student' => $this->student,
+                    'date_from' => $this->data['date_from'],
+                    'date_until' => $this->data['date_until'],
+                    'classroom_id' => $this->data['classroom_id'],
+                  ])
+                  ->view('livewire.report-card-tab2-wrapper'),
               ]),
           ])
       ]);
@@ -155,8 +175,8 @@ class ReportCard extends Component implements HasForms, HasActions
   public function sendAction(): Action
   {
     return Action::make('send')
-      ->label('SMS / 카톡 발송')
-      ->icon('heroicon-m-envelope')
+      ->label('PDF로 출력')
+      ->icon('heroicon-m-document')
       ->requiresConfirmation();
     // ->action(fn() => dd('adsf'));
   }

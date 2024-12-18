@@ -130,7 +130,6 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
     ]);
   }
 
-
   protected function initializeComments()
   {
     foreach ($this->weeklyReports as $report) {
@@ -139,7 +138,6 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
       $this->comments[$key] = $commentReport->report['comment'] ?? '';
     }
   }
-
 
   protected function formatReport($report)
   {

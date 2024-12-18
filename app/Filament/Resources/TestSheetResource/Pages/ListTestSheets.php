@@ -44,6 +44,7 @@ class ListTestSheets extends ListRecords
                 ->form([
                     Select::make('material_id')
                         ->label('교재 선택')
+                        ->required()
                         ->options(
                             \App\Models\Material::where('type', 'book')->get()->pluck('name', 'id')
                         )

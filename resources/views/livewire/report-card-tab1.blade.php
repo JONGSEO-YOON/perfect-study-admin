@@ -1,243 +1,105 @@
 <div class="w-full">
     <div class="overflow-x-auto rounded-b-[0.8rem]">
-        <table class="min-w-full bg-white">
-            <thead>
-                <tr class="bg-gray-100 text-center">
-                    <th colspan="2" class="px-1.5 py-3  text-sm font-semibold text-gray-700 border-b">7월1주차
-                    </th>
-                    <th class="px-1.5 py-3  text-sm font-semibold text-gray-700 border-b">A반(숙제)
-                    </th>
-                    <th colspan="3" class="px-1.5 py-3  text-sm font-semibold text-gray-700 border-b">레벨1
-                    </th>
-                    <th colspan="3" class="px-1.5 py-3  text-sm font-semibold text-gray-700 border-b">레벨2
-                    </th>
-                    <th colspan="3" class="px-1.5 py-3  text-sm font-semibold text-gray-700 border-b">레벨3
-                    </th>
-                    <th colspan="3" class="px-1.5 py-3  text-sm font-semibold text-gray-700 border-b">레벨4
-                    </th>
-                    <th colspan="3" class="px-1.5 py-3  text-sm font-semibold text-gray-700 border-b">레벨5
-                    </th>
-                </tr>
-                <tr class="bg-gray-50 text-center text-xs text-gray-700">
-                    <th class="px-1 py-3 border-b">대단원</th>
-                    <th class="px-1 py-3 border-b">중단원</th>
-                    <th class="px-1 py-3 border-b">문제유형</th>
-                    <th class="px-1 py-3 border-b">출제문항</th>
-                    <th class="px-1 py-3 border-b">정답개수</th>
-                    <th class="px-1 py-3 border-b">정답률</th>
-                    <th class="px-1 py-3 border-b">출제문항</th>
-                    <th class="px-1 py-3 border-b">정답개수</th>
-                    <th class="px-1 py-3 border-b">정답률</th>
-                    <th class="px-1 py-3 border-b">출제문항</th>
-                    <th class="px-1 py-3 border-b">정답개수</th>
-                    <th class="px-1 py-3 border-b">정답률</th>
-                    <th class="px-1 py-3 border-b">출제문항</th>
-                    <th class="px-1 py-3 border-b">정답개수</th>
-                    <th class="px-1 py-3 border-b">정답률</th>
-                    <th class="px-1 py-3 border-b">출제문항</th>
-                    <th class="px-1 py-3 border-b">정답개수</th>
-                    <th class="px-1 py-3 border-b">정답률</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center">
-                    <td rowspan="7" class="px-1 py-3 border-b">공통수학</td>
-                    <td rowspan="7" class="px-1 py-3 border-b">다항식과연산</td>
-                    <td class="px-1 py-3 border-b">거듭제곱근 계산</td>
-                    <td class="px-1 py-3 border-b">120</td>
-                    <td class="px-1 py-3 border-b">110</td>
-                    <td class="px-1 py-3 border-b">110</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                </tr>
-                @foreach (['거듭제곱근 성질', '지수의 성질', '지수의 연산', '로그의 연산', '로그의 성질', '수학적귀납법'] as $item)
-                    <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center">
-                        <td class="px-1 py-3 border-b">{{ $item }}</td>
-                        <td class="px-1 py-3 border-b">120</td>
-                        <td class="px-1 py-3 border-b">110</td>
-                        <td class="px-1 py-3 border-b">110</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
+        @forelse ($reports as $report)
+            <table class="min-w-full bg-white mb-4">
+                <thead>
+                    <tr class="bg-gray-100 text-center">
+                        <th colspan="2" class="px-1.5 py-3 text-sm font-semibold text-gray-700 border-b">
+                            {{ $report['date'] }}
+                        </th>
+                        <th class="px-1.5 py-3 text-sm font-semibold text-gray-700 border-b">
+                            {{ $report['name'] }}
+                        </th>
+                        @for ($level = 1; $level <= 5; $level++)
+                            <th colspan="3" class="px-1.5 py-3 text-sm font-semibold text-gray-700 border-b">
+                                레벨{{ $level }}
+                            </th>
+                        @endfor
                     </tr>
-                @endforeach
-                <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center">
-                    <td rowspan="2" colspan="2" class="px-1 py-3 border-b">단원별 전체 정답률</td>
-                    <td class="px-1 py-3 border-b">개인</td>
-                    <td class="px-1 py-3 border-b">120</td>
-                    <td class="px-1 py-3 border-b">110</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">120</td>
-                </tr>
-                <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center">
-                    <td class="px-1 py-3 border-b">반별</td>
-                    <td class="px-1 py-3 border-b">120</td>
-                    <td class="px-1 py-3 border-b">110</td>
-                    <td class="px-1 py-3 border-b">110</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                </tr>
-            </tbody>
-        </table>
-        <table class="min-w-full bg-white">
-            <thead>
-                <tr class="bg-gray-100 text-center">
-                    <th colspan="2" class="px-1.5 py-3  text-sm font-semibold text-gray-700 border-b">7월1주차
-                    </th>
-                    <th class="px-1.5 py-3  text-sm font-semibold text-gray-700 border-b">A반(일일테스트)
-                    </th>
-                    <th colspan="3" class="px-1.5 py-3  text-sm font-semibold text-gray-700 border-b">레벨1
-                    </th>
-                    <th colspan="3" class="px-1.5 py-3  text-sm font-semibold text-gray-700 border-b">레벨2
-                    </th>
-                    <th colspan="3" class="px-1.5 py-3  text-sm font-semibold text-gray-700 border-b">레벨3
-                    </th>
-                    <th colspan="3" class="px-1.5 py-3  text-sm font-semibold text-gray-700 border-b">레벨4
-                    </th>
-                    <th colspan="3" class="px-1.5 py-3  text-sm font-semibold text-gray-700 border-b">레벨5
-                    </th>
-                </tr>
-                <tr class="bg-gray-50 text-center text-xs text-gray-700">
-                    <th class="px-1 py-3 border-b">대단원</th>
-                    <th class="px-1 py-3 border-b">중단원</th>
-                    <th class="px-1 py-3 border-b">문제유형</th>
-                    <th class="px-1 py-3 border-b">출제문항</th>
-                    <th class="px-1 py-3 border-b">정답개수</th>
-                    <th class="px-1 py-3 border-b">정답률</th>
-                    <th class="px-1 py-3 border-b">출제문항</th>
-                    <th class="px-1 py-3 border-b">정답개수</th>
-                    <th class="px-1 py-3 border-b">정답률</th>
-                    <th class="px-1 py-3 border-b">출제문항</th>
-                    <th class="px-1 py-3 border-b">정답개수</th>
-                    <th class="px-1 py-3 border-b">정답률</th>
-                    <th class="px-1 py-3 border-b">출제문항</th>
-                    <th class="px-1 py-3 border-b">정답개수</th>
-                    <th class="px-1 py-3 border-b">정답률</th>
-                    <th class="px-1 py-3 border-b">출제문항</th>
-                    <th class="px-1 py-3 border-b">정답개수</th>
-                    <th class="px-1 py-3 border-b">정답률</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center">
-                    <td rowspan="7" class="px-1 py-3 border-b">공통수학</td>
-                    <td rowspan="7" class="px-1 py-3 border-b">다항식과연산</td>
-                    <td class="px-1 py-3 border-b">거듭제곱근 계산</td>
-                    <td class="px-1 py-3 border-b">120</td>
-                    <td class="px-1 py-3 border-b">110</td>
-                    <td class="px-1 py-3 border-b">110</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                </tr>
-                @foreach (['거듭제곱근 성질', '지수의 성질', '지수의 연산', '로그의 연산', '로그의 성질', '수학적귀납법'] as $item)
-                    <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center">
-                        <td class="px-1 py-3 border-b">{{ $item }}</td>
-                        <td class="px-1 py-3 border-b">120</td>
-                        <td class="px-1 py-3 border-b">110</td>
-                        <td class="px-1 py-3 border-b">110</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
-                        <td class="px-1 py-3 border-b">190</td>
+                    <tr class="bg-gray-50 text-center text-xs text-gray-700">
+                        <th class="px-1 py-3 border-b">대단원</th>
+                        <th class="px-1 py-3 border-b">중단원</th>
+                        <th class="px-1 py-3 border-b">문제유형</th>
+                        @for ($level = 1; $level <= 5; $level++)
+                            <th class="px-1 py-3 border-b">출제문항</th>
+                            <th class="px-1 py-3 border-b">정답개수</th>
+                            <th class="px-1 py-3 border-b">정답률</th>
+                        @endfor
                     </tr>
-                @endforeach
-                <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center">
-                    <td rowspan="2" colspan="2" class="px-1 py-3 border-b">단원별 전체 정답률</td>
-                    <td class="px-1 py-3 border-b">개인</td>
-                    <td class="px-1 py-3 border-b">120</td>
-                    <td class="px-1 py-3 border-b">110</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">120</td>
-                </tr>
-                <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center">
-                    <td class="px-1 py-3 border-b">반별</td>
-                    <td class="px-1 py-3 border-b">120</td>
-                    <td class="px-1 py-3 border-b">110</td>
-                    <td class="px-1 py-3 border-b">110</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                    <td class="px-1 py-3 border-b">190</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+                </thead>
+                <tbody>
+                    @php
+                        $currentMajor = '';
+                        $currentMiddle = '';
+                        $majorRowspan = 0;
+                        $middleRowspan = 0;
+                    @endphp
 
+                    @foreach ($report['hierarchy'] as $index => $item)
+                        <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center">
+                            @if ($currentMajor !== $item['major'])
+                                @php
+                                    $currentMajor = $item['major'];
+                                    $majorRowspan = count(
+                                        array_filter($report['hierarchy'], fn($h) => $h['major'] === $currentMajor),
+                                    );
+                                @endphp
+                                <td rowspan="{{ $majorRowspan }}" class="px-1 py-3 border-b">
+                                    {{ $item['major'] }}
+                                </td>
+                            @endif
+
+                            @if ($currentMiddle !== $item['middle'])
+                                @php
+                                    $currentMiddle = $item['middle'];
+                                    $middleRowspan = count(
+                                        array_filter($report['hierarchy'], fn($h) => $h['middle'] === $currentMiddle),
+                                    );
+                                @endphp
+                                <td rowspan="{{ $middleRowspan }}" class="px-1 py-3 border-b">
+                                    {{ $item['middle'] }}
+                                </td>
+                            @endif
+
+                            <td class="px-1 py-3 border-b">{{ $item['type'] }}</td>
+
+                            @for ($level = 1; $level <= 5; $level++)
+                                <td class="px-1 py-3 border-b">{{ $item['levels'][$level]['total'] ?? 0 }}</td>
+                                <td class="px-1 py-3 border-b">{{ $item['levels'][$level]['correct'] ?? 0 }}</td>
+                                <td class="px-1 py-3 border-b">{{ $item['levels'][$level]['percentage'] ?? 0 }}%</td>
+                            @endfor
+                        </tr>
+                    @endforeach
+
+                    <!-- 개인별 전체 정답률 -->
+                    <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center">
+                        <td rowspan="2" colspan="2" class="px-1 py-3 border-b">단원별 전체 정답률</td>
+                        <td class="px-1 py-3 border-b">개인</td>
+                        @for ($level = 1; $level <= 5; $level++)
+                            <td class="px-1 py-3 border-b">{{ $report['personal_level'][$level]['total'] ?? 0 }}</td>
+                            <td class="px-1 py-3 border-b">{{ $report['personal_level'][$level]['correct'] ?? 0 }}</td>
+                            <td class="px-1 py-3 border-b">{{ $report['personal_level'][$level]['percentage'] ?? 0 }}%
+                            </td>
+                        @endfor
+                    </tr>
+
+                    <!-- 반별 전체 정답률 -->
+                    <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center">
+                        <td class="px-1 py-3 border-b">반별</td>
+                        @for ($level = 1; $level <= 5; $level++)
+                            <td class="px-1 py-3 border-b">{{ $report['classroom_level'][$level]['total'] ?? 0 }}</td>
+                            <td class="px-1 py-3 border-b">{{ $report['classroom_level'][$level]['correct'] ?? 0 }}
+                            </td>
+                            <td class="px-1 py-3 border-b">{{ $report['classroom_level'][$level]['percentage'] ?? 0 }}%
+                            </td>
+                        @endfor
+                    </tr>
+                </tbody>
+            </table>
+        @empty
+            <div class="w-full text-center py-4 text-gray-500 col-span-2">
+                해당 기간에 검색된 주간 보고서가 없습니다.
+            </div>
+        @endforelse
+    </div>
 </div>

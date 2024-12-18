@@ -70,6 +70,11 @@ class TestSheet extends Model
         return implode(', ', $grades);
     }
 
+    public function answers()
+    {
+        return $this->hasMany(TestSheetAnswer::class);
+    }
+
     public function userAnswers()
     {
         return $this->hasMany(TestSheetAnswer::class)
@@ -82,7 +87,6 @@ class TestSheet extends Model
             ->where('user_id', auth()->id())
             ->latest();
     }
-
 
     /**
      * 학생에게 해당되는 시험지만 조회하는 스코프
@@ -206,7 +210,6 @@ class TestSheet extends Model
         }
     }
 
-
     public function submitAnswer(array $answers, int $userId, int $elapsedTime = 0): bool
     {
         return DB::transaction(function () use ($answers, $userId, $elapsedTime) {
@@ -304,7 +307,6 @@ class TestSheet extends Model
             'wrongQuestions' => $wrongQuestions
         ];
     }
-
 
     protected function createFirstRetryTest(array $wrongQuestions, int $userId): void
     {
@@ -507,6 +509,34 @@ class TestSheet extends Model
             $targetStudents = $this->getTargetStudents();
             $answers = TestSheetAnswer::where('test_sheet_id', $this->id)->get();
 
+            // 1-2. 반별 답안 수집
+            $classroomAnalyses = [];
+            foreach ($answers as $answer) {
+                $student = $targetStudents->firstWhere('user.id', $answer->user_id);
+                if (!$student) continue;
+
+                $classroom = $this->getRepresentativeClassroom($student);
+                if (!$classroom) continue;
+
+                if (!isset($classroomAnalyses[$classroom->id])) {
+                    $classroomAnalyses[$classroom->id] = [
+                        'classroom_id' => $classroom->id,
+                        'classroom_name' => $classroom->name,
+                        'answers' => [],
+                        'level_analysis' => null  // 나중에 계산될 분석 결과 저장용
+                    ];
+                }
+                $classroomAnalyses[$classroom->id]['answers'][] = $answer;
+            }
+
+            // 2. 각 반별로 레벨 분석 수행
+            foreach ($classroomAnalyses as $classroomId => &$classroomData) {
+                $classroomData['level_analysis'] = $this->generateClassroomLevelAnalysis(
+                    $this->questions,
+                    collect($classroomData['answers'])
+                );
+            }
+
             // 2. 학생별 대표 classroom과 점수 수집
             $studentData = [];
             $classroomScores = [];
@@ -581,6 +611,26 @@ class TestSheet extends Model
                 }));
                 $totalQuestions = count($this->questions);
 
+                // 개인 레벨 분석
+                $personalLevelAnalysis = $this->generateLevelAnalysis(
+                    $this->questions,
+                    $answer->answers
+                );
+
+                // 계층적 분석 (기존 코드)
+                $hierarchicalAnalysis = $this->generateHierarchicalAnalysis(
+                    $this->questions,
+                    $answer->answers
+                );
+
+                // 점수별 분석 추가
+                $scoreAnalysis = $this->generateScoreAnalysis(
+                    $this->questions,
+                    $answer->answers
+                );
+
+                $classroomLevelAnalysis = $classroomAnalyses[$classroom->id]['level_analysis'];
+
                 // 학생 데이터 저장
                 $studentData[] = [
                     'student_id' => $student->id,
@@ -594,6 +644,12 @@ class TestSheet extends Model
                     'attempted_count' => $attemptedCount,
                     'total_questions' => $totalQuestions,
                     'attempt_rate' => $calculatePercentage($attemptedCount, $totalQuestions),
+                    'hierarchical_analysis' => $hierarchicalAnalysis,
+                    'level_analysis' => [
+                        'personal' => $personalLevelAnalysis,
+                        'classroom' => $classroomLevelAnalysis
+                    ],
+                    'score_analysis' => $scoreAnalysis
                 ];
 
                 // 반별 점수 집계
@@ -713,6 +769,9 @@ class TestSheet extends Model
                     'attempted_count' => $data['attempted_count'],
                     'total_questions' => $data['total_questions'],
                     'attempt_rate' => $data['attempt_rate'],
+                    'hierarchical_analysis' => $data['hierarchical_analysis'],
+                    'level_analysis' => $data['level_analysis'],
+                    'score_analysis' => $data['score_analysis']
                 ];
             }
 
@@ -721,7 +780,6 @@ class TestSheet extends Model
             return $this->save();
         });
     }
-
 
     public function generateWeeklyReport(): void
     {
@@ -982,7 +1040,7 @@ class TestSheet extends Model
         });
     }
 
-    protected function getRepresentativeClassroom(Student $student): ?Classroom
+    public function getRepresentativeClassroom(Student $student): ?Classroom
     {
         $classrooms = $student->classrooms;
         if ($classrooms->isEmpty()) {
@@ -1124,5 +1182,258 @@ class TestSheet extends Model
     public function scopeHasQuestions(Builder $query): Builder
     {
         return $query->whereJsonLength('questions', '>', 0);
+    }
+
+    private function generateHierarchicalAnalysis($questions, $answers)
+    {
+        $analysis = [];
+
+        foreach ($questions as $index => $question) {
+            $hierarchy = $this->getQuestionTypeHierarchy($question['question_type_id']);
+            if (!$hierarchy) continue;
+
+            $major = $hierarchy['major'] ?? '기타';
+            $middle = $hierarchy['middle'] ?? '기타';
+            $type = $hierarchy['type'];
+            $level = $question['level'] ?? 1;
+
+            // 초기화
+            if (!isset($analysis[$major])) {
+                $analysis[$major] = [
+                    'name' => $major,
+                    'total' => 0,
+                    'correct' => 0,
+                    'sub_categories' => []
+                ];
+            }
+            if (!isset($analysis[$major]['sub_categories'][$middle])) {
+                $analysis[$major]['sub_categories'][$middle] = [
+                    'name' => $middle,
+                    'total' => 0,
+                    'correct' => 0,
+                    'types' => []
+                ];
+            }
+            if (!isset($analysis[$major]['sub_categories'][$middle]['types'][$type])) {
+                $analysis[$major]['sub_categories'][$middle]['types'][$type] = [
+                    'name' => $type,
+                    'total' => 0,
+                    'correct' => 0,
+                    'levels' => []
+                ];
+            }
+            if (!isset($analysis[$major]['sub_categories'][$middle]['types'][$type]['levels'][$level])) {
+                $analysis[$major]['sub_categories'][$middle]['types'][$type]['levels'][$level] = [
+                    'level' => $level,
+                    'total' => 0,
+                    'correct' => 0,
+                    'percentage' => 0
+                ];
+            }
+
+            // 카운트 증가
+            $isCorrect = $answers[$index] === $question['answer'];
+
+            // 대단원 통계
+            $analysis[$major]['total']++;
+            if ($isCorrect) $analysis[$major]['correct']++;
+
+            // 중단원 통계
+            $analysis[$major]['sub_categories'][$middle]['total']++;
+            if ($isCorrect) $analysis[$major]['sub_categories'][$middle]['correct']++;
+
+            // 문제 유형 통계
+            $analysis[$major]['sub_categories'][$middle]['types'][$type]['total']++;
+            if ($isCorrect) $analysis[$major]['sub_categories'][$middle]['types'][$type]['correct']++;
+
+            // 레벨별 통계
+            $analysis[$major]['sub_categories'][$middle]['types'][$type]['levels'][$level]['total']++;
+            if ($isCorrect) $analysis[$major]['sub_categories'][$middle]['types'][$type]['levels'][$level]['correct']++;
+        }
+
+        // 정답률 계산 및 구조 정리
+        foreach ($analysis as &$major) {
+            $major['percentage'] = $major['total'] > 0 ?
+                round(($major['correct'] / $major['total']) * 100, 2) : 0;
+
+            foreach ($major['sub_categories'] as &$middle) {
+                $middle['percentage'] = $middle['total'] > 0 ?
+                    round(($middle['correct'] / $middle['total']) * 100, 2) : 0;
+
+                foreach ($middle['types'] as &$type) {
+                    $type['percentage'] = $type['total'] > 0 ?
+                        round(($type['correct'] / $type['total']) * 100, 2) : 0;
+
+                    foreach ($type['levels'] as &$level) {
+                        $level['percentage'] = $level['total'] > 0 ?
+                            round(($level['correct'] / $level['total']) * 100, 2) : 0;
+                    }
+                    // 레벨을 숫자순으로 정렬
+                    ksort($type['levels']);
+                }
+            }
+        }
+
+        return $analysis;
+    }
+
+    private function getQuestionTypeHierarchy($typeId)
+    {
+        $category = QuestionCategory::find($typeId);
+        if (!$category) {
+            return null;
+        }
+
+        $parent = $category->parent()->first();
+        $grandParent = $parent ? $parent->parent()->first() : null;
+
+        return [
+            'major' => $grandParent ? $grandParent->name : null,
+            'middle' => $parent ? $parent->name : null,
+            'type' => $category->name,
+        ];
+    }
+
+    private function generateLevelAnalysis($questions, $answers): array
+    {
+        $analysis = [];
+
+        // 레벨별 초기화 (1~5)
+        for ($level = 1; $level <= 5; $level++) {
+            $analysis[$level] = [
+                'level' => $level,
+                'total' => 0,
+                'correct' => 0,
+                'percentage' => 0
+            ];
+        }
+
+        // 문제별 분석
+        foreach ($questions as $index => $question) {
+            $level = $question['level'] ?? 1;
+            $isCorrect = $answers[$index] === $question['answer'];
+
+            $analysis[$level]['total']++;
+            if ($isCorrect) {
+                $analysis[$level]['correct']++;
+            }
+        }
+
+        // 정답률 계산
+        foreach ($analysis as &$levelData) {
+            $levelData['percentage'] = $levelData['total'] > 0
+                ? round(($levelData['correct'] / $levelData['total']) * 100, 2)
+                : 0;
+        }
+
+        return $analysis;
+    }
+
+    private function generateClassroomLevelAnalysis($questions, $classroomAnswers): array
+    {
+        $analysis = [];
+
+        // 레벨별 초기화 (1~5)
+        for ($level = 1; $level <= 5; $level++) {
+            $analysis[$level] = [
+                'level' => $level,
+                'total' => 0,
+                'correct' => 0,
+                'percentage' => 0,
+                'answered_students' => 0  // 해당 레벨 문제를 푼 학생 수
+            ];
+        }
+
+        // 문제별, 학생별 분석
+        foreach ($questions as $index => $question) {
+            $level = $question['level'] ?? 1;
+            $analysis[$level]['total']++;
+
+            foreach ($classroomAnswers as $answer) {
+                if (isset($answer->answers[$index])) {
+                    $analysis[$level]['answered_students']++;
+                    if ($answer->answers[$index] === $question['answer']) {
+                        $analysis[$level]['correct']++;
+                    }
+                }
+            }
+        }
+
+        // 정답률 계산
+        foreach ($analysis as &$levelData) {
+            $totalPossibleAnswers = $levelData['answered_students'];
+            $levelData['percentage'] = $totalPossibleAnswers > 0
+                ? round(($levelData['correct'] / $totalPossibleAnswers) * 100, 2)
+                : 0;
+        }
+
+        return $analysis;
+    }
+
+    private function generateScoreAnalysis($questions, $answers): array
+    {
+        $analysis = [];
+
+        // 문제별로 순회하면서 분석
+        foreach ($questions as $index => $question) {
+            // 기본 점수는 1점, use_score_table이 true인 경우 배점표에서 가져옴
+            $score = $this->use_score_table
+                ? ($this->parsed_score_table['table'][$index + 1] ?? 1)
+                : 1;
+
+            // 계층 정보 가져오기
+            $hierarchy = $this->getQuestionTypeHierarchy($question['question_type_id']);
+            if (!$hierarchy) continue;
+
+            $major = $hierarchy['major'] ?? '기타';
+            $type = $hierarchy['type'];
+            $level = $question['level'] ?? 1;
+
+            // 대단원이 없으면 초기화
+            if (!isset($analysis[$major])) {
+                $analysis[$major] = [
+                    'name' => $major,
+                    'types' => []
+                ];
+            }
+
+            // 유형이 없으면 초기화
+            if (!isset($analysis[$major]['types'][$type])) {
+                $analysis[$major]['types'][$type] = [
+                    'name' => $type,
+                    'scores' => []
+                ];
+            }
+
+            // 점수가 없으면 초기화
+            if (!isset($analysis[$major]['types'][$type]['scores'][$score])) {
+                $analysis[$major]['types'][$type]['scores'][$score] = [
+                    'score' => $score,
+                    'levels' => array_fill(1, 5, [
+                        'total_possible' => 0,    // 획득 가능한 총점
+                        'total_earned' => 0,      // 실제 획득한 총점
+                    ])
+                ];
+            }
+
+            // 정답 여부 확인
+            $isCorrect = $answers[$index] === $question['answer'];
+
+            // 해당 레벨의 통계 업데이트
+            $analysis[$major]['types'][$type]['scores'][$score]['levels'][$level]['total_possible'] += $score;
+            if ($isCorrect) {
+                $analysis[$major]['types'][$type]['scores'][$score]['levels'][$level]['total_earned'] += $score;
+            }
+        }
+
+        // 데이터 정리 (점수별 정렬 등)
+        foreach ($analysis as &$majorData) {
+            foreach ($majorData['types'] as &$typeData) {
+                // 점수를 키로 가진 배열을 점수 순으로 정렬
+                ksort($typeData['scores']);
+            }
+        }
+
+        return $analysis;
     }
 }
