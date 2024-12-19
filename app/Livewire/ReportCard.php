@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Exports\StudentReportCardsExport;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -18,6 +19,7 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Livewire\Component;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReportCard extends Component implements HasForms, HasActions
 {
@@ -185,7 +187,14 @@ class ReportCard extends Component implements HasForms, HasActions
     return Action::make('print')
       ->label('엑셀 출력')
       ->icon('heroicon-m-table-cells')
-      ->requiresConfirmation();
+      ->action(function ($livewire) {
+        return Excel::download(new StudentReportCardsExport([
+          'student' => $this->student,
+          'date_from' => $this->data['date_from'],
+          'date_until' => $this->data['date_until'],
+          'classroom_id' => $this->data['classroom_id'],
+        ]), $this->student->user->name . '학생_성적표.xlsx');
+      });
     // ->action(fn() => dd('adsf'));
   }
 

@@ -15,7 +15,7 @@
                 <table class="w-full bg-white border-t">
                     <thead>
                         <tr class="bg-gray-100 text-center">
-                            <th colspan="6" class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">
+                            <th colspan="8" class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">
                                 {{ $weekReport['week_label'] }} 주간테스트
                             </th>
                         </tr>
@@ -26,6 +26,8 @@
                             <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">반평균</th>
                             <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">레벨평균</th>
                             <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">반별 등수</th>
+                            <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">학년평균</th>
+                            <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">학년 등수</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -41,24 +43,37 @@
                                     @endif
                                     <td class="px-6  py-3 border-b">{{ $type['name'] }}</td>
                                     <td class="px-6 py-3 border-b">
-                                        {{ number_format($type['scores']['personal_score'], 1) }}%</td>
+                                        {{ number_format($type['scores']['personal_score']) }}</td>
                                     <td class="px-6 py-3 border-b">
-                                        {{ number_format($type['scores']['classroom_average'], 1) }}%</td>
+                                        {{ number_format($type['scores']['classroom_average']) }}</td>
                                     <td class="px-6 py-3 border-b">
-                                        {{ number_format($type['scores']['level_average'], 1) }}%</td>
-                                    <td class="px-6 py-3 border-b">{{ $type['scores']['classroom_rank'] }}등</td>
+                                        {{ number_format($type['scores']['level_average']) }}</td>
+                                    <td class="px-6 py-3 border-b">{{ $type['scores']['classroom_rank'] }}등
+                                        ({{ $type['scores']['classroom_students_count'] ?? 0 }})
+                                    </td>
+                                    <td class="px-6 py-3 border-b">
+                                        {{ number_format($type['scores']['grade_average'] ?? 0) }}</td>
+                                    <td class="px-6 py-3 border-b">{{ $type['scores']['grade_rank'] ?? 0 }}등
+                                        ({{ $type['scores']['grade_students_count'] ?? 0 }})</td>
                                 </tr>
                             @endforeach
                             <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center font-semibold bg-gray-50">
                                 <td class="px-6 py-3 border-b">전체</td>
                                 <td class="px-6 py-3 border-b">
-                                    {{ number_format($test['total']['personal_score'], 1) }}%
+                                    {{ number_format($test['total']['personal_score']) }}
                                 </td>
                                 <td class="px-6 py-3 border-b">
-                                    {{ number_format($test['total']['classroom_average'], 1) }}%</td>
-                                <td class="px-6 py-3 border-b">{{ number_format($test['total']['level_average'], 1) }}%
+                                    {{ number_format($test['total']['classroom_average']) }}</td>
+                                <td class="px-6 py-3 border-b">{{ number_format($test['total']['level_average']) }}
                                 </td>
-                                <td class="px-6 py-3 border-b">{{ $test['total']['classroom_rank'] }}등</td>
+                                <td class="px-6 py-3 border-b">{{ $test['total']['classroom_rank'] }}등
+                                    ({{ $test['total']['classroom_students_count'] ?? 0 }})
+                                </td>
+
+                                <td class="px-6 py-3 border-b">
+                                    {{ number_format($test['total']['grade_average'] ?? 0) }}</td>
+                                <td class="px-6 py-3 border-b">{{ $test['total']['grade_rank'] ?? 0 }}등
+                                    ({{ $test['total']['grade_students_count'] ?? 0 }})</td>
                             </tr>
                         @endforeach
                     </tbody>

@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class WrongAnswerTestSheet extends Model
 {
@@ -133,5 +135,63 @@ class WrongAnswerTestSheet extends Model
         static::deleting(function ($wrongAnswerTest) {
             $wrongAnswerTest->testSheet()->delete();
         });
+    }
+
+
+
+    public static function getFormattedReport(
+        Student $student,
+        string $dateFrom,
+        string $dateUntil,
+        int $classroomId
+    ): Collection {
+        if (!$student || !$dateFrom || !$dateUntil || !$classroomId) {
+            return collect();
+        }
+
+        // 날짜 파싱
+        $startDate = explode('/', $dateFrom)[0];
+        $endDate = explode('/', $dateUntil)[1];
+        $startCarbon = Carbon::parse($startDate);
+        $endCarbon = Carbon::parse($endDate);
+
+        // 1. 원본 테스트 시트 조회 (오답 테스트가 아닌 것들)
+        $originalTestSheets = TestSheet::query()
+            ->originals()
+            ->whereBetween('start_date', [$startCarbon, $endCarbon])
+            ->where('status', 'completed')
+            ->orderBy('start_date', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $wrongReports = collect();
+
+        foreach ($originalTestSheets as $testSheet) {
+            // classroom 체크
+            $representativeClassroom = $testSheet->getRepresentativeClassroom($student);
+            if (!$representativeClassroom || $representativeClassroom->id != $classroomId) {
+                continue;
+            }
+
+            // 2차 오답 테스트 조회
+            $secondRetryTest = WrongAnswerTestSheet::where('original_test_sheet_id', $testSheet->id)
+                ->where('user_id', $student->user->id)
+                ->where('retry_count', 2)
+                ->with('testSheet')
+                ->first();
+
+            if ($secondRetryTest && $secondRetryTest->testSheet && $secondRetryTest->testSheet->report) {
+                $wrongReports->push([
+                    'date' => $testSheet->start_date->format('n월j일'),
+                    'name' => $testSheet->name,
+                    'report' => collect($secondRetryTest->testSheet->report)
+                        ->sortBy('original_seq')
+                        ->values()
+                        ->toArray()
+                ]);
+            }
+        }
+
+        return $wrongReports;
     }
 }

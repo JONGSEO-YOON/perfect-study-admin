@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class TestSheet extends Model
@@ -541,6 +542,7 @@ class TestSheet extends Model
             $studentData = [];
             $classroomScores = [];
             $levelScores = [];
+            $gradeScores = [];
             $allScores = [];
 
             // 문제 유형별 점수 저장 배열
@@ -569,7 +571,8 @@ class TestSheet extends Model
                             $typeScores[$typeName] = [
                                 'all' => [],
                                 'classroom' => [],
-                                'level' => []
+                                'level' => [],
+                                'grade' => []
                             ];
                         }
 
@@ -596,6 +599,15 @@ class TestSheet extends Model
                             'correct' => $typeCorrect,
                             'total' => $typeTotal
                         ];
+
+                        if (!isset($typeScores[$typeName]['grade'][$classroom->target_grades[0]])) {
+                            $typeScores[$typeName]['grade'][$classroom->target_grades[0]] = [];
+                        }
+                        $typeScores[$typeName]['grade'][$classroom->target_grades[0]][] = [
+                            'correct' => $typeCorrect,
+                            'total' => $typeTotal
+                        ];
+
 
                         $typeStats[$typeName] = [
                             'correct' => $typeCorrect,
@@ -640,6 +652,7 @@ class TestSheet extends Model
                     'classroom_id' => $classroom->id,
                     'classroom_name' => $classroom->name,
                     'level' => $classroom->target_level,
+                    'grade' => $classroom->target_grades[0] ?? null,
                     'type_scores' => $typeStats,
                     'attempted_count' => $attemptedCount,
                     'total_questions' => $totalQuestions,
@@ -664,10 +677,20 @@ class TestSheet extends Model
                     $levelScores[$level] = [];
                 }
                 $levelScores[$level][] = $score;
+
+                // 학년별 점수 집계
+                $grade = $classroom->target_grades[0] ?? null;
+                if ($grade) {
+                    if (!isset($gradeScores[$grade])) {
+                        $gradeScores[$grade] = [];
+                    }
+                    $gradeScores[$grade][] = $score;
+                }
             }
 
             // 3. 전체 평균 계산
             $totalAverage = $calculateAverage($allScores);
+            $totalStudentsCount = count($allScores);
 
             // 4. 학생별 상세 정보 생성
             $report = ['students' => []];
@@ -684,9 +707,19 @@ class TestSheet extends Model
                 $levelScore = $levelScores[$data['level']] ?? [];
                 rsort($levelScore);
 
+                // 학년별 점수 정렬 및 통계
+                $gradeScore = $gradeScores[$data['grade']] ?? [];
+                rsort($gradeScore);
+
                 // 각 평균 계산
                 $classroomAverage = $calculateAverage($classroomScore);
                 $levelAverage = $calculateAverage($levelScore);
+                $gradeAverage = $calculateAverage($gradeScore);
+
+                // 각 학생 수 계산
+                $classroomStudentsCount = count($classroomScore);
+                $levelStudentsCount = count($levelScore);
+                $gradeStudentsCount = count($gradeScore);
 
                 // 문제 유형별 통계 계산
                 $questionTypeStats = [];
@@ -695,6 +728,8 @@ class TestSheet extends Model
                     $typeAllScores = $typeScores[$type]['all'];
                     $typeClassroomScores = $typeScores[$type]['classroom'][$data['classroom_id']] ?? [];
                     $typeLevelScores = $typeScores[$type]['level'][$data['level']] ?? [];
+                    $typeGradeScores = $typeScores[$type]['grade'][$data['grade']] ?? [];
+
 
                     // 각 범주별 평균 계산
                     $calculateTypeAverage = function ($scoresArray, $total) {
@@ -711,7 +746,7 @@ class TestSheet extends Model
                     $typeAllAvg = $calculateTypeAverage($typeAllScores, $scores['total']);
                     $typeClassroomAvg = $calculateTypeAverage($typeClassroomScores, $scores['total']);
                     $typeLevelAvg = $calculateTypeAverage($typeLevelScores, $scores['total']);
-
+                    $typeGradeAvg = $calculateTypeAverage($typeGradeScores, $scores['total']);
 
                     // 순위 계산을 위한 점수 배열
                     $getScoreArray = function ($scoresArray) {
@@ -725,6 +760,9 @@ class TestSheet extends Model
 
                     $levelScoreArray = $getScoreArray($typeLevelScores);
                     rsort($levelScoreArray);
+
+                    $gradeScoreArray = $getScoreArray($typeGradeScores);
+                    rsort($gradeScoreArray);
 
                     $questionTypeStats[] = [
                         'name' => $type,
@@ -744,6 +782,14 @@ class TestSheet extends Model
                         'level_rank' => array_search($scores['correct'], $levelScoreArray) + 1,
                         'attempt_count' => $scores['attempt'] ?? 0,
                         'attempt_rate' => $calculatePercentage($scores['attempt'] ?? 0, $scores['total']),
+
+                        'grade_average' => $typeGradeAvg,
+                        'grade_average_percentage' => $calculatePercentage($typeGradeAvg, $scores['total']),
+                        'grade_rank' => array_search($scores['correct'], $gradeScoreArray) + 1,
+                        'students_count' => $totalStudentsCount,
+                        'classroom_students_count' => $classroomStudentsCount,
+                        'level_students_count' => $levelStudentsCount,
+                        'grade_students_count' => $gradeStudentsCount
                     ];
                 }
 
@@ -771,7 +817,16 @@ class TestSheet extends Model
                     'attempt_rate' => $data['attempt_rate'],
                     'hierarchical_analysis' => $data['hierarchical_analysis'],
                     'level_analysis' => $data['level_analysis'],
-                    'score_analysis' => $data['score_analysis']
+                    'score_analysis' => $data['score_analysis'],
+
+                    'grade_average' => $gradeAverage,
+                    'grade_average_percentage' => $calculatePercentage($gradeAverage, $totalScore),
+                    'grade_rank' => array_search($data['score'], $gradeScore) + 1,
+
+                    'students_count' => $totalStudentsCount,
+                    'classroom_students_count' => $classroomStudentsCount,
+                    'level_students_count' => $levelStudentsCount,
+                    'grade_students_count' => $gradeStudentsCount
                 ];
             }
 
@@ -817,6 +872,7 @@ class TestSheet extends Model
             // 테스트 결과 데이터 구성
             $testData = [
                 'test_sheet_id' => $this->id,  // 추가
+                'target_group' => $this->target_group,  // 추가: 대상 그룹 정보
                 'date' => $startDate->format('Y-m-d'),
                 'test_name' => $this->name,
                 'scopes' => $scopes,
@@ -824,7 +880,15 @@ class TestSheet extends Model
                     'personal_score' => $studentReport['personal_score'],
                     'classroom_average' => $studentReport['classroom_average'],
                     'level_average' => $studentReport['level_average'],
-                    'classroom_rank' => $studentReport['classroom_rank']
+                    'classroom_rank' => $studentReport['classroom_rank'],
+
+                    'grade_average' => $studentReport['grade_average'],
+                    'level_rank' => $studentReport['level_rank'],
+                    'grade_rank' => $studentReport['grade_rank'],
+                    'students_count' => $studentReport['students_count'],
+                    'classroom_students_count' => $studentReport['classroom_students_count'],
+                    'level_students_count' => $studentReport['level_students_count'],
+                    'grade_students_count' => $studentReport['grade_students_count']
                 ],
                 'by_types' => []
             ];
@@ -837,7 +901,15 @@ class TestSheet extends Model
                         'personal_score' => $typeData['personal_score'],
                         'classroom_average' => $typeData['classroom_average'],
                         'level_average' => $typeData['level_average'],
-                        'classroom_rank' => $typeData['classroom_rank']
+                        'classroom_rank' => $typeData['classroom_rank'],
+
+                        'grade_average' => $typeData['grade_average'],
+                        'level_rank' => $typeData['level_rank'],
+                        'grade_rank' => $typeData['grade_rank'],
+                        'students_count' => $typeData['students_count'],
+                        'classroom_students_count' => $typeData['classroom_students_count'],
+                        'level_students_count' => $typeData['level_students_count'],
+                        'grade_students_count' => $typeData['grade_students_count']
                     ]
                 ];
             }
@@ -1435,5 +1507,186 @@ class TestSheet extends Model
         }
 
         return $analysis;
+    }
+
+
+    public static function getFormattedAnalysisReport(
+        Student $student,
+        string $dateFrom,
+        string $dateUntil,
+        int $classroomId
+    ): Collection {
+        if (!$student || !$dateFrom || !$dateUntil || !$classroomId) {
+            return collect();
+        }
+
+        $startDate = explode('/', $dateFrom)[0];
+        $endDate = explode('/', $dateUntil)[1];
+        $startCarbon = Carbon::parse($startDate);
+        $endCarbon = Carbon::parse($endDate);
+
+        // 조건에 맞는 테스트 시트 조회
+        $testSheets = static::query()
+            ->where('status', 'completed')
+            ->originals()
+            ->whereHas('answers', function ($query) use ($student) {
+                $query->where('user_id', $student->user->id);
+            })
+            ->whereBetween('start_date', [$startCarbon, $endCarbon])
+            ->orderBy('start_date', 'asc')
+            ->get()
+            ->filter(function ($testSheet) use ($student, $classroomId) {
+                $classroom = $testSheet->getRepresentativeClassroom($student);
+                return $classroom && $classroom->id == $classroomId;
+            });
+
+        // 테스트 시트별로 리포트 데이터 구성
+        return $testSheets->map(function ($testSheet) use ($student) {
+            $report = collect($testSheet->report)
+                ->firstWhere('student_id', $student->id);
+
+            if (!$report) return null;
+
+            $weekDate = Carbon::parse($testSheet->start_date);
+            $week_label = sprintf(
+                '%d년 %d월 %d주차',
+                $weekDate->format('y'),
+                $weekDate->format('n'),
+                floor(($weekDate->format('d') - 1) / 7) + 1
+            );
+
+            return [
+                'test_sheet_id' => $testSheet->id,
+                'date' => $week_label,
+                'name' => $weekDate->format('m월 d일') . ' ' . $testSheet->name,
+                'class_name' => $report['classroom_name'],
+                'hierarchy' => static::transformHierarchyData($report['hierarchical_analysis'] ?? []),
+                'personal_level' => $report['level_analysis']['personal'] ?? [],
+                'classroom_level' => $report['level_analysis']['classroom'] ?? []
+            ];
+        })->filter(function ($report) {
+            return $report['hierarchy'] && $report['personal_level'] && $report['classroom_level'];
+        })->values();
+    }
+
+    protected static function transformHierarchyData($hierarchicalData): array
+    {
+        $result = [];
+
+        foreach ($hierarchicalData as $major => $majorData) {
+            foreach ($majorData['sub_categories'] as $middle => $middleData) {
+                foreach ($middleData['types'] as $type => $typeData) {
+                    $levelData = [];
+                    foreach ($typeData['levels'] as $level => $data) {
+                        $levelData[$level] = [
+                            'total' => $data['total'],
+                            'correct' => $data['correct'],
+                            'percentage' => $data['percentage']
+                        ];
+                    }
+
+                    $result[] = [
+                        'major' => $majorData['name'],
+                        'middle' => $middleData['name'],
+                        'type' => $typeData['name'],
+                        'levels' => $levelData
+                    ];
+                }
+            }
+        }
+
+        return $result;
+    }
+
+
+    public static function getFormattedHighschoolAnalysisReport(
+        Student $student,
+        string $dateFrom,
+        string $dateUntil,
+        int $classroomId
+    ): Collection {
+        if (!$student || !$dateFrom || !$dateUntil || !$classroomId) {
+            return collect();
+        }
+
+        $startDate = explode('/', $dateFrom)[0];
+        $endDate = explode('/', $dateUntil)[1];
+        $startCarbon = Carbon::parse($startDate);
+        $endCarbon = Carbon::parse($endDate);
+
+        // 조건에 맞는 테스트 시트 조회
+        $testSheets = static::query()
+            ->where('status', 'completed')
+            ->originals()
+            ->whereHas('answers', function ($query) use ($student) {
+                $query->where('user_id', $student->user->id);
+            })
+            ->whereBetween('start_date', [$startCarbon, $endCarbon])
+            ->orderBy('start_date', 'asc')
+            ->get()
+            ->filter(function ($testSheet) use ($student, $classroomId) {
+                $classroom = $testSheet->getRepresentativeClassroom($student);
+                return $classroom && $classroom->id == $classroomId;
+            });
+
+        // 테스트 시트별로 리포트 데이터 구성
+        return $testSheets->map(function ($testSheet) use ($student) {
+            $report = collect($testSheet->report)
+                ->firstWhere('student_id', $student->id);
+
+            if (!$report || !isset($report['score_analysis'])) return null;
+
+            $weekDate = Carbon::parse($testSheet->start_date);
+            $week_label = sprintf(
+                '%d년 %d월 %d주차',
+                $weekDate->format('y'),
+                $weekDate->format('n'),
+                floor(($weekDate->format('d') - 1) / 7) + 1
+            );
+
+            return [
+                'date' => $week_label,
+                'name' => $weekDate->format('m월 d일') . ' ' . $testSheet->name,
+                'class_name' => $report['classroom_name'],
+                'type' => in_array('숙제', $testSheet->tags ?? []) ? '숙제' : '일일테스트',
+                'score_data' => static::transformHighschoolScoreData($report['score_analysis'])
+            ];
+        })->filter()->values();
+    }
+
+    protected static function transformHighschoolScoreData($scoreAnalysis): array
+    {
+        $result = [];
+
+        foreach ($scoreAnalysis as $major => $majorData) {
+            $majorItems = [];
+
+            foreach ($majorData['types'] as $type => $typeData) {
+                $scoreItems = [];
+
+                // 모든 점수에 대해 (2,3,4점)
+                foreach ($typeData['scores'] as $scoreData) {
+                    $score = $scoreData['score'];
+                    $levels = $scoreData['levels'];
+
+                    // 각 레벨별 점수를 배열에 저장
+                    for ($level = 1; $level <= 5; $level++) {
+                        $scoreItems[$score][$level] = $levels[$level]['total_earned'] ?? 0;
+                    }
+                }
+
+                $majorItems[] = [
+                    'type' => $type,
+                    'scores' => $scoreItems
+                ];
+            }
+
+            $result[] = [
+                'major' => $major,
+                'items' => $majorItems
+            ];
+        }
+
+        return $result;
     }
 }

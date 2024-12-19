@@ -28,7 +28,7 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
   public $dateUntil = null;
   public $weeklyReports = [];
   public $arguments = [];
-  public $comments = [];  // 주차별 코멘트를 저장할 배열
+  public $comments = [];
 
   public function mount()
   {
@@ -43,91 +43,12 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
 
   protected function getWeeklyReports()
   {
-    if (!$this->student || !$this->classroomId || !$this->dateFrom || !$this->dateUntil) {
-      return collect();
-    }
-
-    // 날짜 문자열을 Carbon 인스턴스로 변환
-    $startDate = explode('/', $this->dateFrom)[0];
-    $endDate = explode('/', $this->dateUntil)[1];
-    $startCarbon = Carbon::parse($startDate);
-    $endCarbon = Carbon::parse($endDate);
-
-    // 시작 주와 끝 주 계산
-    $startYear = $startCarbon->year;
-    $startWeek = $startCarbon->isoWeek();
-    $endYear = $endCarbon->year;
-    $endWeek = $endCarbon->isoWeek();
-
-    // 모든 보고서 조회
-    $reports = WeeklyTestReport::where('student_id', $this->student->id)
-      ->where('classroom_id', $this->classroomId)
-      ->where(function ($query) use ($startYear, $startWeek, $endYear, $endWeek) {
-        if ($startYear === $endYear) {
-          $query->where('year', $startYear)
-            ->whereBetween('week', [$startWeek, $endWeek]);
-        } else {
-          $query->where(function ($q) use ($startYear, $startWeek, $endYear, $endWeek) {
-            $q->where(function ($q1) use ($startYear, $startWeek) {
-              $q1->where('year', $startYear)
-                ->where('week', '>=', $startWeek);
-            })->orWhere(function ($q2) use ($endYear, $endWeek) {
-              $q2->where('year', $endYear)
-                ->where('week', '<=', $endWeek);
-            });
-          });
-        }
-      })
-      ->get()
-      ->groupBy(function ($report) {
-        return $report->year . '-' . $report->week;
-      });
-
-    // 모든 주차 생성
-    $allWeeks = collect();
-    $currentDate = $startCarbon->copy();
-
-    while ($currentDate <= $endCarbon) {
-      $year = $currentDate->year;
-      $week = $currentDate->isoWeek();
-      $key = $year . '-' . $week;
-
-      if (!$allWeeks->has($key)) {
-        $weekDate = Carbon::now()->setISODate($year, $week, 1);
-        $weekReports = $reports->get($key, collect());
-
-        $allWeeks[$key] = [
-          'year' => $year,
-          'week' => $week,
-          'week_label' => sprintf(
-            '%d년 %d월 %d주차',
-            $weekDate->format('y'),
-            $weekDate->format('n'),
-            floor(($weekDate->format('d') - 1) / 7) + 1
-          ),
-          'week_range' => $this->getWeekRange($year, $week),
-          'test_report' => $this->formatReport($weekReports->firstWhere('type', 'test')),
-          'homework_report' => $this->formatReport($weekReports->firstWhere('type', 'homework')),
-          'attendance_report' => $this->formatReport($weekReports->firstWhere('type', 'attendance')),
-          'comment_report' => $weekReports->firstWhere('type', 'comment')?->report['comment'] ?? ''
-        ];
-      }
-
-      $currentDate->addWeek();
-    }
-
-    return $allWeeks->sortBy(['year', 'week'])->values();
-  }
-
-  protected function getWeeklyCommentReport(int $year, int $week): WeeklyTestReport
-  {
-    return WeeklyTestReport::firstOrNew([
-      'student_id' => $this->student->id,
-      'classroom_id' => $this->classroomId,
-      'year' => $year,
-      'week' => $week,
-      'type' => 'comment'
-    ]);
+    return WeeklyTestReport::getFormattedWeeklyReport(
+      $this->student,
+      $this->dateFrom,
+      $this->dateUntil,
+      $this->classroomId
+    );
   }
 
   protected function initializeComments()
@@ -139,42 +60,15 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
     }
   }
 
-  protected function formatReport($report)
+  protected function getWeeklyCommentReport(int $year, int $week): WeeklyTestReport
   {
-    if (!$report) {
-      return null;
-    }
-
-    if ($report->type === 'attendance') {
-      return collect($report->report)
-        ->sortBy('date')
-        ->values()
-        ->all();
-    }
-
-    return collect($report->report)
-      ->sortBy('test_sheet_id')
-      ->map(function ($test) {
-        return [
-          'date' => $test['date'],
-          'test_sheet_id' => $test['test_sheet_id'] ?? 0,
-          'name' => $test[isset($test['test_name']) ? 'test_name' : 'homework_name'],
-          'scopes' => $test['scopes'],
-          'total' => $test['total'],
-          'by_types' => collect($test['by_types'])->sortBy('name')->values()->all()
-        ];
-      })
-      ->values()
-      ->all();
-  }
-
-  protected function getWeekRange($year, $week)
-  {
-    $date = Carbon::now();
-    $date->setISODate($year, $week);
-    $startOfWeek = $date->startOfWeek()->format('Y-m-d');
-    $endOfWeek = $date->endOfWeek()->format('Y-m-d');
-    return "$startOfWeek ~ $endOfWeek";
+    return WeeklyTestReport::firstOrNew([
+      'student_id' => $this->student->id,
+      'classroom_id' => $this->classroomId,
+      'year' => $year,
+      'week' => $week,
+      'type' => 'comment'
+    ]);
   }
 
   #[On('reportFormChange')]

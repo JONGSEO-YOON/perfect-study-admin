@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class WeeklyTestReport extends Model
 {
@@ -19,5 +21,125 @@ class WeeklyTestReport extends Model
         return [
             'report' => 'array',
         ];
+    }
+
+    public static function getFormattedWeeklyReport(
+        Student $student,
+        string $dateFrom,
+        string $dateUntil,
+        int $classroomId
+    ): Collection {
+        if (!$student || !$classroomId || !$dateFrom || !$dateUntil) {
+            return collect();
+        }
+
+        // 날짜 문자열을 Carbon 인스턴스로 변환
+        $startDate = explode('/', $dateFrom)[0];
+        $endDate = explode('/', $dateUntil)[1];
+        $startCarbon = Carbon::parse($startDate);
+        $endCarbon = Carbon::parse($endDate);
+
+        // 시작 주와 끝 주 계산
+        $startYear = $startCarbon->year;
+        $startWeek = $startCarbon->isoWeek();
+        $endYear = $endCarbon->year;
+        $endWeek = $endCarbon->isoWeek();
+
+        // 모든 보고서 조회
+        $reports = static::where('student_id', $student->id)
+            ->where('classroom_id', $classroomId)
+            ->where(function ($query) use ($startYear, $startWeek, $endYear, $endWeek) {
+                if ($startYear === $endYear) {
+                    $query->where('year', $startYear)
+                        ->whereBetween('week', [$startWeek, $endWeek]);
+                } else {
+                    $query->where(function ($q) use ($startYear, $startWeek, $endYear, $endWeek) {
+                        $q->where(function ($q1) use ($startYear, $startWeek) {
+                            $q1->where('year', $startYear)
+                                ->where('week', '>=', $startWeek);
+                        })->orWhere(function ($q2) use ($endYear, $endWeek) {
+                            $q2->where('year', $endYear)
+                                ->where('week', '<=', $endWeek);
+                        });
+                    });
+                }
+            })
+            ->get()
+            ->groupBy(function ($report) {
+                return $report->year . '-' . $report->week;
+            });
+
+        // 모든 주차 생성
+        $allWeeks = collect();
+        $currentDate = $startCarbon->copy();
+
+        while ($currentDate <= $endCarbon) {
+            $year = $currentDate->year;
+            $week = $currentDate->isoWeek();
+            $key = $year . '-' . $week;
+
+            if (!$allWeeks->has($key)) {
+                $weekDate = Carbon::now()->setISODate($year, $week, 1);
+                $weekReports = $reports->get($key, collect());
+
+                $allWeeks[$key] = [
+                    'year' => $year,
+                    'week' => $week,
+                    'week_label' => sprintf(
+                        '%d년 %d월 %d주차',
+                        $weekDate->format('y'),
+                        $weekDate->format('n'),
+                        floor(($weekDate->format('d') - 1) / 7) + 1
+                    ),
+                    'week_range' => static::getWeekRange($year, $week),
+                    'test_report' => static::formatReport($weekReports->firstWhere('type', 'test')),
+                    'homework_report' => static::formatReport($weekReports->firstWhere('type', 'homework')),
+                    'attendance_report' => static::formatReport($weekReports->firstWhere('type', 'attendance')),
+                    'comment_report' => $weekReports->firstWhere('type', 'comment')?->report['comment'] ?? ''
+                ];
+            }
+
+            $currentDate->addWeek();
+        }
+
+        return $allWeeks->sortBy(['year', 'week'])->values();
+    }
+
+    protected static function getWeekRange($year, $week): string
+    {
+        $date = Carbon::now();
+        $date->setISODate($year, $week);
+        $startOfWeek = $date->startOfWeek()->format('Y-m-d');
+        $endOfWeek = $date->endOfWeek()->format('Y-m-d');
+        return "$startOfWeek ~ $endOfWeek";
+    }
+
+    protected static function formatReport($report): ?array
+    {
+        if (!$report) {
+            return null;
+        }
+
+        if ($report->type === 'attendance') {
+            return collect($report->report)
+                ->sortBy('date')
+                ->values()
+                ->all();
+        }
+
+        return collect($report->report)
+            ->sortBy('test_sheet_id')
+            ->map(function ($test) {
+                return [
+                    'date' => $test['date'],
+                    'test_sheet_id' => $test['test_sheet_id'] ?? 0,
+                    'name' => $test[isset($test['test_name']) ? 'test_name' : 'homework_name'],
+                    'scopes' => $test['scopes'],
+                    'total' => $test['total'],
+                    'by_types' => collect($test['by_types'])->sortBy('name')->values()->all()
+                ];
+            })
+            ->values()
+            ->all();
     }
 }
