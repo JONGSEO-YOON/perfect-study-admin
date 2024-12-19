@@ -3,9 +3,11 @@
 use App\Http\Controllers\JusoPopupController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserWebController;
+use App\Livewire\StudentReportCardPrint;
 use App\Livewire\TestSheetQuestionResult;
 use App\Livewire\TestSheetResult;
 use App\Livewire\TestSheetViewer;
+
 
 Route::get('/login', [UserWebController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [UserWebController::class, 'login']);
@@ -29,3 +31,7 @@ Route::get('/preview-test-sheet', function () {
 
 Route::get('/juso-popup', [JusoPopupController::class, 'show']);
 Route::post('/juso-popup', [JusoPopupController::class, 'show']);
+
+
+Route::get('/student/report-card/print', StudentReportCardPrint::class)
+    ->name('student.report-card.print');

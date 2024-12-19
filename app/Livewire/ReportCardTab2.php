@@ -44,6 +44,10 @@ class ReportCardTab2 extends Component implements HasActions, HasForms
 
   public function loadWrongReports()
   {
+    if (!$this->classroomId) {
+      $this->wrongReports = collect();
+      return;
+    }
     $this->wrongReports = WrongAnswerTestSheet::getFormattedReport(
       $this->student,
       $this->dateFrom,

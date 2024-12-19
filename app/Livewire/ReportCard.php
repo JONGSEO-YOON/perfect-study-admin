@@ -173,18 +173,28 @@ class ReportCard extends Component implements HasForms, HasActions
       ]);
   }
 
-
-  public function sendAction(): Action
-  {
-    return Action::make('send')
-      ->label('PDF로 출력')
-      ->icon('heroicon-m-document')
-      ->requiresConfirmation();
-    // ->action(fn() => dd('adsf'));
-  }
   public function printAction(): Action
   {
     return Action::make('print')
+      ->label('PDF로 출력')
+      ->icon('heroicon-m-document')
+      ->url(function () {
+        $params = http_build_query([
+          'student_id' => $this->student->id,
+          'classroom_id' => $this->data['classroom_id'],
+          'date_from' => $this->data['date_from'],
+          'date_until' => $this->data['date_until'],
+        ]);
+        $url = route('student.report-card.print') . '?' . $params;
+        return $url;
+      })
+      ->openUrlInNewTab();
+
+    // ->action(fn() => dd('adsf'));
+  }
+  public function excelAction(): Action
+  {
+    return Action::make('excel')
       ->label('엑셀 출력')
       ->icon('heroicon-m-table-cells')
       ->action(function ($livewire) {
@@ -195,7 +205,6 @@ class ReportCard extends Component implements HasForms, HasActions
           'classroom_id' => $this->data['classroom_id'],
         ]), $this->student->user->name . '학생_성적표.xlsx');
       });
-    // ->action(fn() => dd('adsf'));
   }
 
   public function initAction() {}

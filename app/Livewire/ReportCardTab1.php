@@ -37,10 +37,15 @@ class ReportCardTab1 extends Component implements HasActions, HasForms
     $this->dateFrom = $data['date_from'];
     $this->dateUntil = $data['date_until'];
     $this->classroomId = $data['classroom_id'];
+    $this->loadReports();
   }
 
   private function loadReports()
   {
+    if (!$this->classroomId) {
+      $this->reports = collect();
+      return;
+    }
     $this->reports = TestSheet::getFormattedAnalysisReport(
       $this->student,
       $this->dateFrom,

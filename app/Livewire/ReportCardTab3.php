@@ -26,6 +26,7 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
   public $classroomId = null;
   public $dateFrom = null;
   public $dateUntil = null;
+  public $readonly = false;
   public $weeklyReports = [];
   public $arguments = [];
   public $comments = [];
@@ -43,6 +44,9 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
 
   protected function getWeeklyReports()
   {
+    if (!$this->classroomId) {
+      return collect();
+    }
     return WeeklyTestReport::getFormattedWeeklyReport(
       $this->student,
       $this->dateFrom,
