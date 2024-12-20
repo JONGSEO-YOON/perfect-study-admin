@@ -69,9 +69,13 @@ class CreateTestSheets extends Page implements HasForms, HasActions
 
     public $questions = null;
 
+    public $initialPrintLayout = [];
+
     public $summary = null;
 
     public $state = "question-selection";
+
+    public $printLayout = null;
 
     public $data = [
         'name' => null,
@@ -87,6 +91,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         'end_date' => null,
         'template' => 'default',
         'split' => 'default',
+        'full_page_split' => 'default',
         'selected_page_index' => -1,
         'title' => '수학 영역(미적분)',
         'sub_title' => '2023년 대학수학능력시험 실전 모의고사 22회',
@@ -260,7 +265,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                             ]);
                         })
                         ->required(),
-
+                    Hidden::make('full_page_split'),
                     ToggleButtons::make('split')
                         ->label(function (Get $get) {
                             $page = $get('selected_page_index');
@@ -285,6 +290,9 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                         ->columnStart(1)
                         ->live()
                         ->afterStateUpdated(function (Get $get, Set $set) {
+                            if ($get('selected_page_index') == -1) {
+                                $set('full_page_split', $get('split'));
+                            }
                             $this->dispatch('onSplitChanged', [
                                 'layoutMode' => $get('split'),
                                 'pageIndex' => $get('selected_page_index'),
@@ -358,6 +366,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             );
             $this->data['tags'] = collect($this->data['tags'])->values()->toArray();
             $this->data['tags_toggle'] = '';
+            $this->initialPrintLayout = $testSheet->print_layout ?? [];
         } else {
             $this->questions = self::selectRandomQuestions($query);
             $this->data = array_merge(
@@ -365,6 +374,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                 $query
             );
         }
+        $this->data['full_page_split'] = $this->data['split'];
 
         $this->summary = self::getDistributionSummary($this->questions);
         $this->id = $id;
@@ -829,11 +839,13 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         $pageIndex = $data['pageIndex'];
         $this->data['selected_page_index'] = $pageIndex;
         $this->data['split'] = $data['layoutMode'];
-        //if ($pageIndex === -1) {
-        //    $this->data['selected_page_index'] = $pageIndex;
-        //} else {
-        //    $this->data['start_date'] = null;
-        //}
+    }
+
+    #[On('submitWithLayout')]
+    public function handleSubmitWithLayout($layoutData)
+    {
+        $this->printLayout = $layoutData;
+        $this->createTestSheet();
     }
 
     public function createTestSheet()
@@ -879,7 +891,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             'start_date' => $formData['start_date'],
             'end_date' => $formData['end_date'],
             'template' => $formData['template'],
-            'split' => $formData['split'],
+            'split' => $formData['full_page_split'],
             'title' => $formData['title'],
             'sub_title' => $formData['sub_title'],
             'questions' => $questionsData,
@@ -888,6 +900,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             'use_score_table' => $formData['use_score_table'],
             'score_table' => $formData['score_table'],
             'parsed_score_table' => $parsed_score_table,
+            'print_layout' => $this->printLayout,
         ];
         if ($this->test_sheet_id) {
             TestSheet::find($this->test_sheet_id)->update($upsertData);

@@ -9,7 +9,6 @@ const props = defineProps({
 });
 
 const { wire, mingleData } = props;
-console.log(props);
 const scale = ref(props.mingleData.scale);
 
 const selectedIndex = ref(null);
@@ -113,6 +112,30 @@ const calculateImageHeight = (img, question) => {
 // 페이지의 레이아웃 모드를 가져오는 함수
 const getPageLayoutMode = (pageIndex) => {
     return pageLayoutModes.value.get(pageIndex) || globalLayoutMode.value;
+};
+
+// const reconstructPageLayoutModes = new Map(
+//     layoutData.pageLayoutModes.map((item) => [item.pageNumber, item.mode])
+// );
+// const reconstructMarginRights = new Map(
+//     layoutData.marginRights.map((item) => [item.pageNumber, item.margin])
+// );
+
+const getPrintLayoutData = () => {
+    return {
+        globalLayoutMode: globalLayoutMode.value,
+        pageLayoutModes: Array.from(pageLayoutModes.value).map(
+            ([key, value]) => ({
+                pageNumber: key,
+                mode: value,
+            })
+        ),
+        manualSplitPoints: manualSplitPoints.value,
+        marginRights: Array.from(marginRights.value).map(([key, value]) => ({
+            pageNumber: key,
+            margin: value,
+        })),
+    };
 };
 
 // 페이지의 레이아웃 모드를 설정하는 함수
@@ -448,6 +471,27 @@ const onPageSelected = (data) => {
         "*"
     );
 };
+const restorePrintLayout = (layoutData) => {
+    if (!layoutData) return;
+
+    console.log(layoutData);
+
+    // 전역 레이아웃 모드 복원
+    globalLayoutMode.value = layoutData.globalLayoutMode;
+
+    // 페이지별 레이아웃 모드 복원
+    pageLayoutModes.value = new Map(
+        layoutData.pageLayoutModes.map((item) => [item.pageNumber, item.mode])
+    );
+
+    // 수동 분할 지점 복원
+    manualSplitPoints.value = layoutData.manualSplitPoints;
+
+    // 여백 설정 복원
+    marginRights.value = new Map(
+        layoutData.marginRights.map((item) => [item.pageNumber, item.margin])
+    );
+};
 
 // watch selectedIndex
 watch(selectedIndex, () => {
@@ -483,7 +527,6 @@ onMounted(() => {
                     marginRights.value.set(question.id, margin);
                 });
             });
-            console.log(marginRights.value);
             await calculatePages();
             calculateExplanationPages();
         } else if (event.data.type === "onSplitChanged") {
@@ -500,6 +543,16 @@ onMounted(() => {
             const _subTitle = event.data.data.subTitle;
             title.value = _title;
             subTitle.value = _subTitle;
+        } else if (event.data.type === "getPrintLayout") {
+            window.parent.postMessage(
+                {
+                    type: "printLayoutData",
+                    data: JSON.parse(JSON.stringify(getPrintLayoutData())),
+                },
+                "*"
+            );
+        } else if (event.data.type === "restorePrintLayout") {
+            restorePrintLayout(event.data.data);
         }
     });
     document.addEventListener("mousemove", handleDrag);

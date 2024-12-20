@@ -1,11 +1,21 @@
 @script
     <script>
         window.questions = @json($this->questions);
+        window.initialPrintLayout = @json($this->initialPrintLayout);
+
         window.onPreviewLoaded = async () => {
-            document.getElementById('preview').contentWindow.postMessage({
+            const preview = document.getElementById('preview').contentWindow;
+            if (window.initialPrintLayout) {
+                preview.postMessage({
+                    type: 'restorePrintLayout',
+                    data: window.initialPrintLayout
+                }, '*');
+            }
+            preview.postMessage({
                 type: 'setQuestions',
                 questions: window.questions
             }, '*');
+
         }
         Livewire.on('onQuestionUpdated', (data) => {
             window.questions = Object.values(data[0]);
@@ -17,7 +27,6 @@
             }, '*');
         });
         Livewire.on('onPageMetaChanged', (data) => {
-            console.log(data[0]);
             document.getElementById('preview').contentWindow.postMessage({
                 type: 'onPageMetaChanged',
                 data: data[0]
@@ -27,6 +36,10 @@
         window.addEventListener('message', (event) => {
             if (event.data.type === 'onPageSelected') {
                 Livewire.dispatch('onPageSelected', event.data);
+            } else if (event.data.type === 'printLayoutData') {
+                Livewire.dispatch('submitWithLayout', {
+                    layoutData: event.data.data
+                });
             }
         });
     </script>
@@ -197,7 +210,12 @@
             </div>
             <div class="w-[1350px] flex flex-row gap-x-4">
                 <div class="flex-1 !grow-[15]">
-                    <form id="test-sheet-form" wire:submit="createTestSheet">
+                    <form id="test-sheet-form"
+                        @submit.prevent="
+                    $event.target.disabled = true;
+                    let preview = document.getElementById('preview');
+                    preview.contentWindow.postMessage({ type: 'getPrintLayout' }, '*');
+                  ">
                         {{ $this->form }}
                     </form>
                 </div>

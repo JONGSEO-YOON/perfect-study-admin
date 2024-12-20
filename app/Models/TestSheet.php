@@ -32,6 +32,7 @@ class TestSheet extends Model
         'report' => 'array',
         'start_date' => 'datetime',
         'end_date' => 'datetime',
+        'print_layout' => 'array',
     ];
 
     // 강의를 등록한 사용자와의 관계

@@ -144,7 +144,6 @@
                     const per_page = this.dataset.perPage;
                     const type = this.dataset.type;
 
-                    console.log(this.dataset)
                     fetch(`/?page=${nextPage}&per_page=${per_page}&type=${type}`, {
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest'
