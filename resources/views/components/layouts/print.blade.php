@@ -73,12 +73,7 @@
 </head>
 
 <body>
-    <div class="no-print" style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
-        <button onclick="window.print()"
-            style="font-size: 16px !important; padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
-            인쇄하기
-        </button>
-    </div>
+
 
     {{ $slot }}
 

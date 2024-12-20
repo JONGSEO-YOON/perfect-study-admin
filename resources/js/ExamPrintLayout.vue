@@ -10,6 +10,7 @@ const props = defineProps({
 
 const { wire, mingleData } = props;
 const scale = ref(props.mingleData.scale);
+const readonly = ref(props.mingleData.readonly);
 
 const selectedIndex = ref(null);
 const subTitle = ref("2023년 대학수학능력시험 실전 모의고사 22회");
@@ -135,6 +136,8 @@ const getPrintLayoutData = () => {
             pageNumber: key,
             margin: value,
         })),
+        title: title.value,
+        subTitle: subTitle.value,
     };
 };
 
@@ -474,7 +477,7 @@ const onPageSelected = (data) => {
 const restorePrintLayout = (layoutData) => {
     if (!layoutData) return;
 
-    console.log(layoutData);
+    if (Object.keys(layoutData).length === 0) return;
 
     // 전역 레이아웃 모드 복원
     globalLayoutMode.value = layoutData.globalLayoutMode;
@@ -491,6 +494,11 @@ const restorePrintLayout = (layoutData) => {
     marginRights.value = new Map(
         layoutData.marginRights.map((item) => [item.pageNumber, item.margin])
     );
+
+    title.value = layoutData.title ?? "수학 영역(미적분)";
+
+    subTitle.value =
+        layoutData.subTitle ?? "2023년 대학수학능력시험 실전 모의고사 22회";
 };
 
 // watch selectedIndex
@@ -561,7 +569,12 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="exam-container">
+    <div
+        class="exam-container"
+        :class="{
+            'pointer-events-none': readonly,
+        }"
+    >
         <div
             v-for="(page, pageIndex) in pages"
             :key="pageIndex"
@@ -858,14 +871,15 @@ onMounted(() => {
             </div>
         </div>
         <div
-            class="flex items-center justify-center font-semibold text-gray-700 text-xl flex-row gap-x-4"
+            class="flex no-print items-center justify-center font-semibold text-gray-700 text-xl flex-row gap-x-4"
         >
             <div class="flex-1 h-px bg-gray-500"></div>
             해설 영역 입니다.
             <div class="flex-1 h-px bg-gray-500"></div>
         </div>
         <div
-            class="flex items-center justify-center text-red-400 text-sm flex-row gap-x-4"
+            v-if="!readonly"
+            class="no-print flex items-center justify-center text-red-400 text-sm flex-row gap-x-4"
         >
             (클릭 시, 페이지가 분할됩니다.)
         </div>
@@ -913,7 +927,8 @@ onMounted(() => {
                                 p.pageIndex === pageIndex && p.side === 'left'
                         )"
                         :key="'left-split-' + point.yPercent"
-                        class="absolute left-0 right-2 h-[2px] bg-red-500"
+                        v-show="!readonly"
+                        class="absolute left-0 right-2 h-[2px] bg-red-500 no-print"
                         :style="{
                             top: `${point.yPercent}%`,
                         }"
@@ -942,8 +957,9 @@ onMounted(() => {
                             (p) =>
                                 p.pageIndex === pageIndex && p.side === 'right'
                         )"
+                        v-show="!readonly"
                         :key="'right-split-' + point.yPercent"
-                        class="absolute h-[2px] bg-red-500 right-0 left-2"
+                        class="absolute h-[2px] bg-red-500 right-0 left-2 no-print"
                         :style="{
                             top: `${point.yPercent}%`,
                         }"
@@ -966,7 +982,10 @@ onMounted(() => {
     </div>
 
     <!-- 해설 렌더링을 위한 임시 컨테이너 -->
-    <div ref="explanationContainer" class="temp-explanation-container pb-4">
+    <div
+        ref="explanationContainer"
+        class="temp-explanation-container pb-4 no-print"
+    >
         <div class="flex flex-col gap-y-6">
             <div
                 v-for="(question, index) in questions"

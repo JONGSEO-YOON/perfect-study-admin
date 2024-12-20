@@ -4,6 +4,7 @@ use App\Http\Controllers\JusoPopupController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserWebController;
 use App\Livewire\StudentReportCardPrint;
+use App\Livewire\TestSheetPrint;
 use App\Livewire\TestSheetQuestionResult;
 use App\Livewire\TestSheetResult;
 use App\Livewire\TestSheetViewer;
@@ -25,7 +26,8 @@ Route::get('/logout', function () {
 
 Route::get('/preview-test-sheet', function () {
     $scale = request('scale', 1);
-    return view('preview-test-sheet', compact('scale'));
+    $readonly = request('readonly', false);
+    return view('preview-test-sheet', compact('scale', 'readonly'));
 });
 
 
@@ -33,5 +35,9 @@ Route::get('/juso-popup', [JusoPopupController::class, 'show']);
 Route::post('/juso-popup', [JusoPopupController::class, 'show']);
 
 
+// 출력용 라우트
 Route::get('/student/report-card/print', StudentReportCardPrint::class)
     ->name('student.report-card.print');
+
+Route::get('/admin/test-sheet/print', TestSheetPrint::class)
+    ->name('test-sheet.print');

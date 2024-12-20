@@ -22,6 +22,7 @@ use Filament\Forms\Components\View;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
@@ -369,6 +370,26 @@ class TestSheetResource extends Resource
                     ->icon('heroicon-m-pencil-square')
                     ->url(fn($record) => '/admin/test-sheets/create/' . $record->temp_data_id . '?test_sheet_id=' . $record->id)
                     ->visible(fn($record) => $record->status === 'pending'),
+                ActionGroup::make([
+                    Tables\Actions\Action::make('print-test-sheet')
+                        ->label('문제지 출력')
+                        ->icon('heroicon-m-printer')
+                        ->url(fn($record) => '/admin/test-sheet/print?test_sheet_id=' . $record->id)
+                        ->openUrlInNewTab(),
+                    Tables\Actions\Action::make('print-second-test-sheet')
+                        ->icon('heroicon-m-printer')
+                        ->label('오답테스트 출력')
+                        ->modalWidth('md')
+                        ->modalSubmitAction(null)
+                        ->modalContent(fn($record) => view('filament.components.modals.print-second-test-sheet-modal', [
+                            'record' => $record,
+                        ]))
+                        ->visible(function ($record) {
+                            return WrongAnswerTestSheet::where('original_test_sheet_id', $record->id)
+                                ->where('retry_count', 2)
+                                ->exists();
+                        })
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

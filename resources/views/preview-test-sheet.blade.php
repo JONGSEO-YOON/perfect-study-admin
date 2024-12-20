@@ -1,6 +1,7 @@
 <x-layouts.simple>
     @livewire('exam-print-layout', [
         'scale' => $scale ?? null,
+        'readonly' => $readonly ?? false,
     ])
     <style>
         @font-face {
