@@ -480,20 +480,30 @@ const restorePrintLayout = (layoutData) => {
     if (Object.keys(layoutData).length === 0) return;
 
     // 전역 레이아웃 모드 복원
-    globalLayoutMode.value = layoutData.globalLayoutMode;
+    if (layoutData.globalLayoutMode)
+        globalLayoutMode.value = layoutData.globalLayoutMode;
 
     // 페이지별 레이아웃 모드 복원
-    pageLayoutModes.value = new Map(
-        layoutData.pageLayoutModes.map((item) => [item.pageNumber, item.mode])
-    );
+    if (layoutData.pageLayoutModes)
+        pageLayoutModes.value = new Map(
+            layoutData.pageLayoutModes.map((item) => [
+                item.pageNumber,
+                item.mode,
+            ])
+        );
 
     // 수동 분할 지점 복원
-    manualSplitPoints.value = layoutData.manualSplitPoints;
+    if (layoutData.manualSplitPoints)
+        manualSplitPoints.value = layoutData.manualSplitPoints;
 
     // 여백 설정 복원
-    marginRights.value = new Map(
-        layoutData.marginRights.map((item) => [item.pageNumber, item.margin])
-    );
+    if (layoutData.marginRights)
+        marginRights.value = new Map(
+            layoutData.marginRights.map((item) => [
+                item.pageNumber,
+                item.margin,
+            ])
+        );
 
     title.value = layoutData.title ?? "수학 영역(미적분)";
 

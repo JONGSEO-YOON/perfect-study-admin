@@ -11,6 +11,8 @@ use App\Models\Classroom;
 use App\Models\GradeSystem;
 use App\Models\School;
 use App\Models\Student;
+use App\Models\WrongAnswerNote;
+use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\CheckboxList;
@@ -28,6 +30,7 @@ use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
@@ -414,76 +417,151 @@ class StudentResource extends Resource
                     ]))
                     ->modalWidth('7xl'),
 
-
-                Tables\Actions\Action::make('manage-account')
-                    ->label(fn($record) => '계정 관리')
-                    ->color(function ($record) {
-                        if ($record->user->username === null) {
-                            return 'gray';
-                        } elseif (!$record->user->is_active) {
-                            return 'danger';
-                        } else {
-                            return 'primary';
-                        }
-                    })
-                    ->icon('heroicon-m-user')
-                    ->fillForm(fn($record) => [
-                        'username' => $record->user->username,
-                        'is_active' => $record->user->is_active,
-                    ])
-                    ->form([
-                        TextInput::make('username')
-                            ->label('계정')
-                            // ->readOnly()
-                            ->required(),
-                        TextInput::make('password')
-                            ->confirmed()
-                            ->password()
-                            ->label('비밀번호')
-                            ->dehydrateStateUsing(fn(string $state): string => Hash::make($state))
-                            ->dehydrated(fn(?string $state): bool => filled($state))
-                            ->required(fn(string $operation): bool => $operation === 'create'),
-                        TextInput::make('password_confirmation')
-                            ->password()
-                            ->dehydrated(false)
-                            ->label('비밀번호 확인')
-                            ->required(fn(string $operation): bool => $operation === 'create'),
-                        Grid::make(2)
-                            ->schema([
-                                Toggle::make('is_active')
-                                    ->label('승인')
-                                    ->inlineLabel()
-                                    ->inline()
-                                    ->default(true),
-                            ]),
-                    ])
-                    ->modalHeading('계정 관리')
-                    ->modalWidth('sm')
-                    ->action(function ($record, $data) {
-                        $record->user->update([
-                            'username' => $data['username'],
-                            'is_active' => $data['is_active'],
-                        ]);
-
-                        if ($data['password'] ?? false) {
-                            $record->user->update([
-                                'password' => Hash::make($data['password']),
-                            ]);
-                        }
-                        Notification::make()
-                            ->title('계정이 성공적으로 업데이트되었습니다.')
-                            ->success()
-                            ->send();
-                    }),
-                Tables\Actions\Action::make('manage-counseling')
-                    ->label('상담 관리')
-                    ->modalHeading('상담 관리')
-                    ->icon('heroicon-m-clipboard-document-list')
-                    ->url(fn($record) => '/admin/counselings?tableFilters[student_id][value]=' . $record->id)
-                    ->modalWidth('2xl'),
                 Tables\Actions\EditAction::make()
                     ->modalHeading('학생 수정하기')
                     ->modalWidth('xl'),
+                ActionGroup::make([
+                    Tables\Actions\Action::make('print-wrong-notes')
+                        ->label('오답 노트 출력')
+                        ->icon('heroicon-m-printer')
+                        ->modalHeading('오답 노트 출력')
+                        ->modalSubmitActionLabel('출력')
+                        ->modalWidth('xl')
+                        ->fillForm(fn($record) => [
+                            'from' => now()->subMonth()->format('Y-m-d'),
+                            'to' => now()->format('Y-m-d'),
+                            'question_count' => count(WrongAnswerNote::getQuestions(
+                                $record->id,
+                                now()->subMonth()->format('Y-m-d'),
+                                now()->format('Y-m-d')
+                            )),
+                        ])
+                        ->form([
+                            Grid::make(2)
+                                ->schema([
+                                    DatePicker::make('from')
+                                        ->live()
+                                        ->label('출제 시작일')
+                                        ->required()
+                                        ->afterStateUpdated(function ($get, $set, $record) {
+                                            $from = Carbon::parse($get('from'))->startOfDay();
+                                            $to = Carbon::parse($get('to'))->endOfDay();
+                                            $set(
+                                                'question_count',
+                                                count(WrongAnswerNote::getQuestions(
+                                                    $record->id,
+                                                    $from,
+                                                    $to
+                                                ))
+                                            );
+                                        }),
+                                    DatePicker::make('to')
+                                        ->live()
+                                        ->label('출제 종료일')
+                                        ->required()
+                                        ->afterStateUpdated(function ($get, $set, $record) {
+                                            $from = Carbon::parse($get('from'))->startOfDay();
+                                            $to = Carbon::parse($get('to'))->endOfDay();
+                                            $set(
+                                                'question_count',
+                                                count(WrongAnswerNote::getQuestions(
+                                                    $record->id,
+                                                    $from,
+                                                    $to
+                                                ))
+                                            );
+                                        }),
+                                    TextInput::make('question_count')
+                                        ->numeric()
+                                        ->label('출제 문제 수')
+                                        ->readOnly()
+                                        ->disabled()
+                                        ->required(),
+                                ])
+                        ])
+                        ->action(function ($record, $data) {
+                            $from = Carbon::parse($data['from'])->startOfDay();
+                            $to = Carbon::parse($data['to'])->endOfDay();
+                            $questionCount = WrongAnswerNote::where('student_id', $record->id)
+                                ->whereBetween('created_at', [$from, $to])
+                                ->count();
+                            if ($questionCount === 0) {
+                                Notification::make()
+                                    ->title('출제될 문제가 없습니다.')
+                                    ->warning()
+                                    ->send();
+                                return;
+                            }
+                            return redirect('/admin/test-sheet/print?student_id=' . $record->id . '&from=' . $data['from'] . '&to=' . $data['to']);
+                        }),
+
+                    Tables\Actions\Action::make('manage-account')
+                        ->label(fn($record) => '계정 관리')
+                        ->color(function ($record) {
+                            if ($record->user->username === null) {
+                                return 'gray';
+                            } elseif (!$record->user->is_active) {
+                                return 'danger';
+                            } else {
+                                return 'gray';
+                            }
+                        })
+                        ->icon('heroicon-m-user')
+                        ->fillForm(fn($record) => [
+                            'username' => $record->user->username,
+                            'is_active' => $record->user->is_active,
+                        ])
+                        ->form([
+                            TextInput::make('username')
+                                ->label('계정')
+                                // ->readOnly()
+                                ->required(),
+                            TextInput::make('password')
+                                ->confirmed()
+                                ->password()
+                                ->label('비밀번호')
+                                ->dehydrateStateUsing(fn(string $state): string => Hash::make($state))
+                                ->dehydrated(fn(?string $state): bool => filled($state))
+                                ->required(fn(string $operation): bool => $operation === 'create'),
+                            TextInput::make('password_confirmation')
+                                ->password()
+                                ->dehydrated(false)
+                                ->label('비밀번호 확인')
+                                ->required(fn(string $operation): bool => $operation === 'create'),
+                            Grid::make(2)
+                                ->schema([
+                                    Toggle::make('is_active')
+                                        ->label('승인')
+                                        ->inlineLabel()
+                                        ->inline()
+                                        ->default(true),
+                                ]),
+                        ])
+                        ->modalHeading('계정 관리')
+                        ->modalWidth('sm')
+                        ->action(function ($record, $data) {
+                            $record->user->update([
+                                'username' => $data['username'],
+                                'is_active' => $data['is_active'],
+                            ]);
+
+                            if ($data['password'] ?? false) {
+                                $record->user->update([
+                                    'password' => Hash::make($data['password']),
+                                ]);
+                            }
+                            Notification::make()
+                                ->title('계정이 성공적으로 업데이트되었습니다.')
+                                ->success()
+                                ->send();
+                        }),
+                    Tables\Actions\Action::make('manage-counseling')
+                        ->label('상담 관리')
+                        ->modalHeading('상담 관리')
+                        ->icon('heroicon-m-clipboard-document-list')
+                        ->url(fn($record) => '/admin/counselings?tableFilters[student_id][value]=' . $record->id)
+                        ->modalWidth('2xl'),
+                ]),
             ])
             ->hiddenFilterIndicators(true)
             ->bulkActions([

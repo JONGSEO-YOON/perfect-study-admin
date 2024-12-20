@@ -216,7 +216,7 @@ class TestSheet extends Model
     {
         return DB::transaction(function () use ($answers, $userId, $elapsedTime) {
             // 1. 채점 및 리포트 생성
-            $result = $this->grade($answers);
+            $result = $this->grade($answers, $userId);
 
             // 2. 답안 업데이트 또는 생성
             TestSheetAnswer::updateOrCreate(
@@ -243,7 +243,7 @@ class TestSheet extends Model
         });
     }
 
-    protected function grade(array $answers): array
+    protected function grade(array $answers, $userId): array
     {
         $correctCount = 0;
         $correctCountReport = [];
@@ -286,6 +286,12 @@ class TestSheet extends Model
                     'original_question_seq' => $index,
                     'original_question_id' => $question['id'],
                 ];
+
+                WrongAnswerNote::create([
+                    'student_id' => User::find($userId)->userable->id,
+                    'question' => $question,
+                    'wrong_answer' => $answer ?? null
+                ]);
             }
         }
 
