@@ -3,8 +3,10 @@
 use App\Http\Controllers\JusoPopupController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserWebController;
+use App\Livewire\MyReportCard;
 use App\Livewire\StudentLectureList;
 use App\Livewire\StudentLectureViewer;
+use App\Livewire\StudentReportCard;
 use App\Livewire\StudentReportCardPrint;
 use App\Livewire\TestSheetPrint;
 use App\Livewire\TestSheetQuestionResult;
@@ -22,6 +24,8 @@ Route::get('/test-sheet-result/{id}/{questionNo}', TestSheetQuestionResult::clas
 
 Route::get('/lectures', StudentLectureList::class)->name('student.lectures');
 Route::get('/lectures/{id}', StudentLectureViewer::class)->name('student.lectures.view');
+
+Route::get('/report-card', MyReportCard::class)->name('student.report.card');
 
 Route::get('/logout', function () {
     auth()->logout();

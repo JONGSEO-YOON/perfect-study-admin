@@ -31,6 +31,13 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
   public $arguments = [];
   public $comments = [];
 
+  public $hide = [
+    'header' => false,
+    'weekRow' => false,
+    'attendance' => false,
+    'comment' => false,
+  ];
+
   public function mount()
   {
     $this->weeklyReports = $this->getWeeklyReports();
