@@ -378,9 +378,8 @@ class TestSheetResource extends Resource
                         ->openUrlInNewTab(),
                     Tables\Actions\Action::make('print-second-test-sheet')
                         ->icon('heroicon-m-printer')
-                        ->label('오답테스트 출력')
+                        ->label('오답 테스트 출력')
                         ->modalWidth('md')
-                        ->modalSubmitAction(null)
                         ->modalContent(fn($record) => view('filament.components.modals.print-second-test-sheet-modal', [
                             'record' => $record,
                         ]))
@@ -389,6 +388,8 @@ class TestSheetResource extends Resource
                                 ->where('retry_count', 2)
                                 ->exists();
                         })
+                        ->modalSubmitActionLabel(false)
+                        ->modalSubmitAction(false)
                 ]),
             ])
             ->bulkActions([
