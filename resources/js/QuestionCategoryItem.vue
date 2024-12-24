@@ -21,6 +21,14 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    currentDepth: {
+        type: Number,
+        default: 0,
+    },
+    maxDepth: {
+        type: Number,
+        default: Infinity,
+    },
 });
 
 const emit = defineEmits(["select"]);
@@ -108,7 +116,10 @@ const handleSelect = (event) => {
             class="flex items-center gap-x-2 px-4 py-2 hover:bg-gray-50 cursor-pointer"
             @click="toggle"
         >
-            <span v-if="item.children?.length" class="w-4 text-gray-500 mr-1">
+            <span
+                v-if="item.children?.length && currentDepth < maxDepth"
+                class="w-4 text-gray-500 mr-1"
+            >
                 <svg
                     :class="{
                         'rotate-90': isExpanded,
@@ -151,13 +162,15 @@ const handleSelect = (event) => {
                 v-html="item.name"
             ></span>
         </div>
-        <div v-if="isExpanded" class="pl-6">
+        <div v-if="isExpanded && currentDepth < maxDepth" class="pl-6">
             <QuestionCategoryItem
                 v-for="child in item.children"
                 :key="child.id"
                 :item="child"
                 :selectedItems="selectedItems"
                 :multiple="multiple"
+                :maxDepth="maxDepth"
+                :currentDepth="currentDepth + 1"
                 @select="$emit('select', $event)"
             />
         </div>

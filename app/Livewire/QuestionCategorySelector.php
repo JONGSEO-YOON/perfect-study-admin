@@ -17,6 +17,8 @@ class QuestionCategorySelector extends Component implements HasMingles
 
     public $multiple = false;
 
+    public $maxDepth = null;
+
     public function component(): string
     {
         return 'resources/js/QuestionCategorySelector.js';
@@ -29,6 +31,7 @@ class QuestionCategorySelector extends Component implements HasMingles
             'questionCategories' => $questionCategories,
             'selectedId' => $this->selectedId,
             'multiple' => $this->multiple,
+            'maxDepth' => $this->maxDepth,
         ];
     }
 }

@@ -3,6 +3,8 @@
 use App\Http\Controllers\JusoPopupController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserWebController;
+use App\Livewire\StudentLectureList;
+use App\Livewire\StudentLectureViewer;
 use App\Livewire\StudentReportCardPrint;
 use App\Livewire\TestSheetPrint;
 use App\Livewire\TestSheetQuestionResult;
@@ -14,10 +16,12 @@ Route::get('/login', [UserWebController::class, 'showLoginForm'])->name('login')
 Route::post('/login', [UserWebController::class, 'login']);
 
 Route::get('/', [UserWebController::class, 'main'])->name('main');
-// Route::get('/test-sheet/{id}', [UserWebController::class, 'showTestSheet'])->name('test.sheet');
 Route::get('/test-sheet/{id}', TestSheetViewer::class)->name('test.sheet');
 Route::get('/test-sheet-result/{id}', TestSheetResult::class)->name('test-sheet.result');
 Route::get('/test-sheet-result/{id}/{questionNo}', TestSheetQuestionResult::class)->name('test-sheet.question.result');
+
+Route::get('/lectures', StudentLectureList::class)->name('student.lectures');
+Route::get('/lectures/{id}', StudentLectureViewer::class)->name('student.lectures.view');
 
 Route::get('/logout', function () {
     auth()->logout();

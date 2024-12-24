@@ -26,6 +26,7 @@
         @livewire(\App\Livewire\QuestionCategorySelector::class, [
             'selectedId' => $getState(),
             'multiple' => $multiple ?? false,
+            'maxDepth' => $maxDepth ?? null,
         ])
     </div>
 </x-dynamic-component>

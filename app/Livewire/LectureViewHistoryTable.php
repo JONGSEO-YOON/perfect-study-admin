@@ -42,13 +42,6 @@ class LectureViewHistoryTable extends Component implements HasForms, HasTable
     if ($histories->count() > 0) {
       return;
     }
-    for ($i = 0; $i < 10; $i++) {
-      $history = LectureVideoViewHistory::create([
-        'lecture_id' => $this->lecture->id,
-        'video_id' => $this->lectureVideoId,
-        'user_id' => Student::all()->random()->user->id,
-      ]);
-    }
   }
 
   public function render()

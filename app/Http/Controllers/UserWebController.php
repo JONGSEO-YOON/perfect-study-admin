@@ -22,6 +22,13 @@ class UserWebController extends Controller implements HasMiddleware
 
   public function showLoginForm()
   {
+    if (auth()->check()) {
+      if (auth()->user()->userable instanceof Student) {
+        return redirect()->route('main');
+      } else {
+        return redirect('/admin');
+      }
+    }
     return view('login');
   }
 

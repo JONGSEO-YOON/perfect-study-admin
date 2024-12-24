@@ -13,6 +13,7 @@ const selectedDepth1 = ref([]);
 const selectedItems = ref([]); // 선택된 항목들을 저장할 배열
 
 const multiple = ref(props.mingleData.multiple);
+const maxDepth = ref(props.mingleData.maxDepth ?? Infinity);
 
 // 재귀적으로 아이템을 찾는 함수
 const findCategoryPath = (categories, targetIds, currentPath = []) => {
@@ -192,6 +193,8 @@ watch(
                 :item="child"
                 :selectedItems="selectedItems"
                 :multiple="multiple"
+                :currentDepth="1"
+                :maxDepth="maxDepth"
                 @select="handleItemSelect"
             />
         </div>
