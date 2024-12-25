@@ -68,16 +68,7 @@
                         </svg>
                         성적표
                     </a>
-                    <a href="/my-page"
-                        class="flex items-center gap-x-5 font-semibold p-4 transition-all hover:bg-[#F6F8FF] rounded-lg {{ request()->is('my-page*') ? 'bg-[#F6F8FF] text-[#8570C2]' : '' }}">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
-                            xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M4.65167 5.34884C4.65167 3.93024 5.21516 2.56974 6.21818 1.56664C7.22121 0.563536 8.5816 0 10.0001 0C11.4186 0 12.779 0.563536 13.782 1.56664C14.785 2.56974 15.3485 3.93024 15.3485 5.34884C15.3485 6.76744 14.785 8.12793 13.782 9.13104C12.779 10.1341 11.4186 10.6977 10.0001 10.6977C8.5816 10.6977 7.22121 10.1341 6.21818 9.13104C5.21516 8.12793 4.65167 6.76744 4.65167 5.34884ZM9.8122 12.1033C9.85224 12.0972 9.89263 12.0938 9.93312 12.093H10.0671C10.108 12.093 10.1483 12.0964 10.188 12.1033L16.9735 13.2967L17.0088 13.3042C18.259 13.5926 19.6021 14.386 19.8635 15.9274L19.8672 15.9544L19.9733 16.7702V16.7721C20.2188 18.6409 18.7371 20 16.9875 20C16.9489 19.9993 16.9103 19.9962 16.8721 19.9907H3.01272C1.26309 19.9907 -0.219584 18.6307 0.026908 16.7609L0.132946 15.9526L0.137597 15.9247C0.398042 14.4112 1.75236 13.573 2.9997 13.3023L3.02668 13.2967L9.8122 12.1033Z"
-                                fill="currentColor" />
-                        </svg>
-                        마이페이지
-                    </a>
+
                     <a href="/notices"
                         class="flex items-center gap-x-5 font-semibold p-4 transition-all hover:bg-[#F6F8FF] rounded-lg {{ request()->is('notices*') ? 'bg-[#F6F8FF] text-[#8570C2]' : '' }}">
                         <svg width="20" height="17" viewBox="0 0 20 17" fill="none"
@@ -88,10 +79,21 @@
                         </svg>
                         공지사항
                     </a>
+                    <a href="/password-change"
+                        class="flex items-center gap-x-5 font-semibold p-4 transition-all hover:bg-[#F6F8FF] rounded-lg {{ request()->is('password-change*') ? 'bg-[#F6F8FF] text-[#8570C2]' : '' }}">
 
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5">
+                            <path fill-rule="evenodd"
+                                d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z"
+                                clip-rule="evenodd" />
+                        </svg>
+
+                        비밀번호 변경
+                    </a>
                     <div class="flex-1"></div>
+
                     <a href="/logout"
-                        class="flex mt-10 items-center gap-x-5 font-semibold p-4  transition-all hover:bg-[#F6F8FF] rounded-lg">
+                        class="flex  mt-10 items-center gap-x-5 font-semibold p-4  transition-all hover:bg-[#F6F8FF] rounded-lg">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5">
                             <path fill-rule="evenodd"
                                 d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z"

@@ -7,6 +7,7 @@ use App\Livewire\MyReportCard;
 use App\Livewire\StudentLectureList;
 use App\Livewire\StudentLectureViewer;
 use App\Livewire\StudentNoticeList;
+use App\Livewire\StudentPasswordChange;
 use App\Livewire\StudentReportCard;
 use App\Livewire\StudentReportCardPrint;
 use App\Livewire\TestSheetPrint;
@@ -28,6 +29,8 @@ Route::get('/lectures/{id}', StudentLectureViewer::class)->name('student.lecture
 
 Route::get('/report-card', MyReportCard::class)->name('student.report.card')->middleware('student.check');
 Route::get('/notices', StudentNoticeList::class)->name('student.notices')->middleware('student.check');
+
+Route::get('/password-change', StudentPasswordChange::class)->name('student.password')->middleware('student.check');
 
 Route::get('/logout', function () {
     auth()->logout();
