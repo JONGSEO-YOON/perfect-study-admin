@@ -138,7 +138,7 @@ class LectureResource extends Resource
                             ->columnSpanFull()
                             ->afterStateHydrated(function ($state, $component) {
                                 $ids = [];
-                                foreach ($state as $categoryName) {
+                                foreach ($state ?? [] as $categoryName) {
                                     $category = QuestionCategory::where('name', $categoryName)
                                         ->with('descendants')
                                         ->first();
