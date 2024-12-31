@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\CounselingResource\Pages;
 use App\Filament\Resources\CounselingResource\RelationManagers;
 use App\Models\Counseling;
+use App\Models\Notification;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
@@ -283,7 +284,18 @@ class CounselingResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make()
                     ->modalHeading('상담 기록하기')
-                    ->modalWidth('xl'),
+                    ->modalWidth('xl')
+                    ->before(function ($record, $data) {
+                        if (!$record->confirmed && $data['confirmed']) {
+                            Notification::create([
+                                'user_id' => $record->counselor_id,
+                                'type' => Notification::TYPE_COUNSELING_CONFIRMATION,
+                                'title' => '상담 원장/관리자 확인',
+                                'content' =>  $record->student->user->name . '학생의 상담을 관리자가 확인했습니다.',
+                                'data' => ['user_id' => $record->counselor_id, 'student_id' => $record->student_id],
+                            ]);
+                        }
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

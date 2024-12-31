@@ -36,7 +36,7 @@ class MyNotification extends Page implements HasForms
 
     protected static ?int $navigationSort = 1;
 
-    protected static bool $shouldRegisterNavigation = true;
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $navigationGroup = '설정';
 

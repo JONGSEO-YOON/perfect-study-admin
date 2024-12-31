@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
@@ -49,13 +51,47 @@ class SignupController extends Controller
       ], 400);
     }
 
-    // 사용자 정보 업데이트
-    $user->username = $validated['username'];
-    $user->password = Hash::make($validated['password']);
-    $user->save();
+    return DB::transaction(function () use ($user, $validated) {
+      // 사용자 정보 업데이트
+      $user->username = $validated['username'];
+      $user->password = Hash::make($validated['password']);
+      $user->save();
 
-    return response()->json([
-      'message' => '회원가입이 신청되었습니다.'
-    ]);
+      $student = $user->userable;
+      if (!$student) {
+        return response()->json([
+          'message' => '학생 정보가 없습니다.'
+        ], 404);
+      }
+
+      $teacherUserIds = $student->classrooms()
+        ->with('teacher.user')
+        ->get()
+        ->pluck('teacher.user.id')
+        ->unique()
+        ->values()
+        ->all();
+
+      if (!count($teacherUserIds)) {
+        return response()->json([
+          'message' => '담임 선생님 정보가 없습니다.'
+        ], 404);
+      }
+
+      for ($i = 0; $i < count($teacherUserIds); $i++) {
+        Notification::create([
+          'user_id' => $teacherUserIds[$i],
+          'type' => Notification::TYPE_MEMBERSHIP_APPROVAL,
+          'title' => '회원 가입 신청',
+          'content' =>  $user->name . '학생의 회원 가입 신청이 있습니다.',
+          'data' => ['user_id' => $user->id, 'student_id' => $student->id]
+        ]);
+      }
+
+
+      return response()->json([
+        'message' => '회원가입이 신청되었습니다.'
+      ]);
+    });
   }
 }

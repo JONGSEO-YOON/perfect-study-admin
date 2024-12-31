@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\CounselingResource\Pages;
 
 use App\Filament\Resources\CounselingResource;
+use App\Models\Notification;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Livewire\Attributes\On;
@@ -18,6 +19,7 @@ class ListCounselings extends ListRecords
         return null;
     }
 
+
     protected function getHeaderActions(): array
     {
         return [
@@ -32,6 +34,15 @@ class ListCounselings extends ListRecords
                         'student_id' => $this->tableFilters['student_id']['value'] ?? null,
                         'request' => true,
                     ];
+                })
+                ->after(function ($record) {
+                    Notification::create([
+                        'user_id' => $record->counselor_id,
+                        'type' => Notification::TYPE_COUNSELING_REQUEST,
+                        'title' => '상담 신청',
+                        'content' =>  $record->student->user->name . '학생의 상담 신청이 있습니다.',
+                        'data' => ['user_id' => $record->counselor_id, 'student_id' => $record->student_id],
+                    ]);
                 })
                 ->modalWidth('xl'),
             Actions\CreateAction::make('create-counseling')
