@@ -14,7 +14,7 @@ class MetadataManagement extends Page
 
     protected static ?string $title = '메타 데이터 관리';
 
-    protected static bool $shouldRegisterNavigation = true;
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $navigationGroup = '문제 관리';
 

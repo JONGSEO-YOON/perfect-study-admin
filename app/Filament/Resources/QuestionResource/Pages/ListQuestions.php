@@ -122,6 +122,7 @@ class ListQuestions extends ListRecords
             BookOverview::class,
         ];
     }
+
     public function getHeaderWidgetsColumns(): int | array
     {
         return 1;
