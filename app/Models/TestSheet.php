@@ -349,6 +349,7 @@ class TestSheet extends Model
             'target_grades' => [],
             'target_levels' => [],
             'target_classrooms' => [],
+            'print_layout' => $this->print_layout,
         ]);
         $newTestSheet->save();
 
@@ -359,7 +360,7 @@ class TestSheet extends Model
             'user_id' => $userId,
             'retry_count' => 1,
             'is_linked_to_original' => true,
-            'wrong_answer_questions' => $validMappings
+            'wrong_answer_questions' => $validMappings,
         ]);
     }
 
@@ -483,6 +484,7 @@ class TestSheet extends Model
             'target_grades' => [],
             'target_levels' => [],
             'target_classrooms' => [],
+            'print_layout' => $firstRetryTest->originalTestSheet->print_layout,
         ]);
         $newTestSheet->save();
 

@@ -12,6 +12,10 @@ const { wire, mingleData } = props;
 const scale = ref(props.mingleData.scale);
 const readonly = ref(props.mingleData.readonly);
 
+// const templateMode = ref("default");
+const templateMode = ref("default");
+const color = ref("#0ea5e9");
+
 const selectedIndex = ref(null);
 const subTitle = ref("2023년 대학수학능력시험 실전 모의고사 22회");
 const title = ref("수학 영역(미적분)");
@@ -38,6 +42,9 @@ const imageHeights = ref(new Map());
 const pages = ref([]);
 const explanationContainer = ref(null);
 const explanationPages = ref([]);
+
+const customLogo = ref("/test.png");
+const grade = ref("중1");
 
 const calculateInitialMargin = (question) => {
     if (!question.metadata) {
@@ -110,17 +117,9 @@ const calculateImageHeight = (img, question) => {
     });
 };
 
-// 페이지의 레이아웃 모드를 가져오는 함수
 const getPageLayoutMode = (pageIndex) => {
     return pageLayoutModes.value.get(pageIndex) || globalLayoutMode.value;
 };
-
-// const reconstructPageLayoutModes = new Map(
-//     layoutData.pageLayoutModes.map((item) => [item.pageNumber, item.mode])
-// );
-// const reconstructMarginRights = new Map(
-//     layoutData.marginRights.map((item) => [item.pageNumber, item.margin])
-// );
 
 const getPrintLayoutData = () => {
     return {
@@ -138,6 +137,10 @@ const getPrintLayoutData = () => {
         })),
         title: title.value,
         subTitle: subTitle.value,
+        templateMode: templateMode.value,
+        color: color.value,
+        customLogo: customLogo.value,
+        grade: grade.value,
     };
 };
 
@@ -505,10 +508,17 @@ const restorePrintLayout = (layoutData) => {
             ])
         );
 
+    if (layoutData.templateMode) templateMode.value = layoutData.templateMode;
+
+    if (layoutData.color) color.value = layoutData.color;
+
     title.value = layoutData.title ?? "수학 영역(미적분)";
 
     subTitle.value =
         layoutData.subTitle ?? "2023년 대학수학능력시험 실전 모의고사 22회";
+
+    customLogo.value = layoutData.customLogo ?? "/test.png";
+    grade.value = layoutData.grade ?? "중1";
 };
 
 // watch selectedIndex
@@ -557,10 +567,24 @@ onMounted(() => {
             }
             calculatePages();
         } else if (event.data.type === "onPageMetaChanged") {
-            const _title = event.data.data.title;
-            const _subTitle = event.data.data.subTitle;
-            title.value = _title;
-            subTitle.value = _subTitle;
+            if (event.data.data.title) {
+                title.value = event.data.data.title;
+            }
+            if (event.data.data.subTitle) {
+                subTitle.value = event.data.data.subTitle;
+            }
+            if (event.data.data.template) {
+                templateMode.value = event.data.data.template;
+            }
+            if (event.data.data.color) {
+                color.value = event.data.data.color;
+            }
+            if (event.data.data.customLogo) {
+                customLogo.value = event.data.data.customLogo;
+            }
+            if (event.data.data.grade) {
+                grade.value = event.data.data.grade;
+            }
         } else if (event.data.type === "getPrintLayout") {
             window.parent.postMessage(
                 {
@@ -598,7 +622,7 @@ onMounted(() => {
                 viewBox="0 0 20 20"
                 fill="currentColor"
                 v-if="selectedIndex === pageIndex"
-                class="size-16 absolute top-4 right-4 text-blue-500"
+                class="size-16 absolute top-4 right-4 text-blue-500 z-30"
             >
                 <path
                     fill-rule="evenodd"
@@ -607,46 +631,134 @@ onMounted(() => {
                 />
             </svg>
 
-            <!-- 첫 페이지일 경우 헤더 표시 -->
-            <template v-if="pageIndex === 0">
-                <div
-                    class="flex items-center justify-center text-2xl tracking-tighter"
-                >
-                    {{ subTitle }}
-                </div>
-                <div
-                    class="flex items-center justify-center text-4xl tracking-tighter font-semibold mt-1.5"
-                >
-                    {{ title }}
-                </div>
-                <div class="flex flex-row items-center justify-between mt-2">
-                    <div
-                        class="border border-black text-lg px-3 rounded font-bold"
-                    >
-                        2교시
-                    </div>
-                    <div class="flex flex-row gap-x-6">
-                        <div class="flex flex-row border border-black">
-                            <div class="border-r border-black py-0.5 px-2">
-                                성 명
-                            </div>
-                            <div class="w-[80px]"></div>
-                        </div>
-                        <div class="flex flex-row border border-black">
-                            <div class="border-r border-black py-0.5 px-2">
-                                수험번호
-                            </div>
-                            <div class="w-[180px]"></div>
-                        </div>
-                    </div>
-                    <div class="border border-black px-4 rounded-full">
-                        홀수형
+            <!-- 기본 템플릿 헤더 -->
+            <template v-if="templateMode === 'default'">
+                <div class="left-0 right-0 bottom-0 absolute">
+                    <div class="absolute w-full left-0 right-0 bottom-0 pb-5">
+                        <div
+                            class="absolute bottom-0 left-0 right-0 h-10 opacity-60 clip-4"
+                            :style="{ backgroundColor: color }"
+                        ></div>
+                        <div
+                            class="absolute bottom-0 left-0 right-0 h-6 opacity-40 clip-5"
+                            :style="{ backgroundColor: color }"
+                        ></div>
                     </div>
                 </div>
             </template>
+
+            <!-- 기본 템플릿 푸터 -->
+            <template v-if="templateMode === 'default'">
+                <div
+                    class="absolute px-[20mm] w-full left-0 right-0 top-0 pb-5"
+                >
+                    <div
+                        class="absolute top-0 left-0 right-0 h-20 opacity-60 clip-1"
+                        :style="{ backgroundColor: color }"
+                    ></div>
+                    <div
+                        class="absolute left-0 right-0 h-16 opacity-40 clip-2"
+                        :style="{ backgroundColor: color }"
+                    ></div>
+                    <div
+                        class="absolute left-0 right-0 h-16 opacity-20 clip-3"
+                        :style="{ backgroundColor: color }"
+                    ></div>
+                </div>
+            </template>
+
+            <!-- 이미지-->
+            <img
+                src="/logo-grayscaled.png"
+                alt=""
+                class="w-28 opacity-40 left-10 bottom-10 absolute"
+            />
+
+            <!-- 첫 페이지일 경우 헤더 표시 -->
+            <template v-if="pageIndex === 0">
+                <template v-if="templateMode === 'default'">
+                    <div class="w-full h-28"></div>
+                    <img
+                        :src="customLogo"
+                        alt=""
+                        class="absolute max-w-40 max-h-12 right-20 top-20"
+                    />
+                    <div
+                        class="absolute px-[20mm] w-full left-0 right-0 top-0 pb-5"
+                    >
+                        <div class="relative z-10 pt-16">
+                            <h1
+                                class="text-2xl text-gray-800 m-0 py-2 font-bold"
+                            >
+                                <span :style="{ color: color }">{{
+                                    grade
+                                }}</span>
+                                {{ title }}
+                            </h1>
+                            <p
+                                class="text-base text-gray-500 mt-1 font-semibold tracking-tight"
+                            >
+                                {{ subTitle }}
+                                <span
+                                    class="text-sm text-gray-400 font-medium ml-0.5"
+                                >
+                                    | {{ questions.length }} 문제
+                                </span>
+                            </p>
+                        </div>
+
+                        <!-- Student Info -->
+                        <div class="flex justify-end mt-5">
+                            <p class="text-sm text-gray-700">
+                                &nbsp;&nbsp; 이름 _________________________
+                            </p>
+                        </div>
+                    </div>
+                </template>
+                <template v-if="templateMode === 'high3'">
+                    <div
+                        class="flex items-center justify-center text-2xl tracking-tighter"
+                    >
+                        {{ subTitle }}
+                    </div>
+                    <div
+                        class="flex items-center justify-center text-4xl tracking-tighter font-semibold mt-1.5"
+                    >
+                        {{ title }}
+                    </div>
+                    <div
+                        class="flex flex-row items-center justify-between mt-2"
+                    >
+                        <div
+                            class="border border-black text-lg px-3 rounded font-bold"
+                        >
+                            2교시
+                        </div>
+                        <div class="flex flex-row gap-x-6">
+                            <div class="flex flex-row border border-black">
+                                <div class="border-r border-black py-0.5 px-2">
+                                    성 명
+                                </div>
+                                <div class="w-[80px]"></div>
+                            </div>
+                            <div class="flex flex-row border border-black">
+                                <div class="border-r border-black py-0.5 px-2">
+                                    수험번호
+                                </div>
+                                <div class="w-[180px]"></div>
+                            </div>
+                        </div>
+                        <div class="border border-black px-4 rounded-full">
+                            홀수형
+                        </div>
+                    </div>
+                </template>
+            </template>
+
             <!-- 다른 페이지일 경우 간단한 헤더 -->
             <template v-else>
                 <div
+                    v-if="templateMode === 'high3'"
                     class="pb-1 flex items-center relative justify-center text-3xl tracking-tighter font-semibold mt-1.5 border-b-[2px] border-black"
                 >
                     <div
@@ -657,12 +769,22 @@ onMounted(() => {
                     </div>
                     {{ title }}
                 </div>
+                <div
+                    v-if="templateMode === 'default'"
+                    class="pb-1 flex items-center relative justify-center text-2xl tracking-tighter font-bold mt-1.5 border-b border-gray-300"
+                >
+                    {{ title }}
+                </div>
             </template>
 
             <div
                 class="flex-1 border-black flex flex-row overflow-hidden h-0 min-h-0"
                 :class="{
-                    'border-t-[2px] border-black mt-4': pageIndex === 0,
+                    'border-t-[2px] border-black':
+                        pageIndex === 0 && templateMode === 'high3',
+                    'border-t border-gray-200':
+                        pageIndex === 0 && templateMode === 'default',
+                    ' mt-4': pageIndex === 0,
                 }"
             >
                 <div class="flex-1 pt-5 pr-4 question-columns flex flex-col">
@@ -675,8 +797,31 @@ onMounted(() => {
                         }"
                         :key="`left-${imgIndex}`"
                     >
-                        <h1 class="">
-                            {{ getQuestionNumber(pageIndex, true, imgIndex) }}.
+                        <h1
+                            :class="{
+                                'font-bold text-2xl text-sky-500 mr-1':
+                                    templateMode === 'default',
+                            }"
+                        >
+                            <span
+                                :style="{ color: color }"
+                                v-if="templateMode === 'default'"
+                            >
+                                {{
+                                    getQuestionNumber(pageIndex, true, imgIndex)
+                                        ?.toString()
+                                        .padStart(2, "0")
+                                }}
+                            </span>
+                            <template v-else>
+                                {{
+                                    getQuestionNumber(
+                                        pageIndex,
+                                        true,
+                                        imgIndex
+                                    )
+                                }}.
+                            </template>
                         </h1>
                         <div
                             class="flex-1 w-0 hover:border hover:border-dashed border-gray-800 pt-1"
@@ -766,8 +911,17 @@ onMounted(() => {
                 </div>
                 <div
                     class="bg-black"
+                    v-if="templateMode === 'high3'"
                     :class="{
                         'w-[2px]': pageIndex === 0,
+                        'w-px mt-10 mb-4': pageIndex !== 0,
+                    }"
+                ></div>
+                <div
+                    class="bg-gray-200"
+                    v-if="templateMode === 'default'"
+                    :class="{
+                        'w-px': pageIndex === 0,
                         'w-px mt-10 mb-4': pageIndex !== 0,
                     }"
                 ></div>
@@ -781,9 +935,37 @@ onMounted(() => {
                         v-for="(question, imgIndex) in page.right"
                         :key="`right-${imgIndex}`"
                     >
-                        <h1 class="">
-                            {{ getQuestionNumber(pageIndex, false, imgIndex) }}.
+                        <h1
+                            :class="{
+                                'font-bold text-2xl text-sky-500 mr-1':
+                                    templateMode === 'default',
+                            }"
+                        >
+                            <span
+                                v-if="templateMode === 'default'"
+                                :style="{ color: color }"
+                            >
+                                {{
+                                    getQuestionNumber(
+                                        pageIndex,
+                                        false,
+                                        imgIndex
+                                    )
+                                        ?.toString()
+                                        .padStart(2, "0")
+                                }}
+                            </span>
+                            <template v-else>
+                                {{
+                                    getQuestionNumber(
+                                        pageIndex,
+                                        false,
+                                        imgIndex
+                                    )
+                                }}.
+                            </template>
                         </h1>
+
                         <div
                             class="flex-1 w-0 hover:border hover:border-dashed border-gray-800 pt-1"
                             :style="{
@@ -871,12 +1053,26 @@ onMounted(() => {
                 </div>
             </div>
 
-            <div class="flex items-center justify-center mt-1">
+            <div class="flex items-center justify-center mt-1 relative">
                 <div
+                    v-if="templateMode === 'high3'"
                     class="border border-black diag flex flex-row w-[80px] leading-6 justify-between font-bold px-1.5 text-lg"
                 >
                     <div class="mb-2">{{ pageIndex + 1 }}</div>
                     <div class="mt-2">{{ pages.length }}</div>
+                </div>
+                <div
+                    v-if="templateMode === 'default'"
+                    class="text-base font-medium text-gray-500 flex items-center gap-x-1 mt-2"
+                >
+                    <div
+                        :style="{ color: color }"
+                        class="text-sky-500 font-bold"
+                    >
+                        {{ pageIndex + 1 }}
+                    </div>
+                    /
+                    <div>{{ pages.length }}</div>
                 </div>
             </div>
         </div>
@@ -900,7 +1096,8 @@ onMounted(() => {
         >
             <!-- 페이지 헤더 -->
             <div
-                class="pb-1 flex items-center relative justify-center text-3xl tracking-tighter font-semibold mt-1.5 border-b-[2px] border-black"
+                v-if="templateMode === 'high3'"
+                class="pb-1 flex items-center relative justify-center text-3xl tracking-tighter font-semibold mt-1.5 border-black border-b-[2px]"
             >
                 <div
                     class="font-bold absolute"
@@ -912,6 +1109,12 @@ onMounted(() => {
                 >
                     {{ pages.length + pageIndex + 1 }}
                 </div>
+                {{ title }}
+            </div>
+            <div
+                v-if="templateMode === 'default'"
+                class="pb-1 flex items-center relative justify-center text-2xl tracking-tighter font-semibold mt-1.5 border-gray-300 border-b"
+            >
                 {{ title }}
             </div>
 
@@ -980,10 +1183,27 @@ onMounted(() => {
             <!-- 페이지 번호 -->
             <div class="flex items-center justify-center mt-1">
                 <div
+                    v-if="templateMode === 'high3'"
                     class="border border-black diag flex flex-row w-[80px] leading-6 justify-between font-bold px-1.5 text-lg"
                 >
                     <div class="mb-2">{{ pages.length + pageIndex + 1 }}</div>
                     <div class="mt-2">
+                        {{ explanationPages.length + pages.length }}
+                    </div>
+                </div>
+
+                <div
+                    v-if="templateMode === 'default'"
+                    class="text-base font-medium text-gray-500 flex items-center gap-x-1 mt-2"
+                >
+                    <div
+                        :style="{ color: color }"
+                        class="text-sky-500 font-bold"
+                    >
+                        {{ pages.length + pageIndex + 1 }}
+                    </div>
+                    /
+                    <div>
                         {{ explanationPages.length + pages.length }}
                     </div>
                 </div>
@@ -1086,5 +1306,24 @@ onMounted(() => {
     left: -9999px;
     /* width: v-bind("`${(COLUMN_WIDTH * 3.779527559)}px`"); scale: 180 */
     /* width: 304px; */
+}
+.clip-1 {
+    clip-path: polygon(0 0, 100% 0, 100% 90%, 0 0%);
+}
+
+.clip-2 {
+    clip-path: polygon(-50% 0%, 100% 0%, 100% 0%, -50% 100%);
+}
+
+.clip-3 {
+    clip-path: polygon(-200% 0%, 100% 0%, 100% 0%, 100% 25%, -200% 100%);
+}
+
+.clip-4 {
+    clip-path: polygon(0 90%, 100% 0, 100% 100%, 0 100%);
+}
+
+.clip-5 {
+    clip-path: polygon(10% 100%, 100% 0, 100% 100%, 10% 100%);
 }
 </style>

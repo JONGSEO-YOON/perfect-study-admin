@@ -9,6 +9,7 @@ use App\Models\QuestionCategory;
 use App\Models\Student;
 use App\Models\TempData;
 use App\Models\TestSheet;
+use App\Models\User;
 use Closure;
 use Faker\Provider\ar_EG\Text;
 use Filament\Actions\Action;
@@ -19,6 +20,7 @@ use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\KeyValue;
@@ -41,6 +43,8 @@ use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Illuminate\Support\Str;
 
 class CreateTestSheets extends Page implements HasForms, HasActions
 {
@@ -97,6 +101,10 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         'sub_title' => '2023년 대학수학능력시험 실전 모의고사 22회',
         'use_score_table' => false,
         'score_table' => [],
+        'color' => '#0ea5e9',
+        'grade' => '중1',
+        'custom_logo' => [],
+
     ];
 
     public function form(Form $form): Form
@@ -236,20 +244,64 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                     ToggleButtons::make('template')
                         ->label('템플릿')
                         ->required()
+                        ->live()
                         ->options([
-                            'default' => '기본 (고3)',
+                            'default' => '기본',
+                            'high3' => '고3',
                         ])
+                        ->inline()
+                        ->afterStateUpdated(function (Get $get, Set $set) {
+                            $this->dispatch('onPageMetaChanged', [
+                                'template' => $get('template'),
+                            ]);
+                        })
+                        ->columnSpanFull()
                         ->default('default'),
                     Hidden::make('selected_page_index')
                         ->live()
                         ->default('default'),
+                    ViewField::make('color')
+                        ->label('색상')
+                        ->required()
+                        ->live()
+                        ->view('filament.components.forms.preset-color-picker')
+                        ->columnSpanFull()
+                        ->visible(fn(Get $get) => $get('template') === 'default'),
+                    TextInput::make('grade')
+                        ->label('학년')
+                        ->columnSpanFull()
+                        ->afterStateUpdated(function (Get $get, Set $set) {
+                            $this->dispatch('onPageMetaChanged', [
+                                'grade' => $get('grade'),
+                            ]);
+                        })
+                        ->live()
+                        ->required(),
+                    FileUpload::make('custom_logo')
+                        ->label('학원 이미지')
+                        ->image()
+                        ->multiple(false)
+                        ->placeholder('학원 이미지 업로드')
+                        ->previewable(true)
+                        ->downloadable(true)
+                        ->visible(fn(Get $get) => $get('template') === 'default')
+                        ->afterStateUpdated(function (Get $get, Set $set) {
+                            $key = array_key_first($this->data['custom_logo']);
+                            $file = $this->data['custom_logo'][$key];
+                            $filename = $file->getFilename();
+                            $file->storeAs('public', $filename);
+                            $this->dispatch('onPageMetaChanged', [
+                                'customLogo' => '/storage/' . $filename,
+                            ]);
+                        })
+                        ->live()
+                        ->columnSpanFull(),
                     TextInput::make('title')
                         ->label('제목')
                         ->columnSpanFull()
                         ->afterStateUpdated(function (Get $get, Set $set) {
                             $this->dispatch('onPageMetaChanged', [
                                 'title' => $get('title'),
-                                'subTitle' => $get('sub_title'),
                             ]);
                         })
                         ->live()
@@ -260,7 +312,6 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                         ->live()
                         ->afterStateUpdated(function (Get $get, Set $set) {
                             $this->dispatch('onPageMetaChanged', [
-                                'title' => $get('title'),
                                 'subTitle' => $get('sub_title'),
                             ]);
                         })
@@ -367,12 +418,28 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             $this->data['tags'] = collect($this->data['tags'])->values()->toArray();
             $this->data['tags_toggle'] = '';
             $this->initialPrintLayout = $testSheet->print_layout ?? [];
+            $this->data['color'] = $this->initialPrintLayout['color'] ?? '#0ea5e9';
+            $this->data['grade'] = $this->initialPrintLayout['grade'] ?? [];
         } else {
             $this->questions = self::selectRandomQuestions($query);
             $this->data = array_merge(
                 $this->data,
                 $query
             );
+            //get first question
+            if ($query['target_group'] === 'grade' || $query['target_group'] === 'level') {
+                $grade = GradeSystem::findOrFail($query['target_grades'][0]);
+            } else if ($query['target_group'] === 'classroom') {
+                $grades = Classroom::findOrFail($query['target_classrooms'][0])->target_grades;
+                $grade = GradeSystem::findOrFail($grades[0]);
+            } else if ($query['target_group'] === 'student') {
+                $student = User::findOrFail($query['target_students'][0])->userable;
+                $grade = GradeSystem::findOrFail($student->grade_system_id);
+            }
+            $this->data['grade'] = $grade->display_name;
+            $this->initialPrintLayout = [
+                'grade' => $this->data['grade'],
+            ];
         }
         $this->data['full_page_split'] = $this->data['split'];
 
@@ -999,5 +1066,13 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         }
 
         return [];
+    }
+
+    #[On('onColorChanged')]
+    function onColorChanged()
+    {
+        $this->dispatch('onPageMetaChanged', [
+            'color' => $this->data['color'],
+        ]);
     }
 }

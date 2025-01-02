@@ -9,8 +9,8 @@
 <div class="">
     <div class="grid flex-1 auto-cols-fr gap-y-8">
         <div class="flex flex-col gap-y-6">
-            <div ax-load="" ax-load-src="http://localhost/js/filament/tables/components/table.js?v=3.2.110.0"
-                x-data="table" class="fi-ta">
+            <div ax-load="" ax-load-src="/js/filament/tables/components/table.js?v=3.2.110.0" x-data="table"
+                class="fi-ta">
                 <div
                     class="fi-ta-ctn divide-y divide-gray-200 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:divide-white/10 dark:bg-gray-900 dark:ring-white/10">
                     <div
@@ -41,7 +41,7 @@
                                         <td class="fi-ta-cell p-0 first-of-type:ps-1 last-of-type:pe-1 sm:first-of-type:ps-3 sm:last-of-type:pe-3 fi-table-cell-name"
                                             wire:key="nyOfF7KneS3u1oCpKUvP.table.record.1.column.name">
                                             <div class="fi-ta-col-wrp">
-                                                <a href="http://localhost/admin/question-categories/{{ $ancestor->id }}"
+                                                <a href="/admin/question-categories/{{ $ancestor->id }}"
                                                     class="flex w-full disabled:pointer-events-none justify-start text-start">
                                                     <div class="fi-ta-text grid w-full gap-y-1 px-3 py-4">
                                                         <div class="flex ">
