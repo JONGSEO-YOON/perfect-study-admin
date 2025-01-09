@@ -66,7 +66,8 @@ class TestSheetResource extends Resource
     {
         return $table
             ->modifyQueryUsing(function ($query) {
-                return $query->originals();
+                return $query->originals()
+                    ->where('user_id', auth()->user()->id);
             })
             ->defaultSort('id', 'desc')
             ->columns([
