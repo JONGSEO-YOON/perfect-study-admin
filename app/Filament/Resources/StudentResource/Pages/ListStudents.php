@@ -24,6 +24,7 @@ class ListStudents extends ListRecords
                 ->icon('heroicon-m-plus-circle')
                 ->label('학생 추가하기')
                 ->modalHeading('학생 추가하기')
+                ->visible(fn() => auth()->user()->isRoleAbove('admin', true))
                 ->modalWidth('xl')
                 ->createAnother(false)
                 ->modalSubmitActionLabel('저장'),

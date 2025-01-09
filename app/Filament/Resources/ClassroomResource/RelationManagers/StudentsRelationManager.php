@@ -49,6 +49,7 @@ class StudentsRelationManager extends RelationManager
                     ->label('학생 추가하기')
                     ->multiple()
                     ->modalHeading('학생 추가하기')
+                    ->visible(fn() => auth()->user()->isRoleAbove('admin', true))
                     ->recordTitle(fn($record) => $record->user->name)
                     ->preloadRecordSelect(true)
                     ->form(fn(Tables\Actions\AttachAction $action): array => [

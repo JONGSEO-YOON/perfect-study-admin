@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Builder;
+use PhpParser\Node\Expr\BinaryOp\Equal;
 
 class User extends Authenticatable implements FilamentUser
 {
@@ -96,5 +97,59 @@ class User extends Authenticatable implements FilamentUser
                 return [$user->userable->id => $user->name . ' (' . $user->birthed_at->format('Y-m-d') . ')'];
             })
             ->toArray();
+    }
+
+    /**
+     * Get the user's role.
+     */
+    public function getRoleAttribute(): string
+    {
+        if (!$this->userable) {
+            return 'guest';
+        }
+
+        if ($this->userable instanceof \App\Models\Teacher) {
+            return $this->userable->role;
+        }
+
+        // Counselor나 Student의 경우 클래스명의 소문자 버전을 반환
+        return strtolower(class_basename($this->userable));
+    }
+
+    public function isRoleAboveOrSelf($user): bool
+    {
+        return $this->isRoleAbove($user->role) || $this->id === $user->id;
+    }
+
+    /**
+     * Check if current user's role is above the given role
+     */
+    public function isRoleAbove(string $role, bool $equal = false): bool
+    {
+        $roles = [
+            'root_admin' => 0,
+            'admin' => 1,
+            'manager' => 2,
+            'general' => 3,
+            'counselor' => 3,
+            'student' => 5,
+            'guest' => 6,
+        ];
+
+        if ($this->role === 'root_admin') {
+            return true;
+        }
+
+        // 현재 유저의 role이나 비교할 role이 정의되지 않은 경우
+        if (!isset($roles[$this->role]) || !isset($roles[$role])) {
+            return false;
+        }
+
+        // 숫자가 작을수록 높은 권한
+        if ($equal) {
+            return $roles[$this->role] <= $roles[$role];
+        } else {
+            return $roles[$this->role] < $roles[$role];
+        }
     }
 }

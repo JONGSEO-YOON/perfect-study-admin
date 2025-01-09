@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Builder;
 
 class Classroom extends Model
 {
@@ -29,5 +30,18 @@ class Classroom extends Model
     {
         return $this->belongsToMany(Student::class)
             ->withTimestamps();
+    }
+
+    protected static function booted()
+    {
+        static::addGlobalScope('teacher_filter', function (Builder $builder) {
+            if (
+                auth()->check()
+                && auth()->user()->userable instanceof \App\Models\Teacher
+                && !auth()->user()->isRoleAbove('manager', true)
+            ) {
+                $builder->where('teacher_id', auth()->user()->userable->id);
+            }
+        });
     }
 }

@@ -43,4 +43,14 @@ class Student extends Model
         return $this->belongsToMany(Classroom::class)
             ->withTimestamps();
     }
+
+    public function canEdit($user)
+    {
+        if (
+            auth()->user()->isRoleAbove('admin', true)
+            || !auth()->user()->userable instanceof \App\Models\Teacher
+        ) {
+            return true;
+        }
+    }
 }

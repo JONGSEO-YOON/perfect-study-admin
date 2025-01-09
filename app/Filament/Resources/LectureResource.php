@@ -45,6 +45,11 @@ class LectureResource extends Resource
 
     protected static ?string $navigationGroup = '자료실';
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->userable instanceof \App\Models\Teacher;
+    }
+
     public static function getBreadcrumb(): string
     {
         return '';
@@ -209,6 +214,11 @@ class LectureResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(function (Builder $query) {
+                $query->when(!auth()->user()->isRoleAbove('admin', true), function ($query) {
+                    $query->where('user_id', auth()->id());
+                });
+            })
             ->columns([
                 //
                 TextColumn::make('id')

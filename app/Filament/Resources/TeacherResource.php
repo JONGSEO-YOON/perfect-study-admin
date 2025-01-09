@@ -17,6 +17,7 @@ use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -60,6 +61,24 @@ class TeacherResource extends Resource
                             ->avatar()
                             ->placeholder('사진 업로드')
                             ->columnSpanFull(),
+                        Grid::make(1)
+                            ->schema([
+                                ToggleButtons::make('role')
+                                    ->label('권한')
+                                    ->required()
+                                    ->options([
+                                        'general' => '일반 강사',
+                                        'manager' => '중간 관리자',
+                                        'admin' => '관리자',
+                                        'root_admin' => '최고 관리자',
+                                    ])
+                                    ->visible(fn($record) => auth()->user()->role == 'root_admin')
+                                    ->inline()
+                                    ->grouped()
+                                    ->columnSpanFull()
+                                    ->default('default'),
+                            ])->relationship('userable'),
+
                         TextInput::make('name')
                             ->label('이름')
                             ->required(),
@@ -169,6 +188,11 @@ class TeacherResource extends Resource
                 Tables\Actions\EditAction::make()
                     ->modalHeading('강사 수정하기')
                     ->modalWidth('xl')
+                    ->visible(function ($record) {
+                        return auth()->user()->isRoleAboveOrSelf($record->user)
+                            ||  (!auth()->user()->userable instanceof \App\Models\Teacher
+                                && !$record->user->isRoleAbove('general'));
+                    })
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

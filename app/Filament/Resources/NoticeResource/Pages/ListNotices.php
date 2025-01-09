@@ -24,6 +24,9 @@ class ListNotices extends ListRecords
                 ->icon('heroicon-m-plus-circle')
                 ->label('공지 추가하기')
                 ->modalHeading('공지 추가하기')
+                ->visible(
+                    fn() => auth()->user()->isRoleAbove('admin', true) || !auth()->user()->userable instanceof \App\Models\Teacher
+                )
                 ->modalWidth('4xl')
                 ->createAnother(false)
                 ->modalSubmitActionLabel('저장'),

@@ -53,6 +53,11 @@ class QuestionResource extends Resource
 
     protected static ?int $navigationSort = 1;
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->userable instanceof \App\Models\Teacher;
+    }
+
     public static function handleUpdate($data)
     {
         $choices = $data['choices'] ?? [];

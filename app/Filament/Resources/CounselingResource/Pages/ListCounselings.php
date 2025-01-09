@@ -63,6 +63,7 @@ class ListCounselings extends ListRecords
                 ->url('/admin/counselors')
                 ->label('상담실 계정 관리')
                 ->modalHeading('상담실 계정 관리')
+                ->visible(fn() => auth()->user()->isRoleAbove('admin', true))
                 ->modalWidth('xl'),
         ];
     }

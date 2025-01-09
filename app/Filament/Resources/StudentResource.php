@@ -61,6 +61,9 @@ class StudentResource extends Resource
     {
         return [
             //
+            Hidden::make('privacy')
+                ->default(false)
+                ->dehydrated(false),
             Grid::make(2)
                 ->schema([
                     FileUpload::make('profile_photo_path')
@@ -101,6 +104,11 @@ class StudentResource extends Resource
                             Select::make('school_id')
                                 ->label('학교')
                                 ->nullable()
+                                ->options(function () {
+                                    return School::query()
+                                        ->orderBy('name')
+                                        ->pluck('name', 'id');
+                                })
                                 ->getSearchResultsUsing(fn(string $search): array => School::where('name', 'like', "%{$search}%")->limit(10)
                                     ->get()
                                     ->map(function ($school) {
@@ -111,7 +119,7 @@ class StudentResource extends Resource
                                     })
                                     ->pluck('name', 'id')->toArray())
                                 ->searchable()
-                                ->preload(10),
+                                ->preload(),
                             Select::make('grade_system_id')
                                 ->label('학년')
                                 ->required()
@@ -132,8 +140,10 @@ class StudentResource extends Resource
                                 ->label('전화번호 (본인)'),
                             PhoneInput::make('landline')
                                 ->label('전화번호 (자택)'),
-                        ]),
+                        ])
+                        ->hidden(fn($get) => $get('../privacy')),
                     Grid::make(2)
+                        ->hidden(fn($get) => $get('../privacy'))
                         ->schema([
                             PhoneInput::make('phone_mother')
                                 ->label('전화번호 (모)'),
@@ -202,159 +212,26 @@ class StudentResource extends Resource
         ];
     }
 
+
     public static function form(Form $form): Form
     {
         return
             $form
             ->schema(self::_form(false));
-        // return $form
-        //     ->schema([
-        //         //
-        //         Grid::make(2)
-        //             ->schema([
-        //                 FileUpload::make('profile_photo_path')
-        //                     ->extraAttributes([
-        //                         'class' => '!items-center'
-        //                     ])
-        //                     ->label('사진')
-        //                     ->image()
-        //                     ->avatar()
-        //                     ->placeholder('사진 업로드')
-        //                     ->columnSpanFull(),
-        //                 TextInput::make('name')
-        //                     ->label('이름')
-        //                     ->required(),
-        //                 DatePicker::make('birthed_at')
-        //                     ->label('생년월일')
-        //                     ->required(),
-        //                 Grid::make(2)
-        //                     ->schema([
-        //                         Radio::make('gender')
-        //                             ->label('성별')
-        //                             ->inlineLabel()
-        //                             ->inline()
-        //                             ->required()
-        //                             ->options([
-        //                                 '남' => '남',
-        //                                 '여' => '여',
-        //                             ]),
-        //                     ]),
-        //                 Hidden::make('address'),
-        //                 Hidden::make('postal_code'),
-        //                 AddressInput::make('address-input')
-        //                     ->label('주소')
-        //                     ->columnSpanFull(),
-        //                 Grid::make(2)
-        //                     ->schema([
-        //                         Select::make('school_id')
-        //                             ->label('학교')
-        //                             ->nullable()
-        //                             ->getSearchResultsUsing(fn(string $search): array => School::where('name', 'like', "%{$search}%")->limit(10)
-        //                                 ->get()
-        //                                 ->map(function ($school) {
-        //                                     return [
-        //                                         'id' => $school->id,
-        //                                         'name' => $school->name . ' - ' . $school->province
-        //                                     ];
-        //                                 })
-        //                                 ->pluck('name', 'id')->toArray())
-        //                             ->searchable()
-        //                             ->preload(10),
-        //                         Select::make('grade_system_id')
-        //                             ->label('학년')
-        //                             ->required()
-        //                             ->options(function () {
-        //                                 return GradeSystem::query()
-        //                                     ->orderBy('sequential_order')
-        //                                     ->pluck(
-        //                                         'display_name',
-        //                                         'id',
-        //                                     );
-        //                             }),
-        //                     ])->relationship('userable'),
-        //                 TextInput::make('email')
-        //                     ->label('이메일'),
-        //                 Grid::make(2)
-        //                     ->schema([
-        //                         PhoneInput::make('phone')
-        //                             ->label('전화번호 (본인)'),
-        //                         PhoneInput::make('landline')
-        //                             ->label('전화번호 (자택)'),
-        //                     ]),
-        //                 Grid::make(2)
-        //                     ->schema([
-        //                         PhoneInput::make('phone_mother')
-        //                             ->label('전화번호 (모)'),
-        //                         PhoneInput::make('phone_father')
-        //                             ->label('전화번호 (부)'),
-        //                         Toggle::make('sms_agree')
-        //                             ->label('SMS 수신 여부')
-        //                             ->inlineLabel()
-        //                             ->inline()
-        //                             ->columnSpanFull()
-        //                             ->default(true),
-        //                         CheckboxList::make('sms_targets')
-        //                             ->label('SMS 수신 대상')
-        //                             ->inlineLabel()
-        //                             ->columnSpanFull()
-        //                             ->options([
-        //                                 'self' => '본인',
-        //                                 'father' => '부',
-        //                                 'mother' => '모',
-        //                             ])
-        //                             // ->default(fn() => ['self'])
-        //                             ->columns(3),
-        //                     ])->relationship('userable'),
-
-        //                 Grid::make(4)
-        //                     ->schema([
-        //                         Select::make('cash_receipt_type')
-        //                             ->label('현금영수증 종류')
-        //                             ->options([
-        //                                 '개인' => '개인',
-        //                                 '사업자' => '사업자',
-        //                             ]),
-        //                         TextInput::make('cash_receipt_no')
-        //                             ->label('현금영수증 번호')
-        //                             ->columnSpan(3),
-        //                     ])
-        //                     ->relationship('userable'),
-        //                 Grid::make(2)
-        //                     ->schema([
-        //                         DatePicker::make('initially_attended_at')
-        //                             ->label('최초 수강일')
-        //                     ])
-        //                     ->relationship('userable'),
-        //                 KeyValue::make('meta')
-        //                     ->keyLabel('정보')
-        //                     ->valueLabel('입력')
-        //                     ->label('추가 정보')
-        //                     ->default([
-        //                         '과목별 내신 등급' => '',
-        //                         '모의고사 등급' => '',
-        //                         '수강료 할인유형' => '',
-        //                     ])
-        //                     ->columnSpanFull(),
-        //                 Textarea::make('remark')
-        //                     ->label('비고')
-        //                     ->columnSpanFull(),
-        //                 FileUpload::make('attachments')
-        //                     ->label('첨부 파일')
-        //                     ->multiple()
-        //                     ->placeholder('클릭하거나 파일을 드래그하여 업로드')
-        //                     ->previewable(false)
-        //                     ->downloadable(true)
-        //                     ->columnSpanFull()
-        //             ])
-        //             ->relationship('user')
-        //     ]);
-
     }
 
     public static function table(Table $table): Table
     {
         return $table
             ->defaultSort('created_at', 'desc')
+            ->modifyQueryUsing(function ($query) {
+                if (auth()->user()->isRoleAbove('manager', true)) {
+                    return $query;
+                }
+                return $query->whereHas('classrooms', function ($q) {
+                    $q->where('classrooms.teacher_id', auth()->user()->userable->id);
+                });
+            })
             ->columns([
                 //
                 TextColumn::make('id')
@@ -377,7 +254,13 @@ class StudentResource extends Resource
                 TextColumn::make('user.phone')
                     ->label('전화번호')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->visible(
+                        fn($livewire) => auth()->user()->isRoleAbove('admin', true)
+                            || !auth()->user()->userable instanceof \App\Models\Teacher
+                            || Classroom::find($livewire?->tableFilters['classroom_id']['value'] ?? null)
+                            ?->teacher_id == auth()->user()->userable->id
+                    ),
                 TextColumn::make('user.birthed_at')
                     ->date('Y-m-d')
                     ->label('생년월일')
@@ -419,7 +302,32 @@ class StudentResource extends Resource
 
                 Tables\Actions\EditAction::make()
                     ->modalHeading('학생 수정하기')
+                    ->fillForm(function ($record, $livewire) {
+                        return array_merge($record->toArray(), [
+                            'privacy' => !$record->canEdit(auth()->user())
+                                && Classroom::find($livewire?->tableFilters['classroom_id']['value'] ?? null)
+                                ?->teacher_id !== auth()->user()->userable->id,
+                        ]);
+                    })
+                    ->label(function ($record) {
+                        if ($record->canEdit(auth()->user())) {
+                            return '수정';
+                        }
+                        return '조회';
+                    })
+                    ->icon(function ($record) {
+                        if ($record->canEdit(auth()->user())) {
+                            return 'heroicon-m-pencil-square';
+                        }
+                        return 'heroicon-m-eye';
+                    })
+                    ->modalSubmitAction(function ($record) {
+                        if (!$record->canEdit(auth()->user())) {
+                            return false;
+                        }
+                    })
                     ->modalWidth('xl'),
+
                 ActionGroup::make([
                     Tables\Actions\Action::make('print-wrong-notes')
                         ->label('오답 노트 출력')
@@ -497,6 +405,9 @@ class StudentResource extends Resource
 
                     Tables\Actions\Action::make('manage-account')
                         ->label(fn($record) => '계정 관리')
+                        ->visible(function ($record) {
+                            return $record->canEdit(auth()->user());
+                        })
                         ->color(function ($record) {
                             if ($record->user->username === null) {
                                 return 'gray';

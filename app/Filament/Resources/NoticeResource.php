@@ -51,14 +51,14 @@ class NoticeResource extends Resource
                                     ->label('공지 대상')
                                     ->required()
                                     ->options([
-                                        '관리자' => '관리자',
+                                        '관리자' => '중간 관리자',
                                         '강사' => '강사',
                                         '학생' => '학생',
                                         '상담실' => '상담실',
                                     ])
                                     ->default(['관리자', '강사', '학생', '상담실'])
                                     ->columns(4)
-                                    ->columnSpan(2),
+                                    ->columnSpan(3),
                             ])->columnSpanFull(),
                         TextInput::make('title')
                             ->label('제목')
@@ -91,7 +91,16 @@ class NoticeResource extends Resource
     {
         return $table
             ->modifyQueryUsing(function (Builder $query) {
-                $query->orderBy('pinned_at', 'desc');
+                $query->orderBy('pinned_at', 'desc')
+                    ->when(!auth()->user()->isRoleAbove('admin', true), function ($query) {
+                        if (auth()->user()->role === 'manager') {
+                            $query->whereJsonContains('target_groups', '관리자')
+                                ->orWhereJsonContains('target_groups', '"관리자"');
+                        } else if (auth()->user()->role === 'general') {
+                            $query->whereJsonContains('target_groups', '강사')
+                                ->orWhereJsonContains('target_groups', '"강사"');
+                        }
+                    });
             })
             ->defaultSort('created_at', 'desc')
             ->emptyStateHeading('공지사항이 없습니다.')
@@ -125,6 +134,23 @@ class NoticeResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make()
                     ->modalHeading('공지 수정하기')
+                    ->label(function ($record) {
+                        if (auth()->user()->isRoleAbove('admin', true) || !auth()->user()->userable instanceof \App\Models\Teacher) {
+                            return '수정';
+                        }
+                        return '조회';
+                    })
+                    ->icon(function ($record) {
+                        if (auth()->user()->isRoleAbove('admin', true) || !auth()->user()->userable instanceof \App\Models\Teacher) {
+                            return 'heroicon-m-pencil-square';
+                        }
+                        return 'heroicon-m-eye';
+                    })
+                    ->modalSubmitAction(function () {
+                        if (!auth()->user()->isRoleAbove('admin', true) && auth()->user()->userable instanceof \App\Models\Teacher) {
+                            return false;
+                        }
+                    })
                     ->modalWidth('4xl'),
             ])
             ->bulkActions([

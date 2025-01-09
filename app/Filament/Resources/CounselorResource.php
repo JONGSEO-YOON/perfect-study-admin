@@ -36,6 +36,10 @@ class CounselorResource extends Resource
         return '';
     }
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->isRoleAbove('admin', true);
+    }
 
 
     public static function form(Form $form): Form

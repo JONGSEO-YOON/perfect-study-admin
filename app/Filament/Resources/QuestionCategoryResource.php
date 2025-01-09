@@ -35,6 +35,11 @@ class QuestionCategoryResource extends Resource
 
     protected static ?int $navigationSort = 2;
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->role == 'root_admin';
+    }
+
     public static function getBreadcrumb(): string
     {
         return '문제 유형표 관리';

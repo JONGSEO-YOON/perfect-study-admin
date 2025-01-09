@@ -26,6 +26,10 @@ class ListTeachers extends ListRecords
                 ->modalHeading('강사 추가하기')
                 ->modalWidth('xl')
                 ->createAnother(false)
+                ->visible(
+                    fn() => auth()->user()->isRoleAbove('manager', true)
+                        ||  !auth()->user()->userable instanceof \App\Models\Teacher
+                )
                 ->modalSubmitActionLabel('저장'),
         ];
     }

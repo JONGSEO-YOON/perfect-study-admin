@@ -46,7 +46,8 @@ class NotificationResource extends Resource
     {
         return $table
             ->modifyQueryUsing(function (Builder $query) {
-                $query->unread();
+                $query->where('user_id', auth()->id())
+                    ->unread();
             })
             ->defaultSort('id', 'desc')
             ->emptyStateHeading('알림이 없습니다.')

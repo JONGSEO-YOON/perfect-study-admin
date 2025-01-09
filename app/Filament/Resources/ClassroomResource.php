@@ -43,6 +43,12 @@ class ClassroomResource extends Resource
         return '';
     }
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->isRoleAbove('admin', true)
+            || !auth()->user()->userable instanceof \App\Models\Teacher;
+    }
+
     public static function form(Form $form): Form
     {
         return $form

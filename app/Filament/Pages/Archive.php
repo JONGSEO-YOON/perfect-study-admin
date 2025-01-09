@@ -158,6 +158,11 @@ class Archive extends Page implements HasForms, HasTable
             ->defaultSort('created_at', 'desc');
     }
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()->isRoleAbove('admin', true);
+    }
+
     public function mount()
     {
         $this->resourceCategories = ResourceCategory::with('subCategories')->get();
