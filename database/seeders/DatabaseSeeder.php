@@ -29,7 +29,9 @@ class DatabaseSeeder extends Seeder
             'username' => 'admin',
             'phone' => '010-1234-5678',
         ]);
-        $adminTeacher = Teacher::factory()->create([]);
+        $adminTeacher = Teacher::factory()->create([
+            'role' => 'root_admin',
+        ]);
         $adminTeacher->user()->save($admin);
 
         $this->call([
