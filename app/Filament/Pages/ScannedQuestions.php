@@ -26,6 +26,9 @@ class ScannedQuestions extends Page
     #[Url]
     public $material_id = null;
 
+    #[Url]
+    public $is_public = false;
+
     public $arguments = [];
 
     public function mount($id)
@@ -79,6 +82,7 @@ class ScannedQuestions extends Page
                 'choices' => [],
                 'choices_count' => 4,
                 'material_id' => $this->material_id,
+                'is_public' => $this->is_public,
                 ...$this->arguments,
             ])
             ->form(QuestionResource::_form())

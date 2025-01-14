@@ -10,9 +10,10 @@
                 @endphp
                 {{ collect($path)->pluck('name')->join(' > ') }}
             </div>
-            @if ($selectedMaterialId)
+            @if ($selectedMaterialId && $selectedMaterial?->is_editable)
                 <div class="flex flex-row gap-x-2">
                     {{-- {{ $this->deleteMaterialAction }} --}}
+                    {{ $this->editMaterialAction }}
                     {{ $this->deleteMaterialAction }}
                 </div>
             @endif
@@ -20,7 +21,7 @@
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 px-4">
             @if ($hasUpperLevel)
                 <div class="flex flex-col items-center space-y-2 hover:brightness-90 cursor-pointer transition-all"
-                    wire:click="$set('selectedMaterialId', 'up')" wire:dblclick="redirectTo(location.href, 'up') ">
+                    wire:click="redirectTo(location.href, 'up') ">
                     <div @class([
                         'aspect-[2/3] w-full flex items-center justify-center bg-gray-100 rounded-lg text-gray-400 transition-all ',
                         '!bg-primary-500 !text-white' => $selectedMaterialId === 'up',
@@ -54,7 +55,7 @@
                 </div>
             @endforeach
             @foreach ($materials->where('type', 'book')->sortBy('created_at') as $material)
-                <div class="flex flex-col items-center space-y-2 hover:brightness-90 cursor-pointer transition-all"
+                <div class="flex flex-col items-center space-y-2 hover:brightness-90 cursor-pointer transition-all relative"
                     wire:click="redirectTo(location.href, {{ $material->id }})">
                     @if ($material->image_path)
                         <div class="aspect-[2/3] w-full bg-gray-200 rounded-lg overflow-hidden shadow">
@@ -77,6 +78,15 @@
                     ])>
                         {{ $material->name }}
                     </p>
+                    @if ($material->user_id !== auth()->id())
+                        <div class="absolute top-0 right-2 p-1 text-white rounded-full shadow bg-primary-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                                class="size-4">
+                                <path
+                                    d="M13 4.5a2.5 2.5 0 1 1 .702 1.737L6.97 9.604a2.518 2.518 0 0 1 0 .792l6.733 3.367a2.5 2.5 0 1 1-.671 1.341l-6.733-3.367a2.5 2.5 0 1 1 0-3.475l6.733-3.366A2.52 2.52 0 0 1 13 4.5Z" />
+                            </svg>
+                        </div>
+                    @endif
                 </div>
             @endforeach
 

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Builder;
 
 class Material extends Model
 {
@@ -46,5 +47,56 @@ class Material extends Model
     public function questions()
     {
         return $this->hasMany(Question::class);
+    }
+
+    /**
+     * 현재 사용자가 볼 수 있는 자료만 조회하는 스코프
+     */
+    public function scopeVisible(Builder $query): Builder
+    {
+        $userId = auth()->id();
+
+        if (auth()->user()->isRoleAbove('manager', true)) {
+            return $query;
+        }
+
+        return $query->where(function ($query) use ($userId) {
+            $query->Where('user_id', $userId)  // 자신이 만든 자료
+                ->orWhereHas('visibleUsers', function ($query) use ($userId) {
+                    $query->where('users.id', $userId);
+                });
+        });
+    }
+
+    /**
+     * 자료를 볼 수 있는 사용자들과의 관계
+     */
+    public function visibleUsers()
+    {
+        return $this->belongsToMany(User::class, 'material_user_visibility')
+            ->withTimestamps();
+    }
+
+    /**
+     * 현재 사용자가 편집 가능한 자료만 조회하는 스코프
+     */
+    public function scopeEditable(Builder $query): Builder
+    {
+        return $query->where(function ($query) {
+            $query->where('user_id', auth()->id())
+                ->when(auth()->user()->isRoleAbove('manager', true), function ($query) {
+                    $query->orWhereRaw('1 = 1');
+                });
+        });
+    }
+
+    /**
+     * 현재 사용자가 이 자료를 편집할 수 있는지 확인
+     */
+    public function getIsEditableAttribute(): bool
+    {
+
+        return auth()->user()->isRoleAbove('manager', true) ||
+            $this->user_id === auth()->id();
     }
 }

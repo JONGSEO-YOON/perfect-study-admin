@@ -328,10 +328,19 @@ class QuestionResource extends Resource
             Select::make('material_id')
                 ->label('교재')
                 ->searchable()
+                ->live()
                 ->options(
-                    \App\Models\Material::where('type', 'book')->get()->pluck('name', 'id')
+                    \App\Models\Material::where('type', 'book')
+                        ->editable()
+                        ->get()->pluck('name', 'id')
                 )
+                ->visible(fn(Get $get) => !$get('is_sub_question'))
                 ->placeholder('교재를 선택하세요.'),
+            Toggle::make('is_public')
+                ->columnSpanFull()
+                ->inline(false)
+                ->visible(fn(Get $get) => !$get('is_sub_question') && !$get('material_id'))
+                ->label('문제 공개 (타 강사 공유)'),
             TagsInput::make('tags')
                 ->label('태그')
                 ->separator(',')
@@ -449,11 +458,39 @@ class QuestionResource extends Resource
                             $data['id'] = $record->id;
                             return self::handleUpdate($data);
                         })
-                        ->modalHeading('문제 수정')
+                        ->label(function ($record) {
+                            if ($record->is_editable) {
+                                return '수정';
+                            }
+                            return '조회';
+                        })
+                        ->icon(function ($record) {
+                            if ($record->is_editable) {
+                                return 'heroicon-m-pencil-square';
+                            }
+                            return 'heroicon-m-eye';
+                        })
+                        ->modalSubmitAction(function ($record) {
+                            if (!$record->is_editable) {
+                                return false;
+                            }
+                        })
+                        ->modalHeading('문제')
                         ->modalWidth('2xl'),
                     Tables\Actions\Action::make('유사 문제 1')
                         ->label('유사 문제 1')
                         ->icon('heroicon-m-pencil-square')
+                        ->icon(function ($record) {
+                            if ($record->is_editable) {
+                                return 'heroicon-m-pencil-square';
+                            }
+                            return 'heroicon-m-eye';
+                        })
+                        ->modalSubmitAction(function ($record) {
+                            if (!$record->is_editable) {
+                                return false;
+                            }
+                        })
                         ->fillForm(function ($record) {
                             $subQuestion = $record->childQuestions()
                                 ->orderBy('id', 'asc')
@@ -499,10 +536,21 @@ class QuestionResource extends Resource
                                 ->success()
                                 ->send();
                         })
-                        ->modalHeading('문제 수정')
+                        ->modalHeading('유사 문제 1')
                         ->modalWidth('2xl'),
                     Tables\Actions\Action::make('유사 문제 2')
                         ->label('유사 문제 2')
+                        ->icon(function ($record) {
+                            if ($record->is_editable) {
+                                return 'heroicon-m-pencil-square';
+                            }
+                            return 'heroicon-m-eye';
+                        })
+                        ->modalSubmitAction(function ($record) {
+                            if (!$record->is_editable) {
+                                return false;
+                            }
+                        })
                         ->fillForm(function ($record) {
                             $subQuestion = $record->childQuestions()
                                 ->orderBy('id', 'asc')
@@ -550,8 +598,7 @@ class QuestionResource extends Resource
                                 ->success()
                                 ->send();
                         })
-                        ->icon('heroicon-m-pencil-square')
-                        ->modalHeading('문제 수정')
+                        ->modalHeading('유사 문제 2')
                         ->modalWidth('2xl'),
                 ]),
                 // Tables\Actions\EditAction::make()

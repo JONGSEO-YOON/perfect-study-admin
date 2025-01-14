@@ -9,6 +9,8 @@ use App\Models\Material;
 use Filament\Actions;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use \Imagick;
@@ -40,6 +42,19 @@ class ListQuestions extends ListRecords
                 ->modalHeading('스캔하여 등록하기')
                 ->modalWidth('2xl')
                 ->modalSubmitActionLabel('스캔하기')
+                ->visible(function () {
+                    if (!$this->parent_id) {
+                        return true;
+                    }
+                    $material = Material::find($this->parent_id);
+                    if (!$material) {
+                        return true;
+                    }
+                    if ($material->type !== 'book') {
+                        return false;
+                    }
+                    return $material->is_editable;
+                })
                 ->fillForm(function () {
                     if (!$this->parent_id) {
                         return [];
@@ -58,9 +73,17 @@ class ListQuestions extends ListRecords
                         ->label('교재')
                         ->searchable()
                         ->options(
-                            \App\Models\Material::where('type', 'book')->get()->pluck('name', 'id')
+                            \App\Models\Material::where('type', 'book')
+                                ->editable()
+                                ->get()->pluck('name', 'id')
                         )
+                        ->live()
                         ->placeholder('교재를 선택하세요.'),
+                    Toggle::make('is_public')
+                        ->columnSpanFull()
+                        ->inline(false)
+                        ->visible(fn(Get $get) =>  !$get('material_id'))
+                        ->label('문제 공개 (타 강사 공유)'),
                     FileUpload::make('file')
                         ->placeholder('파일을 업로드하세요')
                         ->label('스캔할 파일 업로드')
@@ -87,7 +110,7 @@ class ListQuestions extends ListRecords
                             ->danger()
                             ->send();
                     }
-                    return redirect('/admin/scanned-questions/' . $attachmentName . '?material_id=' . ($data['material_id'] ?? ''));
+                    return redirect('/admin/scanned-questions/' . $attachmentName . '?material_id=' . ($data['material_id'] ?? '') . '&is_public=' . ($data['is_public'] ?? '0'));
                 }),
             Actions\CreateAction::make()
                 ->icon('heroicon-m-plus-circle')
@@ -96,6 +119,19 @@ class ListQuestions extends ListRecords
                 ->modalWidth('2xl')
                 ->createAnother(false)
                 ->modalSubmitActionLabel('저장')
+                ->visible(function () {
+                    if (!$this->parent_id) {
+                        return true;
+                    }
+                    $material = Material::find($this->parent_id);
+                    if (!$material) {
+                        return true;
+                    }
+                    if ($material->type !== 'book') {
+                        return false;
+                    }
+                    return $material->is_editable;
+                })
                 ->fillForm(function () {
                     if (!$this->parent_id) {
                         return [];

@@ -46,7 +46,7 @@ class ListTestSheets extends ListRecords
                         ->label('교재 선택')
                         ->required()
                         ->options(
-                            \App\Models\Material::where('type', 'book')->get()->pluck('name', 'id')
+                            \App\Models\Material::where('type', 'book')->visible()->get()->pluck('name', 'id')
                         )
                         ->live()
                         ->searchable()

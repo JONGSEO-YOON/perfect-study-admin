@@ -3,11 +3,15 @@
 namespace App\Filament\Resources\QuestionResource\Widgets;
 
 use App\Models\Material;
+use App\Models\Teacher;
+use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\ToggleButtons;
@@ -35,12 +39,12 @@ class BookOverview extends Widget implements HasForms, HasActions
     public $hasUpperLevel = false;
 
     public $selectedMaterialId = null;
+    public $selectedMaterial = null;
 
     protected static string $view = 'filament.resources.question-resource.widgets.book-overview';
 
     public function mount()
     {
-
         $this->fetchMaterials();
     }
 
@@ -56,10 +60,61 @@ class BookOverview extends Widget implements HasForms, HasActions
             }
             $this->hasUpperLevel = $parentId !== null;
         }
+        if ($this->selectedMaterialId) {
+            $this->selectedMaterial = Material::findOrFail($this->selectedMaterialId);
+        }
         $this->folderId = $parentId;
         $this->materials = Material::where('parent_id', $parentId)
-            ->where('user_id', auth()->id())
+            ->visible()
             ->get();
+    }
+
+    public function materialForm()
+    {
+        return [
+            Hidden::make('id')
+                ->default(null),
+            Grid::make(1)
+                ->schema([
+                    ToggleButtons::make('type')
+                        ->inline()
+                        ->options([
+                            'book' => '교재',
+                            'folder' => '폴더',
+                        ])
+                        ->live()
+                        ->visible(fn(Get $get) => $get('id') === null)
+                        ->label('종류')
+                        ->grouped()
+                        ->required()
+                        ->default('book'),
+                    TextInput::make('name')
+                        ->required()
+                        ->label('이름'),
+                    FileUpload::make('image_path')
+                        ->label('사진')
+                        ->image()
+                        ->visible(fn(Get $get) => $get('type') === 'book')
+                        ->placeholder('사진 업로드'),
+                    Select::make('visible_user_ids')
+                        ->label('공유')
+                        ->visible(function () {
+                            return auth()->user()->isRoleAbove('manager', true);
+                        })
+                        ->multiple()
+                        ->options(function (Get $get) {
+                            return User::where('userable_type', Teacher::class)
+                                ->when($get('id'), function ($query, $id) {
+                                    return $query->where('id', '!=', $this->selectedMaterial->user_id);
+                                })
+                                ->when($get('id') === null, function ($query) {
+                                    return $query->where('id', '!=', auth()->id());
+                                })
+                                ->get()->pluck('name', 'id');
+                        })
+                ])
+
+        ];
     }
 
     public function addNewBookOrFolderAction()
@@ -69,31 +124,9 @@ class BookOverview extends Widget implements HasForms, HasActions
             ->modalHeading('교재 추가')
             ->modalSubmitActionLabel('추가')
             ->form([
-                Grid::make(1)
-                    ->schema([
-                        ToggleButtons::make('type')
-                            ->inline()
-                            ->options([
-                                'book' => '교재',
-                                'folder' => '폴더',
-                            ])
-                            ->live()
-                            ->label('종류')
-                            ->grouped()
-                            ->required()
-                            ->default('book'),
-                        TextInput::make('name')
-                            ->required()
-                            ->label('이름'),
-                        FileUpload::make('image_path')
-                            ->label('사진')
-                            ->image()
-                            ->visible(fn(Get $get) => $get('type') === 'book')
-                            ->placeholder('사진 업로드'),
-                    ])
+                ...$this->materialForm(),
             ])
             ->action(function ($data) {
-
                 $material = Material::create([
                     'user_id' => auth()->id(),
                     'parent_id' => $this->folderId,
@@ -101,6 +134,7 @@ class BookOverview extends Widget implements HasForms, HasActions
                     'name' => $data['name'],
                     'image_path' => $data['image_path'] ?? null,
                 ]);
+                $material->visibleUsers()->sync($data['visible_user_ids'] ?? []);
                 Notification::make()
                     ->title('추가되었습니다.')
                     ->success()
@@ -113,7 +147,6 @@ class BookOverview extends Widget implements HasForms, HasActions
                     ],
                 ];
                 redirect('/admin/questions?' . http_build_query($queries));
-                // $this->fetchMaterials();
             });
     }
 
@@ -132,16 +165,40 @@ class BookOverview extends Widget implements HasForms, HasActions
                 redirect('/admin/questions?' . http_build_query([
                     'parent_id' => $this->folderId,
                 ]));
-                //if ($this->parent_id === $this->selectedMaterialId) {
-                //    redirect('/admin/questions?' . http_build_query([
-                //        'parent_id' => $this->folderId,
-                //    ]));
-                //} else {
-                //    $this->selectedMaterialId = null;
-                //    $this->fetchMaterials();
-                //}
             });
     }
+
+    public function editMaterialAction()
+    {
+        return Action::make('editMaterial')
+            ->label('선택 수정')
+            ->modalWidth('sm')
+            ->icon('heroicon-m-pencil-square')
+            ->size('sm')
+            ->fillForm(function () {
+                return [
+                    ...$this->selectedMaterial->toArray(),
+                    'visible_user_ids' => $this->selectedMaterial->visibleUsers->pluck('id')->toArray(),
+                ];
+            })
+            ->form([
+                ...$this->materialForm(),
+            ])
+            ->action(function ($data) {
+                $material = Material::findOrFail($data['id']);
+                $material->update([
+                    'name' => $data['name'],
+                    'image_path' => $data['image_path'] ?? null,
+                ]);
+                $material->visibleUsers()->sync($data['visible_user_ids']);
+                Notification::make()
+                    ->title('수정되었습니다.')
+                    ->success()
+                    ->send();
+            });
+    }
+
+
 
     public function redirectTo($url, $parentId)
     {
