@@ -70,7 +70,7 @@
                         @endif
                         <td
                             style="text-align:center; height:26px; vertical-align:center; padding: 10px; border: 1px solid #ddd;">
-                            {{ $item['type'] }}</td>
+                            {!! $item['type'] !!}</td>
                         @foreach ($availableScores as $score)
                             @foreach ([1, 2, 3, 4, 5] as $level)
                                 <td

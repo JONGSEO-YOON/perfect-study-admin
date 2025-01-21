@@ -47,7 +47,7 @@
                                         {!! $majorData['major'] !!}
                                     </td>
                                 @endif
-                                <td class="px-1 py-3 border-b">{{ $item['type'] }}</td>
+                                <td class="px-1 py-3 border-b">{!! $item['type'] !!}</td>
                                 @foreach ($availableScores as $score)
                                     @foreach ([1, 2, 3, 4, 5] as $level)
                                         <td class="px-1 py-3 border-b">
