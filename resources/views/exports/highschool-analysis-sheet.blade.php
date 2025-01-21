@@ -65,7 +65,7 @@
                         @if ($index === 0)
                             <td rowspan="{{ count($majorData['items']) }}"
                                 style="text-align:center; height:26px; vertical-align:center; padding: 10px; border: 1px solid #ddd; ">
-                                {{ $majorData['major'] }}
+                                {!! $majorData['major'] !!}
                             </td>
                         @endif
                         <td

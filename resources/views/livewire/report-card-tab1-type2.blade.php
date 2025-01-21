@@ -44,7 +44,7 @@
                             <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center">
                                 @if ($index === 0)
                                     <td rowspan="{{ count($majorData['items']) }}" class="px-1 py-3 border-b">
-                                        {{ $majorData['major'] }}
+                                        {!! $majorData['major'] !!}
                                     </td>
                                 @endif
                                 <td class="px-1 py-3 border-b">{{ $item['type'] }}</td>
