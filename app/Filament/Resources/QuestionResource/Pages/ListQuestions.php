@@ -4,12 +4,15 @@ namespace App\Filament\Resources\QuestionResource\Pages;
 
 use App\Filament\Resources\QuestionResource;
 use App\Filament\Resources\QuestionResource\Widgets\BookOverview;
+use App\Jobs\ConvertPdfToImagesJob;
 use App\Livewire\QuestionTypeField;
 use App\Models\Material;
 use Filament\Actions;
+use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ViewField;
 use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
@@ -28,6 +31,7 @@ class ListQuestions extends ListRecords
     #[Url]
     public $parent_id = null;
 
+
     public function getBreadcrumb(): ?string
     {
         return null;
@@ -40,6 +44,8 @@ class ListQuestions extends ListRecords
                 ->icon('heroicon-m-document-magnifying-glass')
                 ->label('스캔으로 등록하기')
                 ->modalHeading('스캔하여 등록하기')
+                ->closeModalByClickingAway(false)
+                ->closeModalByEscaping(false)
                 ->modalWidth('2xl')
                 ->modalSubmitActionLabel('스캔하기')
                 ->visible(function () {
@@ -90,6 +96,10 @@ class ListQuestions extends ListRecords
                         ->previewable(false)
                         ->downloadable(true)
                         ->columnSpanFull(),
+                    // ViewField::make('progress')
+                    //     ->live()
+                    //     ->reactive()
+                    //     ->view('filament.components.forms.scan-progress')
                 ])
                 ->action(function ($data) {
                     $attachment = $data['file'];
@@ -102,7 +112,13 @@ class ListQuestions extends ListRecords
                             mkdir($outputDir, 0777, true);
                         }
                         $attachmentPath = storage_path('app/public/' . $attachment);
-                        $this->convertPdfToImages($attachmentPath, $outputDir);
+                        $this->convertPdfToImages(
+                            $attachmentPath,
+                            $outputDir,
+                            $attachmentName,
+                            $data['material_id'] ?? null,
+                            $data['is_public'] ?? null
+                        );
                     }
                     if (!$attachmentName) {
                         Notification::make()
@@ -110,6 +126,9 @@ class ListQuestions extends ListRecords
                             ->danger()
                             ->send();
                     }
+                    // $livewire->dispatch('onScanStarted', [
+                    //     'attachmentName' => $attachmentName,
+                    // ]);
                     return redirect('/admin/scanned-questions/' . $attachmentName . '?material_id=' . ($data['material_id'] ?? '') . '&is_public=' . ($data['is_public'] ?? '0'));
                 }),
             Actions\CreateAction::make()
@@ -164,8 +183,11 @@ class ListQuestions extends ListRecords
         return 1;
     }
 
-    public function convertPdfToImages($pdfPath, $outputDir)
+    public function convertPdfToImages($pdfPath, $outputDir, $attachmentName, $materialId, $isPublic)
     {
+        ConvertPdfToImagesJob::dispatch($pdfPath, $outputDir, $attachmentName, $materialId, $isPublic);
+        return;
+
         $imagick = new Imagick();
         $imagick->readImage($pdfPath);
         $imagick->setResolution(600, 600);
@@ -173,7 +195,15 @@ class ListQuestions extends ListRecords
 
         $numPages = $imagick->getNumberImages();
 
+        $this->totalPages = $numPages;
+
         for ($i = 0; $i < $numPages; $i++) {
+            $this->currentPage = $i + 1;
+            $this->dispatch('onProgressUpdated', [
+                'progress' => $this->currentPage / $this->totalPages * 100,
+                'currentPage' => $this->currentPage,
+                'totalPages' => $this->totalPages,
+            ]);
             $image = new Imagick();
             $image->setResolution(300, 300);
             $image->setColorspace(Imagick::COLORSPACE_SRGB);
@@ -182,14 +212,6 @@ class ListQuestions extends ListRecords
             $image->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
             $image->setImageBackgroundColor(new ImagickPixel('white'));
 
-            // $geo = $image->getImageGeometry();
-            // $width = $geo['width'];
-            // $height = $geo['height'];
-            // 76픽셀만큼 상하좌우를 crop
-            // $cropWidth = $width; //- 152;  // 좌우 각각 76픽셀
-            // $cropHeight = $height; // - 152;  // 상하 각각 76픽셀
-            // $image->cropImage($cropWidth, $cropHeight, 76, 76);
-            // $image->trimImage(0);
 
             $image->setImageFormat('jpg');
             $image->writeImage($outputDir . "/page_" . ($i + 1) . ".jpg");

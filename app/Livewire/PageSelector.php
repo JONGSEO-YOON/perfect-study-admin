@@ -8,6 +8,7 @@ use Filament\Notifications\Notification;
 use Ijpatricio\Mingle\Concerns\InteractsWithMingles;
 use Ijpatricio\Mingle\Contracts\HasMingles;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Livewire\Component;
@@ -21,6 +22,11 @@ class PageSelector extends Component implements HasMingles
     public function component(): string
     {
         return 'resources/js/PageSelector.js';
+    }
+
+    public function refreshPages()
+    {
+        return $this->mingleData();
     }
 
     public function mingleData(): array
@@ -41,7 +47,17 @@ class PageSelector extends Component implements HasMingles
             ];
         }
 
+        $cache = Cache::get("pdf_conversion_{$id}", [
+            'progress' => 0,
+            'currentPage' => 0,
+            'totalPages' => 0,
+            'material_id' => null,
+            'is_public' => false,
+            'is_completed' => false
+        ], now()->addHours(1));
+
         return [
+            'cache' => $cache,
             'pages' => $data,
             'id' => $id
         ];

@@ -6,6 +6,7 @@ use App\Filament\Resources\QuestionResource;
 use App\Models\QuestionCategory;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Url;
 
 class ScannedQuestions extends Page
@@ -29,11 +30,21 @@ class ScannedQuestions extends Page
     #[Url]
     public $is_public = false;
 
+    public $cache = [];
+
     public $arguments = [];
 
     public function mount($id)
     {
         $this->id = $id;
+        $this->cache = Cache::get("pdf_conversion_{$id}", [
+            'progress' => 0,
+            'currentPage' => 0,
+            'totalPages' => 0,
+            'material_id' => null,
+            'is_public' => false,
+            'is_completed' => false
+        ], now()->addHours(1));
     }
 
     public function deleteQuestionAction(): Action

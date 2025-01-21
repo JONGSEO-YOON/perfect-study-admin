@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { defineProps } from "vue";
 import PageRenderer from "./PageRenderer.vue";
 
@@ -9,15 +9,16 @@ const props = defineProps({
 });
 
 const { wire, mingleData } = props;
-const pages = mingleData.pages;
+const pages = ref(mingleData.pages);
 const id = mingleData.id;
 
 const extracting = ref(false);
 const completing = ref(false);
 const status = ref("page-select");
+const cache = ref(mingleData.cache);
 
 const selectedPages = ref([]);
-for (const page of pages) {
+for (const page of pages.value) {
     selectedPages.value.push(page);
 }
 const lastSelectedPage = ref(null);
@@ -180,6 +181,14 @@ const editedQuestions = computed(() => {
     //     (q) => q.data && q.sub1_data && q.sub2_data
     // );
 });
+
+onMounted(() => {
+    window.addEventListener("reloadPages", async (event) => {
+        const data = await wire.refreshPages();
+        pages.value = data.pages;
+        cache;
+    });
+});
 </script>
 
 <template>
@@ -311,7 +320,10 @@ const editedQuestions = computed(() => {
             v-if="status === 'page-select'"
             class="flex flex-col transition duration-300"
         >
-            <div class="flex justify-between gap-x-2">
+            <div
+                class="flex justify-between gap-x-2"
+                v-show="cache.is_completed"
+            >
                 <div class="flex gap-x-2">
                     <button
                         v-if="!extracting"
