@@ -15,7 +15,8 @@ class TestSheet extends Model
 
     protected $casts = [
         'display' => 'boolean',
-        'display' => 'use_score_table',
+        'use_score_table' => 'boolean',
+        'show_explanation_video' => 'boolean',
         'published_at' => 'datetime',
         'expired_at' => 'datetime',
         'target_grades' => 'array',
@@ -336,7 +337,7 @@ class TestSheet extends Model
 
         // 새로운 테스트 시트 생성
         $newTestSheet = new static([
-            ...$this->only(['title', 'sub_title', 'scopes', 'user_id', 'tags']),
+            ...$this->only(['title', 'sub_title', 'scopes', 'user_id', 'tags', 'show_explanation_video']),
             'use_score_table' => false,
             'name' => $this->name . ' (오답 유사 유형)',
             'target_group' => 'student',
@@ -471,7 +472,7 @@ class TestSheet extends Model
 
         // 새로운 테스트 시트 생성
         $newTestSheet = new static([
-            ...$firstRetryTest->originalTestSheet->only(['title', 'sub_title', 'scopes', 'user_id', 'tags']),
+            ...$firstRetryTest->originalTestSheet->only(['title', 'sub_title', 'scopes', 'user_id', 'tags', 'show_explanation_video']),
             'name' => $firstRetryTest->originalTestSheet->name . ' (오답 테스트)',
             'target_group' => 'student',
             'target_students' => [$firstRetryTest->user_id],

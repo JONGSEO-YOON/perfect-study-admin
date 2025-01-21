@@ -100,6 +100,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         'title' => '수학 영역(미적분)',
         'sub_title' => '2023년 대학수학능력시험 실전 모의고사 22회',
         'use_score_table' => false,
+        'show_explanation_video' => true,
         'score_table' => [],
         'color' => '#0ea5e9',
         'grade' => '중1',
@@ -388,8 +389,19 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                                 }
                             },
                         ])
+                ]),
+            Section::make('기타')
+                ->label('기타')
+                ->heading('4. 기타')
+                ->columns(4)
+                ->schema([
+                    Toggle::make('show_explanation_video')
+                        ->label('해설 강의 표기')
+                        ->columnSpanFull()
+                        ->live()
+                        ->reactive()
+                        ->default(true),
                 ])
-
 
         ])
             ->statePath('data');
@@ -965,6 +977,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             'scopes' => $scopes,
             'temp_data_id' => $this->id,
             'use_score_table' => $formData['use_score_table'],
+            'show_explanation_video' => $formData['show_explanation_video'],
             'score_table' => $formData['score_table'],
             'parsed_score_table' => $parsed_score_table,
             'print_layout' => $this->printLayout,

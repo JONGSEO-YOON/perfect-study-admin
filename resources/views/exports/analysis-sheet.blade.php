@@ -71,7 +71,7 @@
                         @endphp
                         <td rowspan="{{ $majorRowspan }}"
                             style="text-align:center; height: 26px; vertical-align:center; padding: 10px; border: 1px solid #ddd;">
-                            {{ $item['major'] }}
+                            {!! $item['major'] !!}
                         </td>
                     @endif
 
@@ -84,13 +84,13 @@
                         @endphp
                         <td rowspan="{{ $middleRowspan }}"
                             style="text-align:center; height: 26px; vertical-align:center; padding: 10px; border: 1px solid #ddd;">
-                            {{ $item['middle'] }}
+                            {!! $item['middle'] !!}
                         </td>
                     @endif
 
                     <td
                         style="text-align:center; height: 26px; vertical-align:center; padding: 10px; border: 1px solid #ddd;">
-                        {{ $item['type'] }}</td>
+                        {!! $item['type'] !!}</td>
 
                     @for ($level = 1; $level <= 5; $level++)
                         <td

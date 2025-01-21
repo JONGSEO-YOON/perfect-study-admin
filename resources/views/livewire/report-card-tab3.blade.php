@@ -43,7 +43,7 @@
                                             {{ $test['name'] }}
                                         </td>
                                     @endif
-                                    <td class="px-6  py-3 border-b">{{ $type['name'] }}</td>
+                                    <td class="px-6  py-3 border-b">{!! $type['name'] !!}</td>
                                     <td class="px-6 py-3 border-b">
                                         {{ number_format($type['scores']['personal_score']) }}</td>
                                     <td class="px-6 py-3 border-b">
@@ -179,7 +179,7 @@
                                             {{ $homework['name'] }}
                                         </td>
                                     @endif
-                                    <td class="px-6 py-3 border-b">{{ $type['name'] }}</td>
+                                    <td class="px-6 py-3 border-b">{!! $type['name'] !!}</td>
                                     <td class="px-6 py-3 border-b">
                                         {{ $type['correct_count'] }}/{{ $type['total_count'] }}</td>
                                     <td class="px-6 py-3 border-b">{{ number_format($type['attempt_rate'], 1) }}%</td>

@@ -24,6 +24,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ViewColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
@@ -78,20 +79,24 @@ class TestSheetResource extends Resource
                     ->label('태그')
                     ->sortable()
                     ->searchable(),
-                TextColumn::make('name')
-                    ->label('시험지 명')
-                    ->sortable()
-                    ->searchable()
-                    ->html()
-                    ->formatStateUsing(function ($record) {
-                        $question_count = count($record->questions);
-                        return <<<EOF
-                            $record->name <br />
-                            <span class="text-primary-500 mt-1 font-medium">{$question_count}문항 |</span>
-                            <span class="text-primary-500 mt-1 font-semibold">{$record->scopes[0]}</span>
-                            
-                        EOF;
-                    }),
+                ViewColumn::make('name')
+                    ->view('filament.components.columns.testsheet-question-category-render')
+                    ->label('이름')
+                    ->label('문제 유형'),
+                // TextColumn::make('name')
+                //     ->label('시험지 명')
+                //     ->sortable()
+                //     ->searchable()
+                //     ->html()
+                //     ->formatStateUsing(function ($record) {
+                //         $question_count = count($record->questions);
+                //         return <<<EOF
+                //             $record->name <br />
+                //             <span class="text-primary-500 mt-1 font-medium">{$question_count}문항 |</span>
+                //             <span class="text-primary-500 mt-1 font-semibold">{$record->scopes[0]}</span>
+
+                //         EOF;
+                //     }),
                 TextColumn::make('target_group_label')
                     ->state(true)
                     ->label('출제 대상')

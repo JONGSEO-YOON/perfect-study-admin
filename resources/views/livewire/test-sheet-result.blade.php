@@ -6,7 +6,7 @@
                     {{ $testsheet->start_date->format('m월 d일') }} {{ $testsheet->name }}
                 </h1>
                 <h2 class="text-[#7D7D92] md:ml-4 text-sm">
-                    {{ count($testsheet->questions) }}문제 | {{ $testsheet->scopes[0] }}
+                    {{ count($testsheet->questions) }}문제 | {!! $testsheet->scopes[0] !!}
                 </h2>
             </div>
             <button wire:click="returnToMain"

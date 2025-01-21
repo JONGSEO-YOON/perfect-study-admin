@@ -13,7 +13,7 @@
                     <p @class([
                         'text-base font-bold select-none text-center line-clamp-2 px-2 py-1 rounded',
                     ])>
-                        {{ $category->name }}
+                        {!! $category->name !!}
                     </p>
                 </div>
             @endforeach

@@ -28,7 +28,7 @@
                 </tr>
                 @foreach ($questionTypes as $type)
                     <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center">
-                        <td class="px-6 py-3 border-b">{{ $type['name'] }}</td>
+                        <td class="px-6 py-3 border-b">{!! $type['name'] !!}</td>
                         <td class="px-6 py-3 border-b">
                             {{ $type['personal_score'] }}/{{ $type['personal_total'] }}
                             ({{ $type['personal_score_percentage'] }}%)

@@ -379,9 +379,13 @@ class QuestionResource extends Resource
                 TextColumn::make('id')
                     ->label('No')
                     ->rowIndex(),
-                TextColumn::make('questionType.name')
-                    ->searchable()
-                    ->sortable()
+                // TextColumn::make('questionType.name')
+                //     ->searchable()
+                //     ->sortable()
+                //     ->html(),
+                ViewColumn::make('questionType.name')
+                    ->view('filament.components.columns.question-category-render')
+                    ->label('이름')
                     ->label('문제 유형'),
                 TextColumn::make('level')
                     ->label('레벨')

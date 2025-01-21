@@ -45,7 +45,7 @@
                                     );
                                 @endphp
                                 <td rowspan="{{ $majorRowspan }}" class="px-1 py-3 border-b">
-                                    {{ $item['major'] }}
+                                    {!! $item['major'] !!}
                                 </td>
                             @endif
 
@@ -57,11 +57,11 @@
                                     );
                                 @endphp
                                 <td rowspan="{{ $middleRowspan }}" class="px-1 py-3 border-b">
-                                    {{ $item['middle'] }}
+                                    {!! $item['middle'] !!}
                                 </td>
                             @endif
 
-                            <td class="px-1 py-3 border-b">{{ $item['type'] }}</td>
+                            <td class="px-1 py-3 border-b">{!! $item['type'] !!}</td>
 
                             @for ($level = 1; $level <= 5; $level++)
                                 <td class="px-1 py-3 border-b">{{ $item['levels'][$level]['total'] ?? 0 }}</td>

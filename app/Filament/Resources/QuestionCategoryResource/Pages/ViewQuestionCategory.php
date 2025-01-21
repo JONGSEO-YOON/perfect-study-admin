@@ -5,6 +5,8 @@ namespace App\Filament\Resources\QuestionCategoryResource\Pages;
 use App\Filament\Resources\QuestionCategoryResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\HtmlString;
 
 class ViewQuestionCategory extends ViewRecord
 {
@@ -12,9 +14,9 @@ class ViewQuestionCategory extends ViewRecord
 
     protected ?string $maxContentWidth = '3xl';
 
-    public function getTitle(): string
+    public function getTitle(): Htmlable
     {
-        return $this->record->name;
+        return new HtmlString($this->record->name);
     }
 
     public function getBreadcrumb(): string

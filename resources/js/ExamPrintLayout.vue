@@ -1227,7 +1227,9 @@ onMounted(() => {
                 <div class="break-words break-all">
                     <!-- scale: leading-8 -->
                     정답 {{ question.answer }}
-                    {{ question.question_type.name }}-레벨{{ question.level }}
+                    <span v-html="question.question_type.name"></span>-레벨{{
+                        question.level
+                    }}
                 </div>
             </div>
             <div class="w-full h-px bg-black mt-10 mb-4"></div>
@@ -1238,9 +1240,8 @@ onMounted(() => {
                     <div class="break-words break-all">
                         <!-- scale: leading-8 -->
                         정답 {{ question.answer }}
-                        {{ question.question_type.name }}-레벨{{
-                            question.level
-                        }}
+                        <span v-html="question.question_type.name"></span
+                        >-레벨{{ question.level }}
                     </div>
                 </div>
                 <div class="py-6">

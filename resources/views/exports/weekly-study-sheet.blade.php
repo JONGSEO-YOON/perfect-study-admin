@@ -118,7 +118,7 @@
                             @endif
                             <td
                                 style="text-align:center; height: 26px; vertical-align: middle; padding: 10px; border: 1px solid #ddd;">
-                                {{ $type['name'] }}
+                                {!! $type['name'] !!}
                             </td>
                             <td
                                 style="text-align:center; height: 26px; vertical-align: middle; padding: 10px; border: 1px solid #ddd;">
@@ -208,7 +208,7 @@
                             @endif
                             <td
                                 style="text-align:center; height: 26px; vertical-align: middle; padding: 10px; border: 1px solid #ddd;">
-                                {{ $type['name'] }}
+                                {!! $type['name'] !!}
                             </td>
                             <td
                                 style="text-align:center; height: 26px; vertical-align: middle; padding: 10px; border: 1px solid #ddd;">

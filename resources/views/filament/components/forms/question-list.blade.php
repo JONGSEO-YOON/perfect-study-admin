@@ -13,7 +13,7 @@
                 <div class="text-2xl bg-primary-400 text-white font-bold px-4 py-2.5 rounded-t-lg flex items-center">
                     {{ $number + 1 }}
                     <h2 class="flex items-center ml-4 text-base">
-                        {{ $question['question_type']['name'] }}
+                        {!! $question['question_type']['name'] !!}
                     </h2>
                     <h2 class="flex items-center ml-4 text-sm">
                         레벨: {{ $question['level'] }}

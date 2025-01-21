@@ -15,7 +15,7 @@
                     {{ $testsheet->start_date->format('m월 d일') }} {{ $testsheet->name }}
                 </h1>
                 <h1 class="font-medium text-sm text-[#7D7D92]">
-                    {{ count($testsheet->questions) }} 문제 | {{ $testsheet->scopes[0] }}
+                    {{ count($testsheet->questions) }} 문제 | {!! $testsheet->scopes[0] !!}
                 </h1>
             </div>
             <div class="flex flex-col gap-y-1">
@@ -82,7 +82,7 @@
                     {{ $testsheet->start_date->format('m월 d일') }} {{ $testsheet->name }}
                 </h1>
                 <h1 class="font-medium text-sm text-[#7D7D92]">
-                    {{ count($testsheet->questions) }} 문제 | {{ $testsheet->scopes[0] }}
+                    {{ count($testsheet->questions) }} 문제 | {!! $testsheet->scopes[0] !!}
                 </h1>
             </div>
             <div class="flex flex-col gap-y-1 mt-4 px-2">

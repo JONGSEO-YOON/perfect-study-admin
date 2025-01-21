@@ -122,7 +122,7 @@
                                             {{ $question->answer_type === 'integer' ? '주관식 (정수형)' : '객관식' }}
                                         </div>
                                         <div class="col-span-5 text-center text-sm text-gray-900">
-                                            {{ $question->questionType?->name }}</div>
+                                            {!! $question->questionType?->name !!}</div>
                                         <div wire:sortable.handle class="col-span-2  flex items-center justify-center">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
                                                 fill="currentColor" class="size-4">
@@ -148,7 +148,7 @@
                                     class="text-2xl bg-primary-400 text-white font-bold px-4 py-2.5 rounded-t-lg flex items-center">
                                     {{ $number + 1 }}
                                     <h2 class="flex items-center ml-4 text-base">
-                                        {{ $question->questionType?->name }}
+                                        {!! $question->questionType?->name !!}
                                     </h2>
                                     <h2 class="flex items-center ml-4 text-sm">
                                         레벨: {{ $question->level }}

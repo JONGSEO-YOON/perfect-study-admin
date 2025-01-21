@@ -68,7 +68,7 @@
         @endif
     @endif
 
-    @if (isset($question['explanation_video_url']))
+    @if (isset($question['explanation_video_url']) && $testsheet->show_explanation_video)
         <div class="font-semibold py-2 md:py-4 mt-6 text-lg border-b px-4 md:px-0 flex flex-col">
             해설 영상
         </div>
