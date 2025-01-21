@@ -379,7 +379,10 @@ onMounted(() => {
                         {{ selectedPages?.length }} / {{ pages.length }} 페이지
                         문제 추출
                     </span>
-                    <span class="fi-btn-label" v-else> 문제 추출중... </span>
+                    <span class="fi-btn-label" v-else>
+                        {{ extractedPages?.length }} /
+                        {{ selectedPages.length }} 문제 추출중...
+                    </span>
                 </button>
             </div>
             <div class="flex flex-col bg-gray-200 rounded border p-4 mt-4">
