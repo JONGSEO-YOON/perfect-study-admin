@@ -180,7 +180,7 @@ watch(
                     type="button"
                     @click="selectDepth1(child.name)"
                 >
-                    {{ child.name }}
+                    <span v-html="child.name"></span>
                 </button>
             </div>
         </div>

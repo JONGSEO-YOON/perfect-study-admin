@@ -9,10 +9,8 @@ const props = defineProps({
 });
 
 const { wire, mingleData } = props;
-const scale = ref(props.mingleData.scale);
 const readonly = ref(props.mingleData.readonly);
 
-// const templateMode = ref("default");
 const templateMode = ref("default");
 const color = ref("#0ea5e9");
 
@@ -30,10 +28,11 @@ const CHOICE_ITEM_HEIGHT = 28;
 // in mm
 const PAGE_WIDTH = 210; // A4 width in mm
 const PAGE_PADDING = 40; // Total horizontal padding in mm
-const PAGE_CONTENT_HEIGHT = 235; // 297mm - 40mm (padding) in mm, converted to appropriate unit
+const PAGE_CONTENT_HEIGHT = 225; // 297mm - 40mm (padding) in mm, converted to appropriate unit
 const COLUMN_WIDTH = (PAGE_WIDTH - PAGE_PADDING) / 2; // Single column width in mm
 
-const globalLayoutMode = ref("default");
+const globalLayoutMode = ref(props.mingleData.layoutMode ?? "default");
+// const globalLayoutMode = ref("4Items");
 const pageLayoutModes = ref(new Map()); // 페이지별 레이아웃 모드를 저장
 
 const manualSplitPoints = ref([]); // 사용자가 지정한 분할점 저장
@@ -70,7 +69,7 @@ const calculateInitialMargin = (question) => {
     return Math.max(currentMargin, 0);
 };
 
-const calculateContentHeight = (content) => {
+const calculateContentHeight = async (content) => {
     // 임시 측정용 div 생성
     const tempDiv = document.createElement("div");
 
@@ -84,12 +83,16 @@ const calculateContentHeight = (content) => {
 
     // DOM에 임시로 추가하여 높이 측정
     document.body.appendChild(tempDiv);
+
+    //give time to render
+    await new Promise((resolve) => setTimeout(resolve, 200));
     const height = tempDiv.offsetHeight;
 
     // 임시 요소 제거
     document.body.removeChild(tempDiv);
-
-    return height;
+    console.log(height, content);
+    return Math.min(height, PAGE_CONTENT_HEIGHT * 3.779527559 - 150);
+    // return 600;
 };
 
 const calculateImageHeight = (img, question) => {
@@ -153,7 +156,7 @@ const setPageLayoutMode = (pageIndex, mode) => {
 const calculatePages = async () => {
     await Promise.all(
         questions.value.map(async (question) => {
-            const img = "/storage/" + question.image_path;
+            const img = "/storage/" + (question.image_path ?? question.id);
             const height = await calculateImageHeight(img, question);
             imageHeights.value.set(img, height);
         })
@@ -161,101 +164,210 @@ const calculatePages = async () => {
 
     const result = [];
     const maxColumnHeight = PAGE_CONTENT_HEIGHT * 3.779527559;
+    // const maxColumnHeight = 600;
 
     let currentQuestions = [...questions.value];
 
     while (currentQuestions.length > 0) {
-        let pageSize;
-        let leftCount, rightCount;
         const currentPageIndex = result.length;
         const currentLayoutMode = getPageLayoutMode(currentPageIndex);
-        switch (currentLayoutMode) {
-            case "2Items":
-                pageSize = 2;
-                leftCount = 1;
-                rightCount = 1;
-                break;
-            case "4Items":
-                pageSize = 4;
-                leftCount = 2;
-                rightCount = 2;
-                break;
-            case "6Items":
-                pageSize = 6;
-                leftCount = 3;
-                rightCount = 3;
-                break;
-            case "3-1Items":
-                pageSize = 3;
-                leftCount = 1;
-                rightCount = 2;
-                break;
-            case "3-2Items":
-                pageSize = 3;
-                leftCount = 2;
-                rightCount = 1;
-                break;
-            default:
-                pageSize = Infinity;
-                leftCount = Infinity;
-                rightCount = Infinity;
+        if (currentLayoutMode !== "default") {
+            const nonDefaultPages = calculateNonDefaultPages(
+                currentQuestions,
+                currentLayoutMode,
+                maxColumnHeight
+            );
+            result.push(nonDefaultPages);
+            const totalProcessed =
+                nonDefaultPages.left.length + nonDefaultPages.right.length;
+            currentQuestions = currentQuestions.slice(totalProcessed);
+            continue;
         }
 
-        if (currentLayoutMode === "default") {
-            // 기존 로직 유지
-            let currentPage = { left: [], right: [] };
-            let leftColumnHeight = 0;
-            let rightColumnHeight = 0;
+        // 기존 로직 유지
+        let currentPage = { left: [], right: [] };
+        let leftColumnHeight = 0;
+        let rightColumnHeight = 0;
 
-            for (let i = 0; i < currentQuestions.length; i++) {
-                const currentQuestion = currentQuestions[i];
-                const currentImage = "/storage/" + currentQuestion.image_path;
-                let choicesHeight = 0;
-                if (
-                    currentQuestion.choices_display_type === "seperate" &&
-                    currentQuestion.answer_type === "multiple_choice"
-                ) {
-                    choicesHeight =
-                        CHOICE_ITEM_HEIGHT *
-                        Math.ceil(currentQuestion.choices.length / 3);
-                }
-
-                const imageHeight =
-                    imageHeights.value.get(currentImage) +
-                    MARGIN_BOTTOM +
-                    choicesHeight;
-
-                if (leftColumnHeight + imageHeight <= maxColumnHeight) {
-                    currentPage.left.push(currentQuestion);
-                    leftColumnHeight += imageHeight;
-                } else if (rightColumnHeight + imageHeight <= maxColumnHeight) {
-                    currentPage.right.push(currentQuestion);
-                    rightColumnHeight += imageHeight;
-                } else {
-                    result.push(currentPage);
-                    currentQuestions = currentQuestions.slice(i);
-                    break;
-                }
-
-                if (i === currentQuestions.length - 1) {
-                    result.push(currentPage);
-                    currentQuestions = [];
-                }
+        for (let i = 0; i < currentQuestions.length; i++) {
+            const currentQuestion = currentQuestions[i];
+            const currentImage =
+                "/storage/" +
+                (currentQuestion.image_path ?? currentQuestion.id);
+            let choicesHeight = 0;
+            if (
+                currentQuestion.choices_display_type === "seperate" &&
+                currentQuestion.answer_type === "multiple_choice"
+            ) {
+                choicesHeight =
+                    CHOICE_ITEM_HEIGHT *
+                    Math.ceil(currentQuestion.choices.length / 3);
             }
-        } else {
-            // Items 모드일 때는 지정된 개수로 계산
-            const pageQuestions = currentQuestions.slice(0, pageSize);
 
-            result.push({
-                left: pageQuestions.slice(0, leftCount),
-                right: pageQuestions.slice(leftCount, leftCount + rightCount),
-            });
+            const imageHeight =
+                imageHeights.value.get(currentImage) +
+                MARGIN_BOTTOM -
+                20 +
+                choicesHeight;
 
-            currentQuestions = currentQuestions.slice(pageSize);
+            if (leftColumnHeight + imageHeight <= maxColumnHeight) {
+                currentPage.left.push(currentQuestion);
+                leftColumnHeight += imageHeight;
+            } else if (rightColumnHeight + imageHeight <= maxColumnHeight) {
+                currentPage.right.push(currentQuestion);
+                rightColumnHeight += imageHeight;
+            } else {
+                result.push(currentPage);
+                currentQuestions = currentQuestions.slice(i);
+                break;
+            }
+
+            if (i === currentQuestions.length - 1) {
+                result.push(currentPage);
+                currentQuestions = [];
+            }
         }
     }
 
     pages.value = result;
+};
+
+const calculateNonDefaultPages = (questions, layoutMode, maxColumnHeight) => {
+    let leftCount, rightCount;
+
+    // 레이아웃 모드에 따른 설정
+    switch (layoutMode) {
+        case "2Items":
+            [leftCount, rightCount] = [1, 1];
+            break;
+        case "4Items":
+            [leftCount, rightCount] = [2, 2];
+            break;
+        case "6Items":
+            [leftCount, rightCount] = [3, 3];
+            break;
+        case "3-1Items":
+            [leftCount, rightCount] = [1, 2];
+            break;
+        case "3-2Items":
+            [leftCount, rightCount] = [2, 1];
+            break;
+        default:
+            return { left: [], right: [] };
+    }
+
+    // 각 열의 최소 확보 높이 계산
+    const leftItemHeight = maxColumnHeight / leftCount;
+    const rightItemHeight = maxColumnHeight / rightCount;
+
+    const leftQuestions = [];
+    const rightQuestions = [];
+    let currentIndex = 0;
+    let leftColumnHeight = 0;
+    let rightColumnHeight = 0;
+
+    // 왼쪽 열 문제 배치
+    if (currentIndex < questions.length) {
+        // 첫 번째 문제는 무조건 배치
+        const firstQuestion = questions[currentIndex];
+        const firstImage =
+            "/storage/" + (firstQuestion.image_path ?? firstQuestion.id);
+        const firstChoicesHeight = calculateChoicesHeight(firstQuestion);
+        const firstQuestionHeight =
+            imageHeights.value.get(firstImage) +
+            MARGIN_BOTTOM +
+            firstChoicesHeight;
+
+        leftQuestions.push(firstQuestion);
+        leftColumnHeight += firstQuestionHeight;
+        currentIndex++;
+    }
+
+    // 나머지 왼쪽 열 문제 배치
+    while (
+        leftQuestions.length < leftCount &&
+        currentIndex < questions.length
+    ) {
+        const question = questions[currentIndex];
+        const currentImage = "/storage/" + (question.image_path ?? question.id);
+        const choicesHeight = calculateChoicesHeight(question);
+        const questionHeight =
+            imageHeights.value.get(currentImage) +
+            MARGIN_BOTTOM +
+            choicesHeight;
+
+        // 현재 문제를 추가했을 때의 총 높이 계산
+        const projectedHeight = leftColumnHeight + questionHeight;
+        const avgHeight = projectedHeight / (leftQuestions.length + 1);
+
+        // 평균 높이가 최소 확보 높이보다 작거나, 첫 번째 위치면 추가
+        if (avgHeight <= leftItemHeight || leftQuestions.length === 0) {
+            leftQuestions.push(question);
+            leftColumnHeight += questionHeight;
+            currentIndex++;
+        } else {
+            break;
+        }
+    }
+
+    // 오른쪽 열 문제 배치
+    if (currentIndex < questions.length) {
+        // 첫 번째 문제는 무조건 배치
+        const firstQuestion = questions[currentIndex];
+        const firstImage =
+            "/storage/" + (firstQuestion.image_path ?? firstQuestion.id);
+        const firstChoicesHeight = calculateChoicesHeight(firstQuestion);
+        const firstQuestionHeight =
+            imageHeights.value.get(firstImage) +
+            MARGIN_BOTTOM +
+            firstChoicesHeight;
+
+        rightQuestions.push(firstQuestion);
+        rightColumnHeight += firstQuestionHeight;
+        currentIndex++;
+    }
+
+    // 나머지 오른쪽 열 문제 배치
+    while (
+        rightQuestions.length < rightCount &&
+        currentIndex < questions.length
+    ) {
+        const question = questions[currentIndex];
+        const currentImage = "/storage/" + (question.image_path ?? question.id);
+        const choicesHeight = calculateChoicesHeight(question);
+        const questionHeight =
+            imageHeights.value.get(currentImage) +
+            MARGIN_BOTTOM +
+            choicesHeight;
+
+        // 현재 문제를 추가했을 때의 총 높이 계산
+        const projectedHeight = rightColumnHeight + questionHeight;
+        const avgHeight = projectedHeight / (rightQuestions.length + 1);
+
+        // 평균 높이가 최소 확보 높이보다 작거나, 첫 번째 위치면 추가
+        if (avgHeight <= rightItemHeight || rightQuestions.length === 0) {
+            rightQuestions.push(question);
+            rightColumnHeight += questionHeight;
+            currentIndex++;
+        } else {
+            break;
+        }
+    }
+
+    return {
+        left: leftQuestions,
+        right: rightQuestions,
+    };
+};
+
+const calculateChoicesHeight = (question) => {
+    if (
+        question.choices_display_type === "seperate" &&
+        question.answer_type === "multiple_choice"
+    ) {
+        return CHOICE_ITEM_HEIGHT * Math.ceil(question.choices.length / 3);
+    }
+    return 0;
 };
 
 const getQuestionNumber = (pageIndex, isLeft, imgIndex) => {

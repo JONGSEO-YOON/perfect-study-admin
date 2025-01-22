@@ -2,6 +2,7 @@
     @livewire('exam-print-layout', [
         'scale' => $scale ?? null,
         'readonly' => $readonly ?? false,
+        'layoutMode' => $layoutMode ?? null,
     ])
     <style>
         @font-face {

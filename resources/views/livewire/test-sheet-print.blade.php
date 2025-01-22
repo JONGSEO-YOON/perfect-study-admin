@@ -9,7 +9,8 @@
         </button>
     </div>
 
-    <iframe onload="onPreviewLoaded()" id="preview" class="w-full h-full" src="/preview-test-sheet?scale=1&readonly=true">
+    <iframe onload="onPreviewLoaded()" id="preview" class="w-full h-full"
+        src="/preview-test-sheet?scale=1&readonly=true&layoutMode={{ $initialLayoutMode }}">
     </iframe>
 
     <style>

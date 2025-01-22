@@ -12,6 +12,7 @@ use Livewire\Component;
 class TestSheetPrint extends Component
 {
   public $testSheet;
+  public $initialLayoutMode = 'default';
 
   public function mount()
   {
@@ -22,6 +23,7 @@ class TestSheetPrint extends Component
     }
 
     // 오답 노트 출력인 경우
+    $this->initialLayoutMode = '4Items';
     $studentId = request()->query('student_id');
     $from = request()->query('from');
     $to = request()->query('to');

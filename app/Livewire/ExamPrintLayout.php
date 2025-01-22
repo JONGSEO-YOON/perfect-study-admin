@@ -13,6 +13,7 @@ class ExamPrintLayout extends Component implements HasMingles
 
     public $scale = 1;
     public $readonly = false;
+    public $layoutMode = 'default';
 
     public function component(): string
     {
@@ -24,6 +25,7 @@ class ExamPrintLayout extends Component implements HasMingles
         return [
             'scale' => $this->scale,
             'readonly' => $this->readonly,
+            'layoutMode' => $this->layoutMode,
             'message' => 'Message in a bottle 🍾',
         ];
     }

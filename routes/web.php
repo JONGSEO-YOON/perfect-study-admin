@@ -40,7 +40,8 @@ Route::get('/logout', function () {
 Route::get('/preview-test-sheet', function () {
     $scale = request('scale', 1);
     $readonly = request('readonly', false);
-    return view('preview-test-sheet', compact('scale', 'readonly'));
+    $layoutMode = request('layoutMode', "default");
+    return view('preview-test-sheet', compact('scale', 'readonly', 'layoutMode'));
 });
 
 
