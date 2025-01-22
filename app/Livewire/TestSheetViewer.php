@@ -57,10 +57,20 @@ class TestSheetViewer extends Component
     $this->updateProgress();
   }
 
+
   public function nextQuestion()
   {
     if ($this->currentQuestionIndex < count($this->questions) - 1) {
       $this->currentQuestionIndex++;
+      $this->currentQuestion = $this->questions[$this->currentQuestionIndex];
+      $this->updateProgress();
+    }
+  }
+
+  public function prevQuestion()
+  {
+    if ($this->currentQuestionIndex > 0) {
+      $this->currentQuestionIndex--;
       $this->currentQuestion = $this->questions[$this->currentQuestionIndex];
       $this->updateProgress();
     }

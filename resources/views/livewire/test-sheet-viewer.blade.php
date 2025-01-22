@@ -48,12 +48,12 @@
                         class="font-bold text-[#8570C2] mr-1 text-lg">{{ $progress['current'] }}</span>/{{ $progress['total'] }}
                 </h2>
                 <div class="flex-1 bg-white rounded-[5px] h-5 ml-4">
-                    <div class="bg-[#8570C2] rounded-[5px] h-full" style="width: {{ $progress['percentage'] }}%">
+                    <div class="bg-[#8570C2] rounded-[5px] h-full transition-all"
+                        style="width: {{ $progress['percentage'] }}%">
                     </div>
                 </div>
             </div>
-            <div wire:key="question-{{ $currentQuestionIndex }}" class="question-transition flex flex-col"
-                wire:transition.duration.300ms.slide-fade>
+            <div wire:key="question-{{ $currentQuestionIndex }}" class="question-transition flex flex-col">
                 <div class="flex flex-col font-semibold py-2 md:py-4 mt-1 md:mt-2 text-lg border-b px-4 md:px-0">
                     문제 {{ $progress['current'] }})
                     @if ($testsheet->use_score_table)
@@ -64,9 +64,9 @@
                 </div>
                 @if ($currentQuestion['question_display_type'] === 'image')
                     <img src="{{ Storage::url($currentQuestion['image_path']) }}"
-                        class="w-[90%] md:w-[55%] full h-auto mt-8 px-4 md:px-0" alt="문제 이미지" />
+                        class="w-[90%] md:w-[55%] full h-auto mt-8 px-4 md:px-0  pb-[300px" alt="문제 이미지" />
                 @else
-                    <div class="mt-8 px-4 md:px-0">
+                    <div class="mt-8 px-4 md:px-0 pb-[300px]">
                         {!! $currentQuestion['content'] !!}
                     </div>
                 @endif
@@ -125,9 +125,26 @@
                     </template>
                 </button>
                 <button x-show="!showAnswerPanel"
-                    class="border border-[#E9E9E9] rounded-[10px] font-semibold flex-1 py-3 bg-white"
+                    class="border border-[#E9E9E9] rounded-[10px] font-semibold flex-1 py-3 bg-white flex gap-x-2 items-center justify-center"
+                    wire:click="prevQuestion" @click="showAnswerPanel = false">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                        stroke="currentColor" class="size-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                    </svg>
+                    <div class="hidden sm:flex">
+                        이전 문제
+                    </div>
+                </button>
+                <button x-show="!showAnswerPanel"
+                    class="border border-[#E9E9E9] rounded-[10px] font-semibold flex-1 py-3 bg-white flex gap-x-2 items-center justify-center"
                     wire:click="nextQuestion" @click="showAnswerPanel = false">
-                    다음 문제
+                    <div class="hidden sm:flex">
+                        다음 문제
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                        stroke="currentColor" class="size-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
                 </button>
             </div>
             <div class="flex flex-col" x-show="showAnswerPanel"
