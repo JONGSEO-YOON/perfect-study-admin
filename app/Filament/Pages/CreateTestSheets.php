@@ -1088,4 +1088,9 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             'color' => $this->data['color'],
         ]);
     }
+
+    public function backToQuestionSelection()
+    {
+        $this->state = 'question-selection';
+    }
 }

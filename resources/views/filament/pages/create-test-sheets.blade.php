@@ -19,6 +19,13 @@
         }
         Livewire.on('onQuestionUpdated', (data) => {
             window.questions = Object.values(data[0]);
+            const preview = document.getElementById('preview')?.contentWindow;
+            if (!preview) return;
+            preview.postMessage({
+                type: 'setQuestions',
+                questions: window.questions
+            }, '*');
+
         });
         Livewire.on('onSplitChanged', (data) => {
             document.getElementById('preview').contentWindow.postMessage({
@@ -191,7 +198,21 @@
                 </div>
             </div>
         @else
-            <div class="flex flex-row mb-3 justify-end">
+            <div class="flex flex-row mb-3 justify-between">
+                <button style="--c-400:var(--primary-400);--c-500:var(--primary-500);--c-600:var(--primary-600);"
+                    class="fi-btn relative grid-flow-col items-center justify-center font-semibold outline-none transition duration-75 focus-visible:ring-2 rounded-lg fi-color-custom fi-btn-color-primary fi-color-primary fi-size-md fi-btn-size-md gap-1.5 px-3 py-2 text-sm inline-grid shadow-sm bg-custom-600 text-white hover:bg-custom-500 focus-visible:ring-custom-500/50 dark:bg-custom-500 dark:hover:bg-custom-400 dark:focus-visible:ring-custom-400/50 fi-ac-action fi-ac-btn-action"
+                    wire:click="backToQuestionSelection">
+
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5">
+                        <path fill-rule="evenodd"
+                            d="M7.793 2.232a.75.75 0 0 1-.025 1.06L3.622 7.25h10.003a5.375 5.375 0 0 1 0 10.75H10.75a.75.75 0 0 1 0-1.5h2.875a3.875 3.875 0 0 0 0-7.75H3.622l4.146 3.957a.75.75 0 0 1-1.036 1.085l-5.5-5.25a.75.75 0 0 1 0-1.085l5.5-5.25a.75.75 0 0 1 1.06.025Z"
+                            clip-rule="evenodd" />
+                    </svg>
+
+                    <span class="fi-btn-label">
+                        이전 단계
+                    </span>
+                </button>
                 <button style="--c-400:var(--primary-400);--c-500:var(--primary-500);--c-600:var(--primary-600);"
                     class="fi-btn relative grid-flow-col items-center justify-center font-semibold outline-none transition duration-75 focus-visible:ring-2 rounded-lg fi-color-custom fi-btn-color-primary fi-color-primary fi-size-md fi-btn-size-md gap-1.5 px-3 py-2 text-sm inline-grid shadow-sm bg-custom-600 text-white hover:bg-custom-500 focus-visible:ring-custom-500/50 dark:bg-custom-500 dark:hover:bg-custom-400 dark:focus-visible:ring-custom-400/50 fi-ac-action fi-ac-btn-action"
                     type="submit" form="test-sheet-form">
@@ -210,6 +231,48 @@
             </div>
             <div class="w-[1350px] flex flex-row gap-x-4">
                 <div class="flex-1 !grow-[15]">
+                    <div class="h-[400px] mb-4 flex bg-white border rounded-lg flex-col">
+                        <div class="bg-gray-50 border-b rounded-t-lg">
+                            <div class="grid grid-cols-12 gap-2 px-2 py-3">
+                                <div class="col-span-1 text-center text-xs font-medium text-gray-900">번호</div>
+                                <div class="col-span-2 text-center text-xs font-medium text-gray-900">레벨</div>
+                                <div class="col-span-2 text-center text-xs font-medium text-gray-900">문제 타입</div>
+                                <div class="col-span-5 text-center text-xs font-medium text-gray-900">유형명</div>
+                                <div class="col-span-2 text-center text-xs font-medium text-gray-900">순서 변경</div>
+                            </div>
+                        </div>
+                        <!-- Scrollable Content -->
+                        <div class="grow overflow-y-auto h-0">
+                            <div wire:sortable="onOrderChanged" class="divide-y divide-gray-200">
+                                @foreach ($questions as $index => $question)
+                                    <div wire:key="question-{{ $question->id }}"
+                                        wire:sortable.item="{{ $question->id }}"
+                                        class="grid grid-cols-12 gap-2 px-2 py-3 bg-white hover:bg-gray-50 transition-colors">
+                                        <div class="col-span-1 text-center text-xs text-gray-900">{{ $index + 1 }}
+                                        </div>
+                                        <div class="col-span-2 text-center text-xs text-gray-900">레벨
+                                            {{ $question->level }}
+                                        </div>
+
+                                        <div class="col-span-2 text-center text-xs text-gray-900">
+                                            {{ $question->answer_type === 'integer' ? '주관식 (정수형)' : '객관식' }}
+                                        </div>
+                                        <div class="col-span-5 text-center text-xs text-gray-900">
+                                            {!! $question->questionType?->name !!}</div>
+                                        <div wire:sortable.handle class="col-span-2  flex items-center justify-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                                                fill="currentColor" class="size-4">
+                                                <path fill-rule="evenodd"
+                                                    d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z"
+                                                    clip-rule="evenodd" />
+                                            </svg>
+
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
                     <form id="test-sheet-form"
                         @submit.prevent="
                     $event.target.disabled = true;
