@@ -45,7 +45,8 @@
                                     @endif
                                     <td class="px-6  py-3 border-b">{!! $type['name'] !!}</td>
                                     <td class="px-6 py-3 border-b">
-                                        {{ number_format($type['scores']['personal_score']) }}</td>
+                                        {{ number_format($type['scores']['personal_score']) }} /
+                                        {{ number_format($type['scores']['total_questions'] ?? 0) }}</td>
                                     <td class="px-6 py-3 border-b">
                                         {{ number_format($type['scores']['classroom_average']) }}</td>
                                     <td class="px-6 py-3 border-b">
@@ -62,7 +63,8 @@
                             <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center font-semibold bg-gray-50">
                                 <td class="px-6 py-3 border-b">전체</td>
                                 <td class="px-6 py-3 border-b">
-                                    {{ number_format($test['total']['personal_score']) }}
+                                    {{ number_format($test['total']['personal_score']) }} /
+                                    {{ number_format($test['total']['total_questions'] ?? 0) }}
                                 </td>
                                 <td class="px-6 py-3 border-b">
                                     {{ number_format($test['total']['classroom_average']) }}</td>

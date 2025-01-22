@@ -23,7 +23,7 @@
                             {{ $report['name'] }}
                         </th>
                         @foreach ($availableScores as $score)
-                            <th colspan="5" class="px-1.5 py-3 text-sm font-semibold text-gray-700 border-b">
+                            <th colspan="5" class="px-1.5 border-l py-3 text-sm font-semibold text-gray-700 border-b">
                                 {{ $score }}점
                             </th>
                         @endforeach
@@ -33,7 +33,7 @@
                         <th class="px-1 py-3 border-b">단원</th>
                         @foreach ($availableScores as $score)
                             @foreach ([1, 2, 3, 4, 5] as $level)
-                                <th class="px-1 py-3 border-b">레벨{{ $level }}</th>
+                                <th class="px-1 py-3 border-b border-l">레벨{{ $level }}</th>
                             @endforeach
                         @endforeach
                     </tr>
@@ -50,7 +50,7 @@
                                 <td class="px-1 py-3 border-b">{!! $item['type'] !!}</td>
                                 @foreach ($availableScores as $score)
                                     @foreach ([1, 2, 3, 4, 5] as $level)
-                                        <td class="px-1 py-3 border-b">
+                                        <td class="px-1 py-3 border-b border-l">
                                             {{ $item['scores'][$score][$level] ?? 0 }}
                                         </td>
                                     @endforeach

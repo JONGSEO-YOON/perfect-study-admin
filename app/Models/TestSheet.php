@@ -888,6 +888,7 @@ class TestSheet extends Model
                 'scopes' => $scopes,
                 'total' => [
                     'personal_score' => $studentReport['personal_score'],
+                    'total_questions' => $studentReport['total_questions'],
                     'classroom_average' => $studentReport['classroom_average'],
                     'level_average' => $studentReport['level_average'],
                     'classroom_rank' => $studentReport['classroom_rank'],
@@ -909,6 +910,7 @@ class TestSheet extends Model
                     'name' => $typeData['name'],
                     'scores' => [
                         'personal_score' => $typeData['personal_score'],
+                        'total_questions' => $typeData['personal_total'],
                         'classroom_average' => $typeData['classroom_average'],
                         'level_average' => $typeData['level_average'],
                         'classroom_rank' => $typeData['classroom_rank'],

@@ -458,8 +458,9 @@ class StudentResource extends Resource
 
                             if ($data['password'] ?? false) {
                                 $record->user->update([
-                                    'password' => Hash::make($data['password']),
+                                    'password' => $data['password'],
                                 ]);
+                                // dd($data['password']);
                             }
                             Notification::make()
                                 ->title('계정이 성공적으로 업데이트되었습니다.')
