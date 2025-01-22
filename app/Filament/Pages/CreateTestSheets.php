@@ -486,9 +486,17 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         if ($result->count() < $totalQuestionCount) {
             $remainingCount = $totalQuestionCount - $result->count();
             $existingIds = $result->pluck('id')->merge($excludeIds)->unique()->values()->toArray();
-            $result = $result->concat(
-                self::selectAdditionalQuestions($params, $remainingCount, $existingIds)
-            );
+            $levels = $params['levels'];
+            for ($i = 0; $i < count($levels); $i++) {
+                $level = $levels[$i];
+                $result = $result->concat(
+                    self::selectAdditionalQuestions($params, $remainingCount, $existingIds, $level)
+                );
+                $remainingCount = $totalQuestionCount - $result->count();
+                if ($remainingCount <= 0) {
+                    break;
+                }
+            }
         }
 
         // 교재가 지정된 경우 순서 정렬
@@ -573,6 +581,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         if ($questionCount <= 0) {
             return collect();
         }
+
 
         return self::buildBaseQuery($typeId, $params, $excludeIds, $level)
             ->take($questionCount)
@@ -666,9 +675,9 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         return $levelQuestionCounts;
     }
 
-    protected static function selectAdditionalQuestions(array $params, int $remainingCount, array $excludeIds): Collection
+    protected static function selectAdditionalQuestions(array $params, int $remainingCount, array $excludeIds, $level): Collection
     {
-        return self::buildBaseQuery($params['question_type_ids'], $params, $excludeIds)
+        return self::buildBaseQuery($params['question_type_ids'], $params, $excludeIds, $level)
             ->take($remainingCount)
             ->get();
     }

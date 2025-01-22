@@ -472,7 +472,8 @@ class TestSheet extends Model
 
         // 새로운 테스트 시트 생성
         $newTestSheet = new static([
-            ...$firstRetryTest->originalTestSheet->only(['title', 'sub_title', 'scopes', 'user_id', 'tags', 'show_explanation_video']),
+            ...$firstRetryTest->originalTestSheet->only(['title', 'sub_title', 'scopes', 'user_id', 'show_explanation_video']),
+            'tags' => ['오답 테스트'],
             'name' => $firstRetryTest->originalTestSheet->name . ' (오답 테스트)',
             'target_group' => 'student',
             'target_students' => [$firstRetryTest->user_id],
