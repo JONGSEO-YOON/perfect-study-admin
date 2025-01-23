@@ -152,4 +152,11 @@ class User extends Authenticatable implements FilamentUser
             return $roles[$this->role] < $roles[$role];
         }
     }
+
+
+    public function student()
+    {
+        return $this->belongsTo(Student::class, 'userable_id')
+            ->where('users.userable_type', Student::class);
+    }
 }

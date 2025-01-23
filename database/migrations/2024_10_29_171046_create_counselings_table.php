@@ -16,9 +16,11 @@ return new class extends Migration
 
             $table->string('status');
             $table->text('request_message')->nullable();
+
             $table->foreignId('requester_id')
                 ->nullable()
                 ->constrained('users');
+
             $table->string('requester_type')->nullable();
 
             $table->string('type')->nullable();
@@ -30,6 +32,7 @@ return new class extends Migration
             $table->foreignId('counselor_id')
                 ->cascadeOnDelete()
                 ->constrained('users');
+
             $table->foreignId('student_id')
                 ->nullable()
                 ->constrained('students')

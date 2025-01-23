@@ -19,8 +19,10 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -192,13 +194,35 @@ class TeacherResource extends Resource
                         return auth()->user()->isRoleAboveOrSelf($record->user)
                             ||  (!auth()->user()->userable instanceof \App\Models\Teacher
                                 && !$record->user->isRoleAbove('general'));
+                    }),
+                Tables\Actions\DeleteAction::make()
+                    ->modalHeading('강사 삭제')
+                    ->visible(function ($record) {
+                        return ($record->user->id !== auth()->user()->id
+                            && $record->user->role !== 'root_admin')
+                            && (auth()->user()->isRoleAboveOrSelf($record->user)
+                                ||  (!auth()->user()->userable instanceof \App\Models\Teacher
+                                    && !$record->user->isRoleAbove('general')));
+                    })
+                    ->action(function ($record, Action $action) {
+                        //if has classrooms
+                        if (count($record->classrooms) > 0) {
+                            Notification::make()
+                                ->title('강사님께서 담당하고 있는 반이 있습니다.')
+                                ->danger()
+                                ->send();
+                            $action->halt();
+                            return;
+                        }
+                        $record->delete();
+                        $action->success();
                     })
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
-                        ->modalHeading('강사 삭제'),
-                ]),
+                // Tables\Actions\BulkActionGroup::make([
+                //     Tables\Actions\DeleteBulkAction::make()
+                //         ->modalHeading('강사 삭제'),
+                // ]),
             ]);
     }
 

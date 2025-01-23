@@ -61,11 +61,24 @@ class CounselingResource extends Resource
                             ->dehydrated(false),
                         Select::make('student_id')
                             ->label('학생')
-                            ->options(function () {
-                                return User::where('userable_type', Student::class)
-                                    ->with('userable')
+                            ->options(function (Get $get) {
+
+                                $canViewAllStudents =
+                                    !auth()->user()->userable instanceof \App\Models\Teacher ||
+                                    auth()->user()->isRoleAbove('general');
+                                $query = User::where('userable_type', Student::class)
+                                    ->with('userable');
+                                if (!$canViewAllStudents) {
+                                    $query = $query->whereHas('student.classrooms', function ($q) {
+                                        $q->where('classrooms.teacher_id', auth()->user()->userable->id);
+                                    });
+                                }
+                                return $query
+                                    ->orWhere(function ($query) use ($get) {
+                                        $query->where('userable_id', $get('student_id'))
+                                            ->where('userable_type', Student::class);
+                                    })
                                     ->get()
-                                    // ->filter(fn($user) => $user->userable !== null)
                                     ->mapWithKeys(fn($user) => [$user->userable->id => $user->name . ' (' . $user->birthed_at->format('Y-m-d') . ')'])
                                     ->toArray();
                             })
@@ -74,12 +87,13 @@ class CounselingResource extends Resource
                             ->searchable(),
                         Select::make('counselor_id')
                             ->label('상담자')
-                            ->options(function () {
-                                return User::where('userable_type', Teacher::class)
+                            ->options(function (Get $get) {
+                                $result = User::where('userable_type', Teacher::class)
                                     ->with('userable')
                                     ->get()
                                     ->mapWithKeys(fn($user) => [$user->userable->id => $user->name])
                                     ->toArray();
+                                return $result;
                             })
                             ->required()
                             ->preload()
@@ -207,6 +221,19 @@ class CounselingResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(function (Builder $query) {
+                $canViewAllStudents =
+                    !auth()->user()->userable instanceof \App\Models\Teacher ||
+                    auth()->user()->isRoleAbove('general');
+                if (!$canViewAllStudents) {
+                    $query = $query->where(function ($query) {
+                        $query->whereHas('student.classrooms', function ($q) {
+                            $q->where('classrooms.teacher_id', auth()->user()->userable->id);
+                        })->orWhere('counselor_id', auth()->user()->userable->id);
+                    });
+                }
+                return $query;
+            })
             ->columns([
                 TextColumn::make('id')
                     ->label('No')
@@ -271,9 +298,18 @@ class CounselingResource extends Resource
                     ->label('상태'),
                 SelectFilter::make('student_id')
                     ->options(function () {
-                        return User::where('userable_type', Student::class)
-                            ->with('userable')
-                            ->get()
+
+                        $canViewAllStudents =
+                            !auth()->user()->userable instanceof \App\Models\Teacher ||
+                            auth()->user()->isRoleAbove('general');
+                        $query = User::where('userable_type', Student::class)
+                            ->with('userable');
+                        if (!$canViewAllStudents) {
+                            $query = $query->whereHas('student.classrooms', function ($q) {
+                                $q->where('classrooms.teacher_id', auth()->user()->userable->id);
+                            });
+                        }
+                        return $query->get()
                             ->mapWithKeys(fn($user) => [$user->userable->id => $user->name . ' (' . $user->birthed_at->format('Y-m-d') . ')'])
                             ->toArray();
                     })

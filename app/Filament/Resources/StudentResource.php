@@ -31,6 +31,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
@@ -473,14 +474,17 @@ class StudentResource extends Resource
                         ->icon('heroicon-m-clipboard-document-list')
                         ->url(fn($record) => '/admin/counselings?tableFilters[student_id][value]=' . $record->id)
                         ->modalWidth('2xl'),
+                    DeleteAction::make()
+                        ->visible(fn($record) => $record->canEdit(auth()->user()))
+                        ->modalHeading('학생 삭제')
                 ]),
             ])
             ->hiddenFilterIndicators(true)
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
-                        ->modalHeading('학생 삭제'),
-                ]),
+                // Tables\Actions\BulkActionGroup::make([
+                //     Tables\Actions\DeleteBulkAction::make()
+                //         ->modalHeading('학생 삭제'),
+                // ]),
             ])
             ->emptyStateHeading('학생이 없습니다.');
     }

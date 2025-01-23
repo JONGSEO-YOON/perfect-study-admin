@@ -604,6 +604,10 @@ class QuestionResource extends Resource
                         })
                         ->modalHeading('유사 문제 2')
                         ->modalWidth('2xl'),
+                    Tables\Actions\DeleteAction::make()
+                        ->visible(fn($record) => $record->is_editable)
+                        ->modalHeading('문제 삭제')
+
                 ]),
                 // Tables\Actions\EditAction::make()
                 //     ->modalHeading('문제 수정')
@@ -618,9 +622,9 @@ class QuestionResource extends Resource
                 //     ->modalWidth('2xl'),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                // Tables\Actions\BulkActionGroup::make([
+                //     Tables\Actions\DeleteBulkAction::make(),
+                // ]),
             ]);
     }
 

@@ -157,7 +157,10 @@ class NoticeResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
                         ->modalHeading('공지 삭제'),
-                ]),
+                ])
+                    ->visible(function () {
+                        return auth()->user()->isRoleAbove('admin', true);
+                    }),
             ]);
     }
 
