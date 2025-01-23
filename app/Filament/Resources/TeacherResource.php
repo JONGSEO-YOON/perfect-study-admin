@@ -166,15 +166,27 @@ class TeacherResource extends Resource
                 TextColumn::make('user.username')
                     ->label('계정')
                     ->searchable()
+                    ->visible(function () {
+                        return !auth()->user()->userable instanceof \App\Models\Teacher
+                            || auth()->user()->isRoleAbove('general');
+                    })
                     ->sortable(),
                 TextColumn::make('user.phone')
                     ->label('전화번호')
                     ->searchable()
+                    ->visible(function () {
+                        return !auth()->user()->userable instanceof \App\Models\Teacher
+                            || auth()->user()->isRoleAbove('general');
+                    })
                     ->sortable(),
                 // TextColumn::make('is_admin')
                 //     ->label('담당 반'),
                 TextColumn::make('user.birthed_at')
                     ->date('Y-m-d')
+                    ->visible(function () {
+                        return !auth()->user()->userable instanceof \App\Models\Teacher
+                            || auth()->user()->isRoleAbove('general');
+                    })
                     ->label('생년월일')
                     ->sortable(),
                 TextColumn::make('created_at')
