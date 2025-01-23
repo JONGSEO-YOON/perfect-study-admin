@@ -39,6 +39,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\HtmlString;
 use Psy\VersionUpdater\Checker;
 
 class StudentResource extends Resource
@@ -261,11 +262,22 @@ class StudentResource extends Resource
                             || !auth()->user()->userable instanceof \App\Models\Teacher
                             || Classroom::find($livewire?->tableFilters['classroom_id']['value'] ?? null)
                             ?->teacher_id == auth()->user()->userable->id
-                    ),
-                TextColumn::make('user.birthed_at')
-                    ->date('Y-m-d')
-                    ->label('생년월일')
-                    ->sortable(),
+                    )
+                    ->html()
+                    ->formatStateUsing(function ($record) {
+
+                        return new HtmlString(<<<EOF
+                        <div>
+                            <div class="rounded bg-gray-100 border inline-flex px-2 py-0.5 text-xs text-gray-600">본인</div> {$record->user->phone} <br/>
+                            <div class="rounded bg-gray-100 border inline-flex px-2 py-0.5 text-xs text-gray-600">부</div> {$record->father_phone} <br/>
+                            <div class="rounded bg-gray-100 border inline-flex px-2 py-0.5 text-xs text-gray-600">모</div> {$record->mother_phone} <br/>
+                        </div>
+                        EOF);
+                    }),
+                // TextColumn::make('user.birthed_at')
+                //     ->date('Y-m-d')
+                //     ->label('생년월일')
+                //     ->sortable(),
                 TextColumn::make('created_at')
                     ->date('Y-m-d')
                     ->label('등록일')
