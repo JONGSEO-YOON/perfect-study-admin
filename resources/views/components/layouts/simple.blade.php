@@ -15,6 +15,10 @@
 
     <!-- Livewire Styles -->
     @livewireStyles
+
+    <script></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/mml-svg.js"></script>
+
 </head>
 
 <body>

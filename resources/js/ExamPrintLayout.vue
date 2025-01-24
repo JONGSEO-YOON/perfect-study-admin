@@ -90,7 +90,6 @@ const calculateContentHeight = async (content) => {
 
     // 임시 요소 제거
     document.body.removeChild(tempDiv);
-    console.log(height, content);
     return Math.min(height, PAGE_CONTENT_HEIGHT * 3.779527559 - 150);
     // return 600;
 };
@@ -482,6 +481,12 @@ const calculateExplanationPages = async () => {
     // document.querySelector(".temp-explanation-container").style.width = `${
     //     COLUMN_WIDTH * 3.779527559
     // }px`;
+
+    const elements = explanationContainer.value.getElementsByTagName("math");
+    console.log(elements);
+    await window.MathJax.typesetPromise([explanationContainer.value]);
+
+    // await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const canvas = await html2canvas(explanationContainer.value, {
         // dpi: 2000,
@@ -1326,7 +1331,7 @@ onMounted(() => {
     <!-- 해설 렌더링을 위한 임시 컨테이너 -->
     <div
         ref="explanationContainer"
-        class="temp-explanation-container pb-4 no-print"
+        class="temp-explanation-container pb-4 no-print text-sm"
     >
         <div class="flex flex-col gap-y-6">
             <div
@@ -1339,9 +1344,10 @@ onMounted(() => {
                 <div class="break-words break-all">
                     <!-- scale: leading-8 -->
                     정답 {{ question.answer }}
-                    <span v-html="question.question_type.name"></span>-레벨{{
-                        question.level
-                    }}
+                    <div class="flex items-center break-words break-all">
+                        <span v-html="question.question_type.name"></span> -
+                        레벨{{ question.level }}
+                    </div>
                 </div>
             </div>
             <div class="w-full h-px bg-black mt-10 mb-4"></div>
@@ -1352,8 +1358,11 @@ onMounted(() => {
                     <div class="break-words break-all">
                         <!-- scale: leading-8 -->
                         정답 {{ question.answer }}
-                        <span v-html="question.question_type.name"></span
-                        >-레벨{{ question.level }}
+
+                        <div class="flex items-center break-words break-all">
+                            <span v-html="question.question_type.name"></span> -
+                            레벨{{ question.level }}
+                        </div>
                     </div>
                 </div>
                 <div class="py-6">

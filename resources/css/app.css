@@ -59,3 +59,8 @@ div:has(.modal-content-classroom-students) {
   -webkit-user-select: none;
   -ms-user-select: none;
 }
+
+mjx-container svg {
+    display: inline;
+    vertical-align: -12px !important;
+}
