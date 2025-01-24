@@ -143,13 +143,15 @@
                     </table>
 
 
-                    <div class="flex flex-col items-end">
-                        <x-filament::button
-                            wire:click="mountAction('addAttendance', { week: {{ $weekReport['week'] }}, year: {{ $weekReport['year'] }} })"
-                            icon="heroicon-m-plus-circle" size="sm" class="w-fit  mt-2">
-                            출결 기록
-                        </x-filament::button>
-                    </div>
+                    @if (!$readonly)
+                        <div class="flex flex-col items-end">
+                            <x-filament::button
+                                wire:click="mountAction('addAttendance', { week: {{ $weekReport['week'] }}, year: {{ $weekReport['year'] }} })"
+                                icon="heroicon-m-plus-circle" size="sm" class="w-fit  mt-2">
+                                출결 기록
+                            </x-filament::button>
+                        </div>
+                    @endif
 
                 </div>
             @endif
@@ -248,6 +250,7 @@
                 </div>
             @endif
 
+            <div class="page-break"></div>
         @empty
             <div class="w-full text-center py-4 text-gray-500">
                 해당 기간에 검색된 주간 보고서가 없습니다.

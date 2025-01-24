@@ -1371,11 +1371,13 @@ class TestSheet extends Model
 
         $parent = $category->parent()->first();
         $grandParent = $parent ? $parent->parent()->first() : null;
-
         return [
-            'major' => $grandParent ? $grandParent->name : null,
-            'middle' => $parent ? $parent->name : null,
-            'type' => $category->name,
+            // 'major' => $grandParent ? $grandParent->name : null,
+            // 'middle' => $parent ? $parent->name : null,
+            // 'type' => $category->name,
+            'major' => $grandParent ? $grandParent?->parent()?->first()?->name : null,
+            'middle' => $parent ? $parent?->parent()?->first()?->name : null,
+            'type' => $parent->name,
         ];
     }
 

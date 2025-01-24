@@ -5,7 +5,7 @@
             인쇄하기
         </button>
     </div>
-    <div class="page">
+    <div class="page" style="page-break-after: auto">
         <h1 class="font-bold !text-3xl">
             주간 학습표
         </h1>
@@ -56,5 +56,32 @@
             'dateUntil' => $dateUntil,
         ])
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 모든 table 요소를 찾습니다
+            const tables = document.getElementsByTagName('table');
+
+            // 각 table 앞에 버튼을 추가합니다
+            Array.from(tables).forEach(table => {
+                const buttonHtml =
+                    `<div class="flex no-print">
+    <button class=" my-4 px-4 py-0.5 border rounded-lg flex items-center justify-center">페이지 분리</button>
+</div>
+`
+                table.insertAdjacentHTML('beforebegin', buttonHtml);
+            });
+        });
+    </script>
+    <script>
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('button') && e.target.textContent === '페이지 분리') {
+                // 버튼의 부모 div를 찾아서
+                const buttonContainer = e.target.closest('.flex.no-print');
+
+                // page-break div로 교체합니다
+                buttonContainer.outerHTML = '<div class="page-break w-full border-t border-dashed my-4"></div>';
+            }
+        });
+    </script>
 
 </div>

@@ -45,6 +45,12 @@
             page-break-after: always;
         }
 
+
+        .page-break {
+            page-break-after: always;
+        }
+
+
         .page:last-child {
             page-break-after: avoid;
         }
