@@ -42,7 +42,7 @@ const pages = ref([]);
 const explanationContainer = ref(null);
 const explanationPages = ref([]);
 
-const customLogo = ref("/test.png");
+const customLogo = ref("/test_removed.png");
 const grade = ref("중1");
 
 const calculateInitialMargin = (question) => {
@@ -634,7 +634,7 @@ const restorePrintLayout = (layoutData) => {
     subTitle.value =
         layoutData.subTitle ?? "2023년 대학수학능력시험 실전 모의고사 22회";
 
-    customLogo.value = layoutData.customLogo ?? "/test.png";
+    customLogo.value = layoutData.customLogo ?? "/test_removed.png";
     grade.value = layoutData.grade ?? "중1";
 };
 
@@ -654,6 +654,24 @@ watch(selectedIndex, () => {
         layoutMode,
     });
 });
+
+const getHeaderImagePath = () => {
+    if (color.value.toLocaleUpperCase() === "#0EA5E9") {
+        return "/images/bg-template-blue.png";
+    } else if (color.value.toLocaleUpperCase() === "#F43F5E") {
+        return "/images/bg-template-red.png";
+    } else if (color.value.toLocaleUpperCase() === "#8B5CF6") {
+        return "/images/bg-template-purple.png";
+    } else if (color.value.toLocaleUpperCase() === "#22C55E") {
+        return "/images/bg-template-green.png";
+    } else if (color.value.toLocaleUpperCase() === "#EAB308") {
+        return "/images/bg-template-amber.png";
+    } else if (color.value.toLocaleUpperCase() === "#F97316") {
+        return "/images/bg-template-orange.png";
+    }
+
+    return "/images/bg-template-blue.png";
+};
 
 onMounted(() => {
     window.addEventListener("message", async (event) => {
@@ -751,7 +769,7 @@ onMounted(() => {
             <!-- 기본 템플릿 헤더 -->
             <template v-if="templateMode === 'default'">
                 <div class="left-0 right-0 bottom-0 absolute">
-                    <div class="absolute w-full left-0 right-0 bottom-0 pb-5">
+                    <!-- <div class="absolute w-full left-0 right-0 bottom-0 pb-5">
                         <div
                             class="absolute bottom-0 left-0 right-0 h-10 opacity-60 clip-4"
                             :style="{ backgroundColor: color }"
@@ -760,7 +778,16 @@ onMounted(() => {
                             class="absolute bottom-0 left-0 right-0 h-6 opacity-40 clip-5"
                             :style="{ backgroundColor: color }"
                         ></div>
-                    </div>
+                    </div> -->
+                    <img
+                        :src="getHeaderImagePath()"
+                        alt=""
+                        class="w-full h-[40px] object-cover absolute bottom-0 left-0 right-0"
+                    />
+                    <div
+                        class="absolute bottom-0 left-0 right-0 h-[40px] bg-gradient-to-b from-white/100 to-white/20"
+                        style=""
+                    ></div>
                 </div>
             </template>
 
@@ -769,17 +796,14 @@ onMounted(() => {
                 <div
                     class="absolute px-[20mm] w-full left-0 right-0 top-0 pb-5"
                 >
+                    <img
+                        :src="getHeaderImagePath()"
+                        alt=""
+                        class="w-full h-[110px] object-cover absolute top-0 left-0 right-0"
+                    />
                     <div
-                        class="absolute top-0 left-0 right-0 h-20 opacity-60 clip-1"
-                        :style="{ backgroundColor: color }"
-                    ></div>
-                    <div
-                        class="absolute left-0 right-0 h-16 opacity-40 clip-2"
-                        :style="{ backgroundColor: color }"
-                    ></div>
-                    <div
-                        class="absolute left-0 right-0 h-16 opacity-20 clip-3"
-                        :style="{ backgroundColor: color }"
+                        class="absolute inset-0 h-[110px] bg-gradient-to-b from-white/0 to-white"
+                        style=""
                     ></div>
                 </div>
             </template>
