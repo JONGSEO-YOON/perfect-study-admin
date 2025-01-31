@@ -287,12 +287,12 @@ class TestSheet extends Model
                     'original_question_seq' => $index,
                     'original_question_id' => $question['id'],
                 ];
-
-                WrongAnswerNote::create([
-                    'student_id' => User::find($userId)->userable->id,
-                    'question' => $question,
-                    'wrong_answer' => $answer ?? null
-                ]);
+                if (User::find($userId)->userable)
+                    WrongAnswerNote::create([
+                        'student_id' => User::find($userId)->userable->id,
+                        'question' => $question,
+                        'wrong_answer' => $answer ?? null
+                    ]);
             }
         }
 
