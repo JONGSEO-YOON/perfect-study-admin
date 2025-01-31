@@ -63,7 +63,7 @@ class TestSheet extends Model
             break;
         }
         // if empty, than use users grade
-        if (empty($grades)) {
+        if (empty($grades) && auth()->check()) {
             $grades = auth()->user()->userable->classrooms->pluck('target_grades')
                 ->map(function ($grade) {
                     return GradeSystem::find($grade[0])->display_name;
