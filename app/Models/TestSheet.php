@@ -287,7 +287,7 @@ class TestSheet extends Model
                     'original_question_seq' => $index,
                     'original_question_id' => $question['id'],
                 ];
-                if (User::find($userId)->userable)
+                if (User::find($userId))
                     WrongAnswerNote::create([
                         'student_id' => User::find($userId)->userable->id,
                         'question' => $question,
