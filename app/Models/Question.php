@@ -64,6 +64,10 @@ class Question extends Model
         });
 
         static::addGlobalScope('material_visibility', function (Builder $builder) {
+            if (!auth()->check()) {
+                return;
+            }
+
             if (!auth()->user()->userable instanceof \App\Models\Teacher) {
                 return;
             }
