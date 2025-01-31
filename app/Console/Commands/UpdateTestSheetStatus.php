@@ -52,6 +52,8 @@ class UpdateTestSheetStatus extends Command
                 Log::info("TestSheet #{$testSheet->id} auto completed successfully");
             } catch (\Exception $e) {
                 Log::error("Failed to auto complete TestSheet #{$testSheet->id}: " . $e->getMessage());
+                // printstacktrace
+                Log::error($e->getTraceAsString());
                 // 선택적: 실패 처리 로직 추가
             }
         }
