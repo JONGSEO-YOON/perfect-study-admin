@@ -153,16 +153,24 @@ class ListQuestions extends ListRecords
                 })
                 ->fillForm(function () {
                     if (!$this->parent_id) {
-                        return [];
+                        return [
+                            'choices' => [],
+                            'choices_count' => 4,
+                        ];
                     }
 
                     $material = Material::find($this->parent_id);
                     if ($material->type !== 'book') {
-                        return [];
+                        return [
+                            'choices' => [],
+                            'choices_count' => 4,
+                        ];
                     }
 
                     return [
                         'material_id' => $this->parent_id,
+                        'choices' => [],
+                        'choices_count' => 4,
                     ];
                 })
                 ->using(function ($data) {
