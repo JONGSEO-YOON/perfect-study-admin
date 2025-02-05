@@ -111,6 +111,10 @@ class ChildrenRelationManager extends RelationManager
                         Select::make('parent_id')
                             ->label('단원 선택')
                             ->searchable()
+                            ->allowHtml()
+                            ->extraAttributes([
+                                'class' => 'question-category-select',
+                            ])
                             ->options(function ($record) {
                                 // 현재 카테고리의 모든 하위 카테고리 ID들을 조회
                                 $descendantIds = $record->descendants()

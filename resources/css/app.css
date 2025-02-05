@@ -64,3 +64,11 @@ mjx-container svg {
     display: inline;
     vertical-align: -12px !important;
 }
+
+.question-category-select .choices__inner p {
+    display: inline !important;
+}
+
+.question-category-select .choices__list p{
+    display: inline !important;
+}
