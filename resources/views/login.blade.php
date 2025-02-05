@@ -39,12 +39,50 @@
 
                     <div class="mt-4 flex justify-between font-medium">
                         <a href="#" class="text-[#6D4FC5] signup">회원가입</a>
-                        {{-- <a href="#" class="text-[#6D4FC5]">아이디/비밀번호 찾기</a> --}}
+                        <a href="#" onclick="install()" class="text-[#6D4FC5] install">홈 화면에 설치</a>
                     </div>
                 </form>
             </div>
         </div>
     </div>
     <x-signup-modal />
+    <script>
+        window.addEventListener('beforeinstallprompt', async (e) => {
+            // Chrome 76 이전 버전에서는 자동 표시되는 설치 프롬프트를 방지
+            e.preventDefault();
+            // 나중에 사용하기 위해 이벤트를 저장
+            deferredPrompt = e;
 
+        });
+
+        const isIos = () => {
+            const userAgent = window.navigator.userAgent.toLowerCase();
+            return /iphone|ipad|ipod/.test(userAgent);
+        };
+
+        const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
+
+        function install() {
+            // iOS 디바이스에서 Safari로 접속한 경우 설치 안내 메시지 표시
+            if (isIos() && !isInStandaloneMode()) {
+                alert('Safari에서 하단 공유 버튼을 클릭한 후, [홈 화면에 추가] 버튼을 선택하세요')
+                return;
+            }
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('사용자가 설치를 수락했습니다.');
+                } else {
+                    console.log('사용자가 설치를 거부했습니다.');
+                }
+                deferredPrompt = null;
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', function() {
+            if (isInStandaloneMode()) {
+                document.querySelector('.install').style.display = 'none';
+            }
+        });
+    </script>
 </x-layouts.simple>
