@@ -283,4 +283,19 @@ class QuestionCategory extends Model
         // 이름들을 ' > ' 구분자로 연결
         return $categories->pluck('name')->implode(' < ');
     }
+
+    public function getFlattenedDescendantIds(): array
+    {
+        $result = [];
+
+        // 직계 자식들의 ID를 먼저 추가
+        $children = $this->children;
+        foreach ($children as $child) {
+            $result[] = $child->id;
+            // 각 자식의 하위 ID들도 배열에 추가
+            $result = array_merge($result, $child->getFlattenedDescendantIds());
+        }
+
+        return $result;
+    }
 }

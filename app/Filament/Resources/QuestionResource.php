@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\QuestionResource\Pages;
 use App\Filament\Resources\QuestionResource\RelationManagers;
 use App\Models\Question;
+use App\Models\QuestionCategory;
 use Faker\Provider\ar_EG\Text;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
@@ -422,8 +423,34 @@ class QuestionResource extends Resource
                             });
                     })
                     ->columnSpanFull(),
-                // Filter::make('questionType')
-                //     ->form([
+                Filter::make('questionType')
+                    ->form([
+                        Select::make('question_type_id')
+                            ->label('유형 선택')
+                            ->searchable()
+                            ->allowHtml()
+                            ->extraAttributes([
+                                'class' => 'question-category-select',
+                            ])
+                            ->options(function () {
+                                return QuestionCategory::query()
+                                    ->get()
+                                    ->mapWithKeys(fn($category) => [$category->getKey() => $category->full_path]);
+                            })
+                            ->columnSpanFull()
+                    ])
+                    ->columnSpan(2)
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            $data['question_type_id'] ?? null,
+                            function (Builder $query, $questionTypeId) {
+                                $category = QuestionCategory::find($questionTypeId);
+                                $questionTypeIds = [$questionTypeId, ...$category->getFlattenedDescendantIds()];
+                                // dd($questionTypeIds);
+                                return $query->whereIn('question_type_id', $questionTypeIds);
+                            }
+                        );
+                    })
                 // ViewField::make('question_type_ids')
                 //     ->label('문제 유형')
                 //     ->view('filament.components.forms.question-type', [
