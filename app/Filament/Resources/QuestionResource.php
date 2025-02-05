@@ -387,6 +387,9 @@ class QuestionResource extends Resource
                 ViewColumn::make('questionType.name')
                     ->view('filament.components.columns.question-category-render')
                     ->label('이름')
+                    ->sortable(true, function ($query, $direction) {
+                        return $query->orderBy('question_type_id', $direction);
+                    })
                     ->label('문제 유형'),
                 TextColumn::make('level')
                     ->label('레벨')
