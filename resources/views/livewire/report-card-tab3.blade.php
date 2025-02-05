@@ -24,12 +24,12 @@
                         <tr class="bg-gray-100 text-center">
                             <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">테스트</th>
                             <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">범위</th>
-                            <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">개인점수</th>
-                            <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">반평균</th>
-                            <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">레벨평균</th>
-                            <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">반별 등수</th>
-                            <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">학년평균</th>
-                            <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">학년 등수</th>
+                            <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b min-w-[86px]">개인점수</th>
+                            <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b min-w-[86px]">반평균</th>
+                            <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b min-w-[86px]">레벨평균</th>
+                            <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b min-w-[86px]">반별 등수</th>
+                            <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b min-w-[86px]">학년평균</th>
+                            <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b min-w-[86px]">학년 등수</th>
                         </tr>
                     </thead>
                     <tbody>
