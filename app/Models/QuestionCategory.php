@@ -12,6 +12,7 @@ class QuestionCategory extends Model
     public function children()
     {
         return $this->belongsToMany(QuestionCategory::class, 'question_category_closure', 'ancestor_id', 'descendant_id')
+            ->orderBy('order')
             ->wherePivot('depth', 1);
     }
 
