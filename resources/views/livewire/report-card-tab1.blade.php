@@ -23,7 +23,11 @@
                         @for ($level = 1; $level <= 5; $level++)
                             <th class="px-1 py-3 border-b">출제문항</th>
                             <th class="px-1 py-3 border-b">정답개수</th>
-                            <th class="px-1 py-3 border-b">정답률</th>
+                            @if ($reportKey === 'hierarchy')
+                                <th class="px-1 py-3 border-b">정답률</th>
+                            @else
+                                <th class="px-1 py-3 border-b">모름</th>
+                            @endif
                         @endfor
                     </tr>
                 </thead>
@@ -35,13 +39,18 @@
                         $middleRowspan = 0;
                     @endphp
 
-                    @foreach ($report['hierarchy'] as $index => $item)
+                    @foreach ($report[$reportKey] as $index => $item)
                         <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center">
+                            @php
+                                if (!isset($item['major'])) {
+                                    dd($item);
+                                }
+                            @endphp
                             @if ($currentMajor !== $item['major'])
                                 @php
                                     $currentMajor = $item['major'];
                                     $majorRowspan = count(
-                                        array_filter($report['hierarchy'], fn($h) => $h['major'] === $currentMajor),
+                                        array_filter($report[$reportKey], fn($h) => $h['major'] === $currentMajor),
                                     );
                                 @endphp
                                 <td rowspan="{{ $majorRowspan }}" class="px-1 py-3 border-b">
@@ -53,7 +62,7 @@
                                 @php
                                     $currentMiddle = $item['middle'];
                                     $middleRowspan = count(
-                                        array_filter($report['hierarchy'], fn($h) => $h['middle'] === $currentMiddle),
+                                        array_filter($report[$reportKey], fn($h) => $h['middle'] === $currentMiddle),
                                     );
                                 @endphp
                                 <td rowspan="{{ $middleRowspan }}" class="px-1 py-3 border-b">
@@ -66,7 +75,14 @@
                             @for ($level = 1; $level <= 5; $level++)
                                 <td class="px-1 py-3 border-b">{{ $item['levels'][$level]['total'] ?? 0 }}</td>
                                 <td class="px-1 py-3 border-b">{{ $item['levels'][$level]['correct'] ?? 0 }}</td>
-                                <td class="px-1 py-3 border-b">{{ $item['levels'][$level]['percentage'] ?? 0 }}%</td>
+                                @if ($reportKey === 'hierarchy')
+                                    <td class="px-1 py-3 border-b">{{ $item['levels'][$level]['percentage'] ?? 0 }}%
+                                    </td>
+                                @else
+                                    <td class="px-1 py-3 border-b">
+                                        {{ $item['levels'][$level]['dont_know_answers_count'] ?? 0 }}
+                                    </td>
+                                @endif
                             @endfor
                         </tr>
                     @endforeach
@@ -78,8 +94,15 @@
                         @for ($level = 1; $level <= 5; $level++)
                             <td class="px-1 py-3 border-b">{{ $report['personal_level'][$level]['total'] ?? 0 }}</td>
                             <td class="px-1 py-3 border-b">{{ $report['personal_level'][$level]['correct'] ?? 0 }}</td>
-                            <td class="px-1 py-3 border-b">{{ $report['personal_level'][$level]['percentage'] ?? 0 }}%
-                            </td>
+                            @if ($reportKey === 'hierarchy')
+                                <td class="px-1 py-3 border-b">
+                                    {{ $report['personal_level'][$level]['percentage'] ?? 0 }}%
+                                </td>
+                            @else
+                                <td class="px-1 py-3 border-b">
+                                    -
+                                </td>
+                            @endif
                         @endfor
                     </tr>
 
@@ -90,8 +113,15 @@
                             <td class="px-1 py-3 border-b">{{ $report['classroom_level'][$level]['total'] ?? 0 }}</td>
                             <td class="px-1 py-3 border-b">{{ $report['classroom_level'][$level]['correct'] ?? 0 }}
                             </td>
-                            <td class="px-1 py-3 border-b">{{ $report['classroom_level'][$level]['percentage'] ?? 0 }}%
-                            </td>
+                            @if ($reportKey === 'hierarchy')
+                                <td class="px-1 py-3 border-b">
+                                    {{ $report['classroom_level'][$level]['percentage'] ?? 0 }}%
+                                </td>
+                            @else
+                                <td class="px-1 py-3 border-b">
+                                    -
+                                </td>
+                            @endif
                         @endfor
                     </tr>
                 </tbody>

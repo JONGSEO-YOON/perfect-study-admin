@@ -27,13 +27,16 @@ class WrongAnswerNote extends Model
    * @param string $to 종료일자 (Y-m-d)
    * @return array 고유한 문제 배열
    */
-  public static function getQuestions(int $studentId, string $from, string $to): array
+  public static function getQuestions(int $studentId, string $from, string $to, bool $isDontKnowOnly = false): array
   {
     $wrongAnswers = self::where('student_id', $studentId)
       ->whereBetween('created_at', [
         Carbon::parse($from)->startOfDay(),
         Carbon::parse($to)->endOfDay()
       ])
+      ->when($isDontKnowOnly, function ($query) {
+        return $query->where('dont_know', true);
+      })
       ->get();
 
     return $wrongAnswers->map(function ($wrongAnswer) {

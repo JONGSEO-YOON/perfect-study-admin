@@ -13,6 +13,7 @@ class TestSheetAnswer extends Model
 
     protected $casts = [
         'answers' => 'array',
+        'dont_know_answers' => 'array',
         'correct_count_report' => 'array'
     ];
 

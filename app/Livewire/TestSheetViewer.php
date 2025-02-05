@@ -20,6 +20,7 @@ class TestSheetViewer extends Component
   public $currentQuestionIndex = 0;
   public $questions = [];
   public $answers = [];
+  public $dontKnowAnswers = [];
   public $progress = [];
   public $currentQuestion = null;
   public $currentAnswer = '';  // 현재 입력 중인 답안
@@ -47,9 +48,11 @@ class TestSheetViewer extends Component
         return redirect("/test-sheet-result/{$id}");
       }
       $this->answers = $latestAnswer->answers;
+      $this->dontKnowAnswers = $latestAnswer->dont_know_answers;
       $this->elapsedTime = $latestAnswer->time ?? 0;
     } else {
       $this->answers = array_fill(0, count($this->testsheet->questions), null);
+      $this->dontKnowAnswers = [];
     }
 
     $this->questions = $this->testsheet->questions;
@@ -117,6 +120,29 @@ class TestSheetViewer extends Component
     $this->currentAnswer = '';
   }
 
+  public function dontKnowAnswer()
+  {
+    $this->answers[$this->currentQuestionIndex] = null;
+    $this->dontKnowAnswers['' . $this->currentQuestionIndex] = true;
+
+    // Save current progress
+    TestSheetAnswer::updateOrCreate(
+      [
+        'test_sheet_id' => $this->testsheet->id,
+        'user_id' => auth()->id(),
+        'status' => 'pending'
+      ],
+      [
+        'answers' => $this->answers,
+        'dont_know_answers' => $this->dontKnowAnswers,
+        'correct_count' => 0 // 진행 중에는 채점하지 않음
+      ]
+    );
+
+    $this->currentAnswer = null;
+    $this->nextQuestion();
+  }
+
   public function submitAnswer()
   {
     if ($this->completed) {
@@ -134,6 +160,7 @@ class TestSheetViewer extends Component
         ],
         [
           'answers' => $this->answers,
+          'dont_know_answers' => $this->dontKnowAnswers,
           'correct_count' => 0 // 진행 중에는 채점하지 않음
         ]
       );
@@ -160,7 +187,7 @@ class TestSheetViewer extends Component
 
   public function completeTest()
   {
-    $success = $this->testsheet->submitAnswer($this->answers, auth()->id(), $this->elapsedTime);
+    $success = $this->testsheet->submitAnswer($this->answers, $this->dontKnowAnswers, auth()->id(), $this->elapsedTime);
 
     if ($success) {
       $this->completed = true;
@@ -189,6 +216,7 @@ class TestSheetViewer extends Component
         [
           'time' => $this->elapsedTime,
           'answers' => $this->answers,
+          'dont_know_answers' => $this->dontKnowAnswers,
           'correct_count' => 0
         ]
       );

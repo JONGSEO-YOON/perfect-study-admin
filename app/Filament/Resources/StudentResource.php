@@ -351,6 +351,7 @@ class StudentResource extends Resource
                         ->fillForm(fn($record) => [
                             'from' => now()->subMonth()->format('Y-m-d'),
                             'to' => now()->format('Y-m-d'),
+                            'is_dont_know_only' => false,
                             'question_count' => count(WrongAnswerNote::getQuestions(
                                 $record->id,
                                 now()->subMonth()->format('Y-m-d'),
@@ -367,12 +368,14 @@ class StudentResource extends Resource
                                         ->afterStateUpdated(function ($get, $set, $record) {
                                             $from = Carbon::parse($get('from'))->startOfDay();
                                             $to = Carbon::parse($get('to'))->endOfDay();
+                                            $isDontKnowOnly = $get('is_dont_know_only');
                                             $set(
                                                 'question_count',
                                                 count(WrongAnswerNote::getQuestions(
                                                     $record->id,
                                                     $from,
-                                                    $to
+                                                    $to,
+                                                    $isDontKnowOnly
                                                 ))
                                             );
                                         }),
@@ -383,15 +386,39 @@ class StudentResource extends Resource
                                         ->afterStateUpdated(function ($get, $set, $record) {
                                             $from = Carbon::parse($get('from'))->startOfDay();
                                             $to = Carbon::parse($get('to'))->endOfDay();
+                                            $isDontKnowOnly = $get('is_dont_know_only');
                                             $set(
                                                 'question_count',
                                                 count(WrongAnswerNote::getQuestions(
                                                     $record->id,
                                                     $from,
-                                                    $to
+                                                    $to,
+                                                    $isDontKnowOnly
                                                 ))
                                             );
                                         }),
+                                    Toggle::make('is_dont_know_only')
+                                        ->label('[잘 모르겠음] 문제만 출력')
+                                        ->columnSpanFull()
+                                        ->inlineLabel()
+                                        ->inline()
+                                        ->reactive()
+                                        ->live()
+                                        ->afterStateUpdated(function ($get, $set, $record) {
+                                            $from = Carbon::parse($get('from'))->startOfDay();
+                                            $to = Carbon::parse($get('to'))->endOfDay();
+                                            $isDontKnowOnly = $get('is_dont_know_only');
+                                            $set(
+                                                'question_count',
+                                                count(WrongAnswerNote::getQuestions(
+                                                    $record->id,
+                                                    $from,
+                                                    $to,
+                                                    $isDontKnowOnly
+                                                ))
+                                            );
+                                        })
+                                        ->default(false),
                                     TextInput::make('question_count')
                                         ->numeric()
                                         ->label('출제 문제 수')
@@ -403,6 +430,7 @@ class StudentResource extends Resource
                         ->action(function ($record, $data) {
                             $from = Carbon::parse($data['from'])->startOfDay();
                             $to = Carbon::parse($data['to'])->endOfDay();
+                            $isDontKnowOnly = $data['is_dont_know_only'];
                             $questionCount = WrongAnswerNote::where('student_id', $record->id)
                                 ->whereBetween('created_at', [$from, $to])
                                 ->count();
@@ -413,7 +441,7 @@ class StudentResource extends Resource
                                     ->send();
                                 return;
                             }
-                            return redirect('/admin/test-sheet/print?student_id=' . $record->id . '&from=' . $data['from'] . '&to=' . $data['to']);
+                            return redirect('/admin/test-sheet/print?student_id=' . $record->id . '&from=' . $data['from'] . '&to=' . $data['to'] . '&is_dont_know_only=' . $isDontKnowOnly);
                         }),
 
                     Tables\Actions\Action::make('manage-account')

@@ -27,6 +27,7 @@ class TestSheetPrint extends Component
     $studentId = request()->query('student_id');
     $from = request()->query('from');
     $to = request()->query('to');
+    $is_dont_know_only = request()->query('is_dont_know_only');
 
     if ($studentId && $from && $to) {
       $student = Student::findOrFail($studentId);
@@ -40,7 +41,7 @@ class TestSheetPrint extends Component
       $testSheet->subTitle = Carbon::parse($from)->format('Y-m-d') . ' ~ ' . Carbon::parse($to)->format('Y-m-d');
 
       // 문제 정보 구성
-      $questions = WrongAnswerNote::getQuestions($studentId, $from, $to);
+      $questions = WrongAnswerNote::getQuestions($studentId, $from, $to, $is_dont_know_only);
 
       $testSheet->questions = $questions;
 

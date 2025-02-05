@@ -131,6 +131,7 @@ class ReportCard extends Component implements HasForms, HasActions
                   ])
                   ->view('livewire.report-card-tab3-wrapper'),
               ]),
+
             Tab::make('Tab 1')
               ->label('오답 유형분석표')
               ->visible(fn() => $this->student->gradeSystem->display_name != '고3')
@@ -143,6 +144,19 @@ class ReportCard extends Component implements HasForms, HasActions
                     'classroom_id' => $this->data['classroom_id'],
                   ])
                   ->view('livewire.report-card-tab1-wrapper'),
+              ]),
+            Tab::make('Tab 5')
+              ->label('오답 유형분석표 - 학부모용')
+              ->visible(fn() => $this->student->gradeSystem->display_name != '고3')
+              ->schema([
+                ViewField::make('tab5')
+                  ->viewData([
+                    'student' => $this->student,
+                    'date_from' => $this->data['date_from'],
+                    'date_until' => $this->data['date_until'],
+                    'classroom_id' => $this->data['classroom_id'],
+                  ])
+                  ->view('livewire.report-card-tab5-wrapper'),
               ]),
             Tab::make('Tab 2')
               ->label('오답 유형분석표 (고3)')

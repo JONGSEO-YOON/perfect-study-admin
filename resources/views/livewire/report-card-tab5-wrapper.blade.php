@@ -4,6 +4,5 @@
         'classroomId' => $classroom_id,
         'dateFrom' => $date_from,
         'dateUntil' => $date_until,
-        'reportKey' => 'detailed_hierarchy',
     ])
 </div>

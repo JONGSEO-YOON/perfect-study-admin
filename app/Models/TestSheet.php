@@ -213,11 +213,11 @@ class TestSheet extends Model
         }
     }
 
-    public function submitAnswer(array $answers, int $userId, int $elapsedTime = 0): bool
+    public function submitAnswer(array $answers, array $dontKnowAnswers, int $userId, int $elapsedTime = 0): bool
     {
-        return DB::transaction(function () use ($answers, $userId, $elapsedTime) {
+        return DB::transaction(function () use ($answers, $dontKnowAnswers, $userId, $elapsedTime) {
             // 1. 채점 및 리포트 생성
-            $result = $this->grade($answers, $userId);
+            $result = $this->grade($answers, $dontKnowAnswers, $userId);
 
             // 2. 답안 업데이트 또는 생성
             TestSheetAnswer::updateOrCreate(
@@ -244,7 +244,7 @@ class TestSheet extends Model
         });
     }
 
-    protected function grade(array $answers, $userId): array
+    protected function grade(array $answers, array  $dontKnowAnswers, $userId): array
     {
         $correctCount = 0;
         $correctCountReport = [];
@@ -291,7 +291,8 @@ class TestSheet extends Model
                     WrongAnswerNote::create([
                         'student_id' => User::find($userId)->userable->id,
                         'question' => $question,
-                        'wrong_answer' => $answer ?? null
+                        'wrong_answer' => $answer ?? null,
+                        'dont_know' => $dontKnowAnswers[$index] ?? false
                     ]);
             }
         }
@@ -387,10 +388,10 @@ class TestSheet extends Model
                 if (!$answer) {
                     // 답안이 없는 경우 빈 답안으로 제출 처리
                     $emptyAnswers = array_fill(0, count($this->questions), null);
-                    $this->submitAnswer($emptyAnswers, $student->user->id, 0);
+                    $this->submitAnswer($emptyAnswers, [], $student->user->id, 0);
                 } else if ($answer->status === 'pending') {
                     // 진행 중인 답안이 있는 경우 현재 상태로 제출 처리
-                    $this->submitAnswer($answer->answers, $student->user->id, $answer->time);
+                    $this->submitAnswer($answer->answers, $answer->dont_know_answers, $student->user->id, $answer->time);
                 }
             }
             if ($this->isOriginal()) {
@@ -643,7 +644,13 @@ class TestSheet extends Model
                 // 계층적 분석 (기존 코드)
                 $hierarchicalAnalysis = $this->generateHierarchicalAnalysis(
                     $this->questions,
-                    $answer->answers
+                    $answer
+                );
+
+                $detailedHierarchicalAnalysis = $this->generateHierarchicalAnalysis(
+                    $this->questions,
+                    $answer,
+                    false
                 );
 
                 // 점수별 분석 추가
@@ -669,6 +676,7 @@ class TestSheet extends Model
                     'total_questions' => $totalQuestions,
                     'attempt_rate' => $calculatePercentage($attemptedCount, $totalQuestions),
                     'hierarchical_analysis' => $hierarchicalAnalysis,
+                    'detailed_hierarchical_analysis' => $detailedHierarchicalAnalysis,
                     'level_analysis' => [
                         'personal' => $personalLevelAnalysis,
                         'classroom' => $classroomLevelAnalysis
@@ -827,6 +835,7 @@ class TestSheet extends Model
                     'total_questions' => $data['total_questions'],
                     'attempt_rate' => $data['attempt_rate'],
                     'hierarchical_analysis' => $data['hierarchical_analysis'],
+                    'detailed_hierarchical_analysis' => $data['detailed_hierarchical_analysis'],
                     'level_analysis' => $data['level_analysis'],
                     'score_analysis' => $data['score_analysis'],
 
@@ -1269,12 +1278,14 @@ class TestSheet extends Model
         return $query->whereJsonLength('questions', '>', 0);
     }
 
-    private function generateHierarchicalAnalysis($questions, $answers)
+    private function generateHierarchicalAnalysis($questions, $answer, $fromRoot = true)
     {
         $analysis = [];
+        $answers = $answer->answers;
+        $dontKnowAnswers = $answer->dont_know_answers;
 
         foreach ($questions as $index => $question) {
-            $hierarchy = $this->getQuestionTypeHierarchy($question['question_type_id']);
+            $hierarchy = $this->getQuestionTypeHierarchy($question['question_type_id'], $fromRoot);
             if (!$hierarchy) continue;
 
             $major = $hierarchy['major'] ?? '기타';
@@ -1312,12 +1323,16 @@ class TestSheet extends Model
                     'level' => $level,
                     'total' => 0,
                     'correct' => 0,
-                    'percentage' => 0
+                    'percentage' => 0,
+                    'dont_know_answers_count' => 0
                 ];
             }
 
             // 카운트 증가
             $isCorrect = $answers[$index] === $question['answer'];
+
+            // 모름
+            $isDontKnow = ($dontKnowAnswers[$index] ?? false) === true;
 
             // 대단원 통계
             $analysis[$major]['total']++;
@@ -1334,6 +1349,10 @@ class TestSheet extends Model
             // 레벨별 통계
             $analysis[$major]['sub_categories'][$middle]['types'][$type]['levels'][$level]['total']++;
             if ($isCorrect) $analysis[$major]['sub_categories'][$middle]['types'][$type]['levels'][$level]['correct']++;
+
+            if ($isDontKnow) {
+                $analysis[$major]['sub_categories'][$middle]['types'][$type]['levels'][$level]['dont_know_answers_count']++;
+            }
         }
 
         // 정답률 계산 및 구조 정리
@@ -1362,7 +1381,7 @@ class TestSheet extends Model
         return $analysis;
     }
 
-    private function getQuestionTypeHierarchy($typeId)
+    private function getQuestionTypeHierarchy($typeId, $fromRoot = true)
     {
         $category = QuestionCategory::find($typeId);
         if (!$category) {
@@ -1371,14 +1390,25 @@ class TestSheet extends Model
 
         $parent = $category->parent()->first();
         $grandParent = $parent ? $parent->parent()->first() : null;
-        return [
-            // 'major' => $grandParent ? $grandParent->name : null,
-            // 'middle' => $parent ? $parent->name : null,
-            // 'type' => $category->name,
-            'major' => $grandParent ? $grandParent?->parent()?->first()?->name : null,
-            'middle' => $parent ? $parent?->parent()?->first()?->name : null,
-            'type' => $parent->name,
-        ];
+        if ($fromRoot) {
+            return [
+                // 'major' => $grandParent ? $grandParent->name : null,
+                // 'middle' => $parent ? $parent->name : null,
+                // 'type' => $category->name,
+                'major' => $grandParent ? $grandParent?->parent()?->first()?->name : null,
+                'middle' => $parent ? $parent?->parent()?->first()?->name : null,
+                'type' => $parent->name,
+            ];
+        } else {
+            return [
+                'major' => $grandParent ? $grandParent->name : null,
+                'middle' => $parent ? $parent->name : null,
+                'type' => $category->name,
+                //'major' => $grandParent ? $grandParent?->parent()?->first()?->name : null,
+                //'middle' => $parent ? $parent?->parent()?->first()?->name : null,
+                //'type' => $parent->name,
+            ];
+        }
     }
 
     private function generateLevelAnalysis($questions, $answers): array
@@ -1469,10 +1499,11 @@ class TestSheet extends Model
                 : 1;
 
             // 계층 정보 가져오기
-            $hierarchy = $this->getQuestionTypeHierarchy($question['question_type_id']);
+            $hierarchy = $this->getQuestionTypeHierarchy($question['question_type_id'], false);
             if (!$hierarchy) continue;
 
             $major = $hierarchy['major'] ?? '기타';
+            $middle = $hierarchy['middle'] ?? '기타';
             $type = $hierarchy['type'];
             $level = $question['level'] ?? 1;
 
@@ -1488,6 +1519,7 @@ class TestSheet extends Model
             if (!isset($analysis[$major]['types'][$type])) {
                 $analysis[$major]['types'][$type] = [
                     'name' => $type,
+                    'middle' => $middle,
                     'scores' => []
                 ];
             }
@@ -1576,6 +1608,7 @@ class TestSheet extends Model
                 'name' => $weekDate->format('m월 d일') . ' ' . $testSheet->name,
                 'class_name' => $report['classroom_name'],
                 'hierarchy' => static::transformHierarchyData($report['hierarchical_analysis'] ?? []),
+                'detailed_hierarchy' => static::transformHierarchyData($report['detailed_hierarchical_analysis'] ?? []),
                 'personal_level' => $report['level_analysis']['personal'] ?? [],
                 'classroom_level' => $report['level_analysis']['classroom'] ?? []
             ];
@@ -1596,7 +1629,8 @@ class TestSheet extends Model
                         $levelData[$level] = [
                             'total' => $data['total'],
                             'correct' => $data['correct'],
-                            'percentage' => $data['percentage']
+                            'percentage' => $data['percentage'],
+                            'dont_know_answers_count' => $data['dont_know_answers_count'] ?? 0
                         ];
                     }
 
@@ -1672,11 +1706,61 @@ class TestSheet extends Model
     protected static function transformHighschoolScoreData($scoreAnalysis): array
     {
         $result = [];
+        foreach ($scoreAnalysis as $major => $majorData) {
+            $middleGroups = [];
+
+            foreach ($majorData['types'] as $type => $typeData) {
+                $middleName = $typeData['middle'] ?? '기타';
+
+                if (!isset($middleGroups[$middleName])) {
+                    $middleGroups[$middleName] = [];
+                }
+
+                $scoreItems = [];
+                foreach ($typeData['scores'] as $scoreData) {
+                    $score = $scoreData['score'];
+                    $levels = $scoreData['levels'];
+
+                    for ($level = 1; $level <= 5; $level++) {
+                        $scoreItems[$score][$level] = $levels[$level]['total_earned'] ?? 0;
+                    }
+                }
+
+                $middleGroups[$middleName][] = [
+                    'type' => $type,
+                    'scores' => $scoreItems
+                ];
+            }
+
+            // Convert middleGroups to the desired format
+            $middles = [];
+            foreach ($middleGroups as $middleName => $items) {
+                $middles[] = [
+                    'middle' => $middleName,
+                    'middleItems' => $items
+                ];
+            }
+
+            $result[] = [
+                'major' => $major,
+                'middles' => $middles
+            ];
+        }
+
+        return $result;
+    }
+
+    protected static function _transformHighschoolScoreData($scoreAnalysis): array
+    {
+        $result = [];
 
         foreach ($scoreAnalysis as $major => $majorData) {
             $majorItems = [];
 
             foreach ($majorData['types'] as $type => $typeData) {
+                if (isset($typeData['middle'])) {
+                    dd($scoreAnalysis);
+                }
                 $scoreItems = [];
 
                 // 모든 점수에 대해 (2,3,4점)

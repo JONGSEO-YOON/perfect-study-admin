@@ -20,6 +20,8 @@ class ReportCardTab1 extends Component implements HasActions, HasForms
   public $dateUntil = null;
   public $reports = [];
 
+  public $reportKey = 'hierarchy';
+
   public function mount() {}
 
   public function render()

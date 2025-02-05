@@ -107,7 +107,7 @@
     </div>
     <div class="fixed bottom-0 left-0 right-0 w-full">
         <div class="flex flex-col w-full max-w-[740px] mx-auto py-6 shadow-xl rounded-t-[35px] px-5 md:px-16 gap-y-4 z-10 bg-white transition-all duration-300"
-            :style="'box-shadow: 0px 4px 12px 6px rgba(189, 189, 189, 0.25); ' + (showAnswerPanel ? 'height: 500px' :
+            :style="'box-shadow: 0px 4px 12px 6px rgba(189, 189, 189, 0.25); ' + (showAnswerPanel ? 'height: 560px' :
                 'height:100px')"
             style="">
             <div class="flex flex-row gap-x-5">
@@ -194,6 +194,18 @@
                         class="bg-[#F4F4F4] hover:bg-gray-300 p-4 rounded-[10px] text-xl transition-all">0</button>
                     <button wire:click="submitAnswer" @click="showAnswerPanel = false"
                         class="p-4 text-white rounded-[10px] text-lg bg-[#8570C2] font-semibold transition-all">완료</button>
+                    <div></div>
+                    <div></div>
+                    <button wire:click="dontKnowAnswer" @click="showAnswerPanel = false"
+                        class="p-3 rounded-[10px] text-lg border-[#8570C2] text-[#8570C2] font-semibold transition-all flex items-center justify-center gap-x-2 col-span-3">
+                        <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="currentColor"
+                            viewBox="0 0 16 16">
+                            <path fill="currentColor" fill-rule="evenodd"
+                                d="M7.134 2.995 2.217 11.5a1 1 0 0 0 .866 1.5h9.834a1 1 0 0 0 .866-1.5L8.866 2.995a1 1 0 0 0-1.732 0m3.03-.751c-.962-1.665-3.366-1.665-4.329 0L.918 10.749c-.963 1.666.24 3.751 2.165 3.751h9.834c1.925 0 3.128-2.085 2.164-3.751z"
+                                clip-rule="evenodd"></path>
+                        </svg>
+                        잘
+                        모르겠어요</button>
                 </div>
             </div>
 
