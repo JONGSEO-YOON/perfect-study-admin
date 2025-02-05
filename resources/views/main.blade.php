@@ -66,31 +66,5 @@
                 });
             }
         });
-        document.addEventListener('DOMContentLoaded', function() {
-            // 토글 버튼과 사이드바 요소 선택
-            const toggleButtons = document.querySelectorAll('.menu-button');
-            const sidebar = document.querySelector('aside');
-
-            // 초기 상태 설정 (모바일에서는 숨김)
-            if (window.innerWidth < 1024) {
-                sidebar.classList.add('hidden');
-            }
-
-            // 버튼 클릭 이벤트 처리
-            for (const toggleButton of toggleButtons) {
-                toggleButton.addEventListener('click', function() {
-                    sidebar.classList.toggle('hidden');
-                });
-            }
-
-            // 화면 크기 변경 시 처리
-            window.addEventListener('resize', function() {
-                if (window.innerWidth >= 1024) {
-                    sidebar.classList.remove('hidden');
-                } else {
-                    sidebar.classList.add('hidden');
-                }
-            });
-        });
     </script>
 </x-layouts.student>
