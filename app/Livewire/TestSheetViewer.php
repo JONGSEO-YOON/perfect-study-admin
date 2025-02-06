@@ -9,6 +9,7 @@ use App\Models\TestSheetAnswer;
 use App\Models\WrongAnswerTestSheet;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
+use Illuminate\Support\Str;
 
 class TestSheetViewer extends Component
 {
@@ -18,7 +19,10 @@ class TestSheetViewer extends Component
   public $completed = false;
   public $testsheet = null;
   public $currentQuestionIndex = 0;
-  public $questions = [];
+
+  public $sessionKey;
+  // protected $questions = [];
+
   public $answers = [];
   public $dontKnowAnswers = [];
   public $progress = [];
@@ -30,13 +34,22 @@ class TestSheetViewer extends Component
 
   public function render()
   {
-    return view('livewire.test-sheet-viewer');
+    return view('livewire.test-sheet-viewer', [
+      'questions' => $this->getQuestions(),
+    ]);
   }
+
+  protected function getQuestions(): array
+  {
+    return session($this->sessionKey) ?? [];
+  }
+
 
   public function mount($id)
   {
     $this->id = $id;
     $this->testsheet = TestSheet::find($id);
+    $this->sessionKey = 'test_questions_' . Str::uuid()->toString();
 
     $latestAnswer = TestSheetAnswer::where('test_sheet_id', $id)
       ->where('user_id', auth()->id())
@@ -55,17 +68,19 @@ class TestSheetViewer extends Component
       $this->dontKnowAnswers = [];
     }
 
-    $this->questions = $this->testsheet->questions;
-    $this->currentQuestion = $this->questions[$this->currentQuestionIndex];
+    session([$this->sessionKey => $this->testsheet->questions]);
+    // $this->questions = $this->testsheet->questions;
+
+    $this->currentQuestion = $this->getQuestions()[$this->currentQuestionIndex];
     $this->updateProgress();
   }
 
 
   public function nextQuestion()
   {
-    if ($this->currentQuestionIndex < count($this->questions) - 1) {
+    if ($this->currentQuestionIndex < count($this->getQuestions()) - 1) {
       $this->currentQuestionIndex++;
-      $this->currentQuestion = $this->questions[$this->currentQuestionIndex];
+      $this->currentQuestion = $this->getQuestions()[$this->currentQuestionIndex];
       $this->updateProgress();
     }
   }
@@ -74,7 +89,7 @@ class TestSheetViewer extends Component
   {
     if ($this->currentQuestionIndex > 0) {
       $this->currentQuestionIndex--;
-      $this->currentQuestion = $this->questions[$this->currentQuestionIndex];
+      $this->currentQuestion = $this->getQuestions()[$this->currentQuestionIndex];
       $this->updateProgress();
     }
   }
@@ -82,7 +97,7 @@ class TestSheetViewer extends Component
 
   protected function updateProgress()
   {
-    $total = count($this->questions);
+    $total = count($this->getQuestions());
     $answered = count(array_filter($this->answers, fn($answer) => $answer !== null));
 
     $this->progress = [
@@ -98,7 +113,6 @@ class TestSheetViewer extends Component
     if ($this->currentQuestion['answer_type'] === 'multiple_choice') {
       $this->currentAnswer = $number;
     } else {
-
       $this->currentAnswer = $this->currentAnswer . $number;
     }
   }
@@ -174,7 +188,7 @@ class TestSheetViewer extends Component
   public function goToQuestion($index)
   {
     $this->currentQuestionIndex = $index;
-    $this->currentQuestion = $this->questions[$index];
+    $this->currentQuestion = $this->getQuestions()[$index];
     $this->currentAnswer = '';
     $this->updateProgress();
   }
