@@ -19,7 +19,7 @@
                     </h2>
                 </div>
                 <div class="flex flex-col md:flex-row ml-auto">
-                    <div wire:poll.1000ms="updateTimer"
+                    <div wire:poll.5000ms="updateTimer"
                         class="flex flex-row gap-x-2 items-center text-[#7D7D92] ml-auto text-sm md:text-base">
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
                             xmlns="http://www.w3.org/2000/svg">
