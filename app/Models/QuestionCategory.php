@@ -70,7 +70,7 @@ class QuestionCategory extends Model
     public static function getFullTree()
     {
         // depth가 0인 최상위 카테고리들만 가져옴
-        return self::with('children.children.children.children') // 필요한 깊이만큼 with() 체이닝
+        return self::with('children.children.children.children.children.children') // 필요한 깊이만큼 with() 체이닝
             ->where('depth', 0)
             ->orderBy('order')
             ->get()
