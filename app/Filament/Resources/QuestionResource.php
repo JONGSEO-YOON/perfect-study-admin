@@ -219,7 +219,7 @@ class QuestionResource extends Resource
                             if ($get('choices_display_type') === 'in_question') {
                                 $set('choices_count', 0);
                             } else {
-                                $set('choices_count', 4);
+                                $set('choices_count', 6);
                             }
                         })
                         ->columnSpanFull(),
@@ -235,7 +235,24 @@ class QuestionResource extends Resource
                             4 => '4',
                             5 => '5',
                             6 => '6',
-                        ])->label('선택지 개수'),
+                        ])->label('선택지 개수')
+                        ->afterStateUpdated(function (Get $get, Set $set, $livewire) {
+                            if (isset($livewire->mountedTableActionsData[0]['choices'])) {
+                                $choicesCount = $get('choices_count');
+                                $currentCount = count($livewire->mountedTableActionsData[0]['choices']);
+                                if ($choicesCount > $currentCount) {
+                                    for ($i = $currentCount; $i < $choicesCount; $i++) {
+                                        $livewire->mountedTableActionsData[0]['choices'][] = [
+                                            'content' => '',
+                                        ];
+                                    }
+                                }
+                                // if less remove
+                                if ($choicesCount < $currentCount) {
+                                    $livewire->mountedTableActionsData[0]['choices'] = array_slice($livewire->mountedTableActionsData[0]['choices'], 0, $choicesCount);
+                                }
+                            }
+                        }),
                     Tabs::make('choices')
                         ->visible(fn(Get $get) => $get('answer_type') === 'multiple_choice' && $get('choices_display_type') === 'seperate')
                         ->live()
@@ -272,7 +289,7 @@ class QuestionResource extends Resource
                                                 ->columnSpanFull()
                                                 ->visible(fn(Get $get) => $get($prefix . '.display_type') === 'image'),
                                             TinyEditor::make($prefix . '.content')
-                                                ->required()
+                                                // ->required()
                                                 ->label('내용')
                                                 ->placeholder('선택지를 입력하세요.')
                                                 ->visible(fn(Get $get) => $get($prefix . '.display_type') === 'content')
@@ -484,7 +501,7 @@ class QuestionResource extends Resource
                                         'image_path' => $choice->image_path,
                                     ];
                                 })->toArray(),
-                                'choices_count' => $record->choices->count() > 0 ? $record->choices->count() : 4,
+                                'choices_count' => $record->choices->count() > 0 ? $record->choices->count() : 6,
                                 ...$record->toArray(),
                             ];
                         })
@@ -539,14 +556,14 @@ class QuestionResource extends Resource
                                             'image_path' => $choice->image_path,
                                         ];
                                     })->toArray(),
-                                    'choices_count' => $subQuestion->choices->count() > 0  ?  $subQuestion->choices->count() : 4,
+                                    'choices_count' => $subQuestion->choices->count() > 0  ?  $subQuestion->choices->count() : 6,
                                     ...$subQuestion->toArray(),
                                 ];
                             }
                             return [
                                 'question_type_id' => $record->question_type_id,
                                 'choices' => [],
-                                'choices_count' => 4,
+                                'choices_count' => 6,
                                 'question_display_type' => 'image',
                                 'answer_type' => 'multiple_choice',
                                 'choices_display_type' => 'in_question',
@@ -600,7 +617,7 @@ class QuestionResource extends Resource
                                             'image_path' => $choice->image_path,
                                         ];
                                     })->toArray(),
-                                    'choices_count' => $subQuestion->choices->count() > 0  ?  $subQuestion->choices->count() : 4,
+                                    'choices_count' => $subQuestion->choices->count() > 0  ?  $subQuestion->choices->count() : 6,
                                     ...$subQuestion->toArray(),
                                 ];
                             }
@@ -610,7 +627,7 @@ class QuestionResource extends Resource
                                 'answer_type' => 'multiple_choice',
                                 'choices_display_type' => 'in_question',
                                 'choices' => [],
-                                'choices_count' => 4,
+                                'choices_count' => 6,
                                 'is_sub_question' => true,
                             ];
                         })

@@ -91,7 +91,7 @@ class ScannedQuestions extends Page
                 'answer_type' => 'multiple_choice',
                 'choices_display_type' => 'in_question',
                 'choices' => [],
-                'choices_count' => 4,
+                'choices_count' => 6,
                 'material_id' => $this->material_id,
                 'is_public' => $this->is_public,
                 ...$this->arguments,

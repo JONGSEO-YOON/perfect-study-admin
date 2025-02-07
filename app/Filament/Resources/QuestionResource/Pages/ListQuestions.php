@@ -155,7 +155,7 @@ class ListQuestions extends ListRecords
                     if (!$this->parent_id) {
                         return [
                             'choices' => [],
-                            'choices_count' => 4,
+                            'choices_count' => 6,
                         ];
                     }
 
@@ -163,14 +163,14 @@ class ListQuestions extends ListRecords
                     if ($material->type !== 'book') {
                         return [
                             'choices' => [],
-                            'choices_count' => 4,
+                            'choices_count' => 6,
                         ];
                     }
 
                     return [
                         'material_id' => $this->parent_id,
                         'choices' => [],
-                        'choices_count' => 4,
+                        'choices_count' => 6,
                     ];
                 })
                 ->using(function ($data) {
