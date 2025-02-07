@@ -449,11 +449,19 @@ class QuestionResource extends Resource
                             ->label('유형 선택')
                             ->searchable()
                             ->allowHtml()
+                            ->preload(false)
                             ->extraAttributes([
                                 'class' => 'question-category-select',
                             ])
+                            ->getSearchResultsUsing(function ($search) {
+                                return QuestionCategory::query()
+                                    ->where('name', 'like', "%{$search}%")
+                                    ->get()
+                                    ->mapWithKeys(fn($category) => [$category->getKey() => $category->full_path]);
+                            })
                             ->options(function () {
                                 return QuestionCategory::query()
+                                    ->take(10)
                                     ->get()
                                     ->mapWithKeys(fn($category) => [$category->getKey() => $category->full_path]);
                             })
