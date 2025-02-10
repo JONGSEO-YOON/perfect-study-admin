@@ -177,7 +177,6 @@ class CounselingResource extends Resource
 
                                                 Textarea::make('request_message')
                                                     ->label('요청 내용')
-                                                    ->required()
                                                     ->disabled(fn(Get $get) => !$get('request'))
                                                     ->rows(5)
                                                     ->columnSpanFull(),
