@@ -146,9 +146,10 @@ class PageSelector extends Component implements HasMingles
         }
     }
 
-    public function extractQuestions($data)
+    public function extractQuestions($data, $data2)
     {
         $number = $data['number'];
+        $margin = $data2['margin'];
 
         $filePath = "storage/app/public/converted-pdfs/{$this->id}/page_{$number}.jpg";
         $fullPath = env('APP_ABSOLUTE_PATH') . '/' . $filePath;
@@ -156,7 +157,11 @@ class PageSelector extends Component implements HasMingles
         try {
             // HTTP 요청 보내기
             $response = Http::get(env('EXTRACT_SERVER_URL') . '/detect_problems', [
-                'input_path' => $fullPath
+                'input_path' => $fullPath,
+                'top_crop' => $margin['top'] / 100,
+                'bottom_crop' => (100 - $margin['bottom']) / 100,
+                'left_crop' => $margin['left'] / 100,
+                'right_crop' => (100 - $margin['right']) / 100,
             ]);
 
             // JSON 응답 확인 및 반환

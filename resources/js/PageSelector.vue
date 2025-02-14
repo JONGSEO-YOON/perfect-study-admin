@@ -10,12 +10,19 @@ const props = defineProps({
 
 const { wire, mingleData } = props;
 const pages = ref(mingleData.pages);
+const showMarginModal = ref(false);
 const id = mingleData.id;
 
 const extracting = ref(false);
 const completing = ref(false);
 const status = ref("page-select");
 const cache = ref(mingleData.cache);
+const extractionMargin = ref({
+    top: 5,
+    right: 3,
+    bottom: 7,
+    left: 3,
+});
 
 const selectedPages = ref([]);
 for (const page of pages.value) {
@@ -23,32 +30,7 @@ for (const page of pages.value) {
 }
 const lastSelectedPage = ref(null);
 const extractedPages = ref([]);
-const croppedQuestions = ref([
-    // {
-    //     number: 1,
-    //     url: "http://localhost/storage/converted-pdfs/01JDNP0BQ10G7BTWAGFR2Q3H4E/questions/question_1.jpg",
-    // },
-    // {
-    //     number: 2,
-    //     url: "http://localhost/storage/converted-pdfs/01JDNP0BQ10G7BTWAGFR2Q3H4E/questions/question_2.jpg",
-    // },
-    // {
-    //     number: 3,
-    //     url: "http://localhost/storage/converted-pdfs/01JDNP0BQ10G7BTWAGFR2Q3H4E/questions/question_3.jpg",
-    // },
-    // {
-    //     number: 4,
-    //     url: "http://localhost/storage/converted-pdfs/01JDNP0BQ10G7BTWAGFR2Q3H4E/questions/question_4.jpg",
-    // },
-    // {
-    //     number: 5,
-    //     url: "http://localhost/storage/converted-pdfs/01JDNP0BQ10G7BTWAGFR2Q3H4E/questions/question_5.jpg",
-    // },
-    // {
-    //     number: 6,
-    //     url: "http://localhost/storage/converted-pdfs/01JDNP0BQ10G7BTWAGFR2Q3H4E/questions/question_6.jpg",
-    // },
-]);
+const croppedQuestions = ref([]);
 
 const togglePageSelection = (page) => {
     const index = selectedPages.value.findIndex(
@@ -63,12 +45,15 @@ const togglePageSelection = (page) => {
 };
 
 const extractQuestions = async () => {
+    showMarginModal.value = false;
     extracting.value = true;
     extractedPages.value = [];
     // sort selected pages
     selectedPages.value.sort((a, b) => a.number - b.number);
     for (const selectedPage of selectedPages.value) {
-        const questions = await wire.extractQuestions(selectedPage);
+        const questions = await wire.extractQuestions(selectedPage, {
+            margin: extractionMargin.value,
+        });
         if (questions?.length) {
             extractedPages.value.push({
                 page: selectedPage,
@@ -181,6 +166,87 @@ const editedQuestions = computed(() => {
     //     (q) => q.data && q.sub1_data && q.sub2_data
     // );
 });
+
+const isDragging = ref(false);
+const currentHandle = ref(null);
+const startPos = ref({ x: 0, y: 0 });
+const startMargin = ref({ top: 0, right: 0, bottom: 0, left: 0 });
+
+const startDrag = (event, handle) => {
+    isDragging.value = true;
+    currentHandle.value = handle;
+    startPos.value = {
+        x: event.clientX,
+        y: event.clientY,
+    };
+    startMargin.value = { ...extractionMargin.value };
+
+    // Add event listeners
+    document.addEventListener("mousemove", handleDrag);
+    document.addEventListener("mouseup", stopDrag);
+};
+
+const handleDrag = (event) => {
+    if (!isDragging.value) return;
+
+    const containerRect = event.target
+        .closest(".relative")
+        .getBoundingClientRect();
+    const deltaX = event.clientX - startPos.value.x;
+    const deltaY = event.clientY - startPos.value.y;
+
+    // Calculate percentage movement
+    const percentX = (deltaX / containerRect.width) * 100;
+    const percentY = (deltaY / containerRect.height) * 100;
+
+    switch (currentHandle.value) {
+        case "left":
+            extractionMargin.value.left = Math.max(
+                0,
+                Math.min(
+                    100 - extractionMargin.value.right,
+                    startMargin.value.left + percentX
+                )
+            );
+            break;
+        case "right":
+            extractionMargin.value.right = Math.max(
+                0,
+                Math.min(
+                    100 - extractionMargin.value.left,
+                    startMargin.value.right - percentX
+                )
+            );
+            break;
+        case "top":
+            extractionMargin.value.top = Math.max(
+                0,
+                Math.min(
+                    100 - extractionMargin.value.bottom,
+                    startMargin.value.top + percentY
+                )
+            );
+            break;
+        case "bottom":
+            extractionMargin.value.bottom = Math.max(
+                0,
+                Math.min(
+                    100 - extractionMargin.value.top,
+                    startMargin.value.bottom - percentY
+                )
+            );
+            break;
+    }
+};
+
+const stopDrag = () => {
+    isDragging.value = false;
+    currentHandle.value = null;
+
+    // Remove event listeners
+    document.removeEventListener("mousemove", handleDrag);
+    document.removeEventListener("mouseup", stopDrag);
+};
 
 onMounted(() => {
     window.addEventListener("reloadPages", async (event) => {
@@ -361,7 +427,7 @@ onMounted(() => {
                     "
                     :disabled="!selectedPages?.length || extracting"
                     class="fi-btn relative grid-flow-col disabled:opacity-50 items-center justify-center font-semibold outline-none transition-all duration-75 focus-visible:ring-2 rounded-lg fi-color-custom fi-btn-color-primary fi-color-primary fi-size-lg fi-btn-size-lg gap-1.5 px-3.5 py-2.5 text-sm inline-grid shadow-sm bg-custom-600 text-white hover:bg-custom-500 focus-visible:ring-custom-500/50 dark:bg-custom-500 dark:hover:bg-custom-400 dark:focus-visible:ring-custom-400/50"
-                    @click="extractQuestions"
+                    @click="showMarginModal = true"
                 >
                     <svg
                         class="fi-btn-icon transition duration-75 h-5 w-5 text-white"
@@ -670,6 +736,155 @@ onMounted(() => {
                 <h2 class="text-base text-gray-600">
                     학습지 메뉴에서 학습지를 등록해보세요!
                 </h2>
+            </div>
+        </div>
+    </Transition>
+    <Transition
+        enter-active-class="transition duration-300 ease-in-out"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition duration-300 ease-in-out"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+    >
+        <div
+            v-if="showMarginModal"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30"
+        >
+            <div class="bg-white rounded-lg shadow-lg p-6 w-1/2">
+                <h2 class="text-xl font-bold mb-1">페이지 여백 설정</h2>
+                <h2 class="text-sm text-gray-600 font-medium mb-4">
+                    화살표를 움직여 여백을 조정해주세요.
+                </h2>
+                <div class="">
+                    <div class="w-full max-w-[500px] mx-auto relative">
+                        <img
+                            class="w-full border rounded user-select-none select-none"
+                            :src="selectedPages[0]?.url"
+                        />
+                        <div
+                            class="absolute top-0 left-0 rounded border-2 border-dashed border-primary-500 bg-black bg-opacity-10"
+                            :style="{
+                                top: `${extractionMargin.top}%`,
+                                left: `${extractionMargin.left}%`,
+                                right: `${extractionMargin.right}%`,
+                                bottom: `${extractionMargin.bottom}%`,
+                            }"
+                        ></div>
+                        <div
+                            class="text-white bg-primary-500 rounded-full absolute top-1/2 -translate-y-1/2 -translate-x-1/2 cursor-pointer"
+                            :style="{
+                                left: `${extractionMargin.left}%`,
+                            }"
+                            @mousedown="startDrag($event, 'left')"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                                class="size-6"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
+                                    clip-rule="evenodd"
+                                />
+                            </svg>
+                        </div>
+                        <div
+                            class="text-white bg-primary-500 rounded-full absolute top-1/2 -translate-y-1/2 translate-x-1/2 cursor-pointer"
+                            :style="{
+                                right: `${extractionMargin.right}%`,
+                            }"
+                            @mousedown="startDrag($event, 'right')"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                                class="size-6"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
+                                    clip-rule="evenodd"
+                                />
+                            </svg>
+                        </div>
+                        <div
+                            class="text-white bg-primary-500 rounded-full absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 cursor-pointer"
+                            :style="{
+                                top: `${extractionMargin.top}%`,
+                            }"
+                            @mousedown="startDrag($event, 'top')"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                                class="size-6"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M9.47 6.47a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 1 1-1.06 1.06L10 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06l4.25-4.25Z"
+                                    clip-rule="evenodd"
+                                />
+                            </svg>
+                        </div>
+                        <div
+                            class="text-white bg-primary-500 rounded-full absolute bottom-0 translate-y-1/2 left-1/2 -translate-x-1/2 cursor-pointer"
+                            :style="{
+                                bottom: `${extractionMargin.bottom}%`,
+                            }"
+                            @mousedown="startDrag($event, 'bottom')"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                                class="size-6"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+                                    clip-rule="evenodd"
+                                />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-end mt-4 gap-x-2">
+                    <button
+                        @click="showMarginModal = false"
+                        class="fi-btn border text-sm px-4 py-2 rounded-lg hover:bg-gray-100"
+                    >
+                        취소
+                    </button>
+                    <button
+                        style="
+                            --c-400: var(--primary-400);
+                            --c-500: var(--primary-500);
+                            --c-600: var(--primary-600);
+                        "
+                        :disabled="!selectedPages?.length || extracting"
+                        class="fi-btn relative grid-flow-col disabled:opacity-50 items-center justify-center font-semibold outline-none transition-all duration-75 focus-visible:ring-2 rounded-lg fi-color-custom fi-btn-color-primary fi-color-primary fi-size-lg fi-btn-size-lg gap-1.5 px-3.5 py-2.5 text-sm inline-grid shadow-sm bg-custom-600 text-white hover:bg-custom-500 focus-visible:ring-custom-500/50 dark:bg-custom-500 dark:hover:bg-custom-400 dark:focus-visible:ring-custom-400/50"
+                        @click="extractQuestions"
+                    >
+                        <svg
+                            class="fi-btn-icon transition duration-75 h-5 w-5 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            aria-hidden="true"
+                            data-slot="icon"
+                        >
+                            <path
+                                d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z"
+                            ></path>
+                        </svg>
+                        <span class="fi-btn-label"> 문제 추출 시작 </span>
+                    </button>
+                </div>
             </div>
         </div>
     </Transition>
