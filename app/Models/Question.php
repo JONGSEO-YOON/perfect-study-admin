@@ -96,6 +96,13 @@ class Question extends Model
                                         $q->orWhereRaw('1 = 1');
                                     });
                             });
+                    })
+                    // 부모가 있는 경우는 검증하지 않음
+                    ->orWhere(function ($q) {
+                        $q->orWhereExists(function ($query) {
+                            $query->from('questions as parent_q')
+                                ->whereColumn('parent_q.id', 'questions.parent_question_id');
+                        });
                     });
             });
         });
