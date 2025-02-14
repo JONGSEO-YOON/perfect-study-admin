@@ -21,12 +21,12 @@
                         <th class="px-1 py-3 border-b">중단원</th>
                         <th class="px-1 py-3 border-b">문제유형</th>
                         @for ($level = 1; $level <= 5; $level++)
-                            <th class="px-1 py-3 border-b">출제문항</th>
-                            <th class="px-1 py-3 border-b">정답개수</th>
+                            <th class="px-1 py-3 border-b min-w-[50px]">출제문항</th>
+                            <th class="px-1 py-3 border-b  min-w-[50px]">정답개수</th>
                             @if ($reportKey === 'hierarchy')
-                                <th class="px-1 py-3 border-b">정답률</th>
+                                <th class="px-1 py-3 border-b  min-w-[50px]">정답률</th>
                             @else
-                                <th class="px-1 py-3 border-b">모름</th>
+                                <th class="px-1 py-3 border-b  min-w-[50px]">모름</th>
                             @endif
                         @endfor
                     </tr>
@@ -73,13 +73,15 @@
                             <td class="px-1 py-3 border-b">{!! $item['type'] !!}</td>
 
                             @for ($level = 1; $level <= 5; $level++)
-                                <td class="px-1 py-3 border-b">{{ $item['levels'][$level]['total'] ?? 0 }}</td>
-                                <td class="px-1 py-3 border-b">{{ $item['levels'][$level]['correct'] ?? 0 }}</td>
+                                <td class="px-1 py-3 border-b border-r">{{ $item['levels'][$level]['total'] ?? 0 }}</td>
+                                <td class="px-1 py-3 border-b border-r">{{ $item['levels'][$level]['correct'] ?? 0 }}
+                                </td>
                                 @if ($reportKey === 'hierarchy')
-                                    <td class="px-1 py-3 border-b">{{ $item['levels'][$level]['percentage'] ?? 0 }}%
+                                    <td class="px-1 py-3 border-b border-r">
+                                        {{ $item['levels'][$level]['percentage'] ?? 0 }}%
                                     </td>
                                 @else
-                                    <td class="px-1 py-3 border-b">
+                                    <td class="px-1 py-3 border-b border-r">
                                         {{ $item['levels'][$level]['dont_know_answers_count'] ?? 0 }}
                                     </td>
                                 @endif
@@ -92,14 +94,16 @@
                         <td rowspan="2" colspan="2" class="px-1 py-3 border-b">단원별 전체 정답률</td>
                         <td class="px-1 py-3 border-b">개인</td>
                         @for ($level = 1; $level <= 5; $level++)
-                            <td class="px-1 py-3 border-b">{{ $report['personal_level'][$level]['total'] ?? 0 }}</td>
-                            <td class="px-1 py-3 border-b">{{ $report['personal_level'][$level]['correct'] ?? 0 }}</td>
+                            <td class="px-1 py-3 border-b border-r">
+                                {{ $report['personal_level'][$level]['total'] ?? 0 }}</td>
+                            <td class="px-1 py-3 border-b border-r">
+                                {{ $report['personal_level'][$level]['correct'] ?? 0 }}</td>
                             @if ($reportKey === 'hierarchy')
-                                <td class="px-1 py-3 border-b">
+                                <td class="px-1 py-3 border-b border-r">
                                     {{ $report['personal_level'][$level]['percentage'] ?? 0 }}%
                                 </td>
                             @else
-                                <td class="px-1 py-3 border-b">
+                                <td class="px-1 py-3 border-b border-r">
                                     -
                                 </td>
                             @endif
@@ -110,15 +114,17 @@
                     <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center">
                         <td class="px-1 py-3 border-b">반별</td>
                         @for ($level = 1; $level <= 5; $level++)
-                            <td class="px-1 py-3 border-b">{{ $report['classroom_level'][$level]['total'] ?? 0 }}</td>
-                            <td class="px-1 py-3 border-b">{{ $report['classroom_level'][$level]['correct'] ?? 0 }}
+                            <td class="px-1 py-3 border-b border-r">
+                                {{ $report['classroom_level'][$level]['total'] ?? 0 }}</td>
+                            <td class="px-1 py-3 border-b border-r">
+                                {{ $report['classroom_level'][$level]['correct'] ?? 0 }}
                             </td>
                             @if ($reportKey === 'hierarchy')
-                                <td class="px-1 py-3 border-b">
+                                <td class="px-1 py-3 border-b border-r">
                                     {{ $report['classroom_level'][$level]['percentage'] ?? 0 }}%
                                 </td>
                             @else
-                                <td class="px-1 py-3 border-b">
+                                <td class="px-1 py-3 border-b border-r">
                                     -
                                 </td>
                             @endif
