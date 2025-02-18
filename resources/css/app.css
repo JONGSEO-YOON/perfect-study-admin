@@ -72,3 +72,7 @@ mjx-container svg {
 .question-category-select .choices__list p{
     display: inline !important;
 }
+
+#wrs_content_container > div > div.wrs_tickContainer {
+    display: none !important;
+}
