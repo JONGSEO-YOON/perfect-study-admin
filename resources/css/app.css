@@ -73,6 +73,6 @@ mjx-container svg {
     display: inline !important;
 }
 
-#wrs_content_container > div > div.wrs_tickContainer {
+.wrs_editor .wrs_tickContainer {
     display: none !important;
 }
