@@ -448,7 +448,12 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                 $student = User::findOrFail($query['target_students'][0])->userable;
                 $grade = GradeSystem::findOrFail($student->grade_system_id);
             }
+
             $this->data['grade'] = $grade->display_name;
+
+            if ($query['material_id'] ?? false) {
+                $this->data['tags_toggle'] = '숙제';
+            }
             $this->initialPrintLayout = [
                 'grade' => $this->data['grade'],
             ];
