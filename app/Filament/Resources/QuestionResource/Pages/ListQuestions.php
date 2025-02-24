@@ -11,6 +11,7 @@ use Filament\Actions;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\ViewField;
 use Filament\Forms\Get;
@@ -70,8 +71,10 @@ class ListQuestions extends ListRecords
                     if ($material->type !== 'book') {
                         return [];
                     }
+                    $starting_seq = $material->questions()->max('seq') + 1;
                     return [
                         'material_id' => $this->parent_id,
+                        'starting_seq' => $starting_seq,
                     ];
                 })
                 ->form([
@@ -84,6 +87,12 @@ class ListQuestions extends ListRecords
                                 ->get()->pluck('name', 'id')
                         )
                         ->live()
+                        ->placeholder('교재를 선택하세요.'),
+                    TextInput::make('starting_seq')
+                        ->label('시작 문제 번호')
+                        ->numeric()
+                        ->required()
+                        ->visible(fn(Get $get) => $get('material_id'))
                         ->placeholder('교재를 선택하세요.'),
                     Toggle::make('is_public')
                         ->columnSpanFull()
@@ -129,7 +138,11 @@ class ListQuestions extends ListRecords
                     // $livewire->dispatch('onScanStarted', [
                     //     'attachmentName' => $attachmentName,
                     // ]);
-                    return redirect('/admin/scanned-questions/' . $attachmentName . '?material_id=' . ($data['material_id'] ?? '') . '&is_public=' . ($data['is_public'] ?? '0'));
+                    return redirect(
+                        '/admin/scanned-questions/' . $attachmentName . '?material_id=' . ($data['material_id'] ?? '')
+                            . '&is_public=' . ($data['is_public'] ?? '0')
+                            . '&starting_seq=' . ($data['starting_seq'] ?? '1')
+                    );
                 }),
             Actions\CreateAction::make()
                 ->icon('heroicon-m-plus-circle')
@@ -194,41 +207,5 @@ class ListQuestions extends ListRecords
     public function convertPdfToImages($pdfPath, $outputDir, $attachmentName, $materialId, $isPublic)
     {
         ConvertPdfToImagesJob::dispatch($pdfPath, $outputDir, $attachmentName, $materialId, $isPublic);
-        return;
-
-        $imagick = new Imagick();
-        $imagick->readImage($pdfPath);
-        $imagick->setResolution(600, 600);
-        $imagick->setImageFormat('jpg');
-
-        $numPages = $imagick->getNumberImages();
-
-        $this->totalPages = $numPages;
-
-        for ($i = 0; $i < $numPages; $i++) {
-            $this->currentPage = $i + 1;
-            $this->dispatch('onProgressUpdated', [
-                'progress' => $this->currentPage / $this->totalPages * 100,
-                'currentPage' => $this->currentPage,
-                'totalPages' => $this->totalPages,
-            ]);
-            $image = new Imagick();
-            $image->setResolution(300, 300);
-            $image->setColorspace(Imagick::COLORSPACE_SRGB);
-            $image->readImage($pdfPath . "[" . $i . "]");
-            $image->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
-            $image->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
-            $image->setImageBackgroundColor(new ImagickPixel('white'));
-
-
-            $image->setImageFormat('jpg');
-            $image->writeImage($outputDir . "/page_" . ($i + 1) . ".jpg");
-            $image->clear();
-
-            // $this->progress = ($i + 1) / $numPages * 100;
-            // $this->dispatch('progressUpdated');
-        }
-
-        $imagick->clear();
     }
 }

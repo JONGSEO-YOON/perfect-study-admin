@@ -354,6 +354,13 @@ class QuestionResource extends Resource
                 )
                 ->visible(fn(Get $get) => !$get('is_sub_question'))
                 ->placeholder('교재를 선택하세요.'),
+            TextInput::make('seq')
+                ->label('문제번호')
+                ->required()
+                ->numeric()
+                ->visible(fn(Get $get) => $get('material_id'))
+                ->placeholder('교재를 선택하세요.'),
+
             Toggle::make('is_public')
                 ->columnSpanFull()
                 ->inline(false)
@@ -397,6 +404,18 @@ class QuestionResource extends Resource
                 TextColumn::make('id')
                     ->label('No')
                     ->rowIndex(),
+                TextColumn::make('seq')
+                    ->label('문제 번호')
+                    ->sortable()
+                    ->visible(function ($livewire) {
+                        return ($livewire->tableFilters['material_id']['material_id'] ?? false);
+                    }),
+                TextColumn::make('id')
+                    ->label('No')
+                    ->rowIndex()
+                    ->visible(function ($livewire) {
+                        return !($livewire->tableFilters['material_id']['material_id'] ?? false);
+                    }),
                 // TextColumn::make('questionType.name')
                 //     ->searchable()
                 //     ->sortable()
@@ -478,23 +497,35 @@ class QuestionResource extends Resource
                                 return $query->whereIn('question_type_id', $questionTypeIds);
                             }
                         );
+                    }),
+                Filter::make('seq')
+                    ->visible(function ($livewire) {
+                        return ($livewire->tableFilters['material_id']['material_id'] ?? false);
                     })
-                // ViewField::make('question_type_ids')
-                //     ->label('문제 유형')
-                //     ->view('filament.components.forms.question-type', [
-                //         'multiple' => true,
-                //     ])
-                //     ->reactive()
-                //     ->live()
-                //     ->columnSpanFull(),
-                // ])
-                // ->query(function (Builder $query, array $data): Builder {
-                //     return $query->when(
-                //         $data['question_type_ids'] ?? null,
-                //         fn(Builder $query, $questionTypeIds) => $query->whereIn('question_type_id', $questionTypeIds)
-                //     );
-                // })
-                // ->columnSpanFull()
+                    ->form([
+                        TextInput::make('seq_from')
+                            ->numeric()
+                            ->label('문제 번호 (시작)'),
+                        TextInput::make('seq_to')
+                            ->numeric()
+                            ->label('문제 번호 (끝)'),
+
+                    ])
+                    ->columns(2)
+                    ->columnSpan(2)
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            $data['seq_from'] ?? null,
+                            function (Builder $query, $seq_from) {
+                                return $query->where('seq', '>=', $seq_from);
+                            }
+                        )->when(
+                            $data['seq_to'] ?? null,
+                            function (Builder $query, $seq_to) {
+                                return $query->where('seq', '<=', $seq_to);
+                            }
+                        );
+                    })
 
             ], FiltersLayout::AboveContent)
             ->actions([

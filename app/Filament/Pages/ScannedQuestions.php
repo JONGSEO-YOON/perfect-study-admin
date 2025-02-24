@@ -25,6 +25,9 @@ class ScannedQuestions extends Page
     public $id;
 
     #[Url]
+    public $starting_seq = null;
+
+    #[Url]
     public $material_id = null;
 
     #[Url]
@@ -82,6 +85,7 @@ class ScannedQuestions extends Page
         if ($this->arguments['url'] ?? false) {
             $url = explode('/storage', $this->arguments['url'])[1];
         }
+        $this->arguments['seq'] = $this->starting_seq ? $this->starting_seq + $this->arguments['seq'] - 1 : $this->arguments['seq'];
         return Action::make('editQuestionInternal')
             ->modalHeading('문제 편집하기')
             ->modalWidth('2xl')
