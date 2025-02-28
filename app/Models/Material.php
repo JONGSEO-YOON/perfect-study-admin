@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class Material extends Model
 {
@@ -18,7 +19,13 @@ class Material extends Model
         // deleting 이벤트 등록
         static::deleting(function ($material) {
             // 1. 연관된 질문들 삭제
-            $material->questions()->delete();
+            $questionIds = $material->questions()->pluck('id')->toArray();
+
+            if (!empty($questionIds)) {
+                // Direct delete without complex conditions
+                DB::table('questions')->whereIn('id', $questionIds)->delete();
+                // Or with Eloquent: Question::whereIn('id', $questionIds)->delete();
+            }
 
             // 2. folder인 경우 하위 항목들 재귀적 삭제
             if ($material->type === 'folder') {
