@@ -27,7 +27,7 @@ class ListQuestions extends ListRecords
 
     protected static ?string $title = '문제 은행';
 
-    protected ?string $maxContentWidth = '4xl';
+    protected ?string $maxContentWidth = '7xl';
 
     #[Url]
     public $parent_id = null;

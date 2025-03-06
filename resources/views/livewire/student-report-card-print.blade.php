@@ -32,7 +32,7 @@
             ])
         </div>
     @else
-        <div class="page sm">
+        <div class="page_landscape sm">
             <h1 class="font-bold !text-3xl mb-6" style="font-size: 1.875rem !important; ">
                 오답 유형 분석표
             </h1>
@@ -44,7 +44,7 @@
                 'reportKey' => 'detailed_hierarchy',
             ])
         </div>
-        <div class="page sm">
+        <div class="page_landscape sm">
             <h1 class="font-bold !text-3xl mb-6" style="font-size: 1.875rem !important; ">
                 오답 유형 분석표 - 학부모용
             </h1>

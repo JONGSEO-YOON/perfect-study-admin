@@ -34,6 +34,18 @@
             background: #f0f0f0;
         }
 
+        .page_landscape {
+            width: 297mm;
+            min-height: 210mm;
+            margin: 10mm auto;
+            padding: 5mm 5mm 5mm;
+            background: white;
+            box-sizing: border-box;
+            position: relative;
+            page-break-after: always;
+        }
+
+
         .page {
             width: 210mm;
             min-height: 297mm;
