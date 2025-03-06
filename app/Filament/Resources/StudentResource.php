@@ -269,8 +269,8 @@ class StudentResource extends Resource
                         return new HtmlString(<<<EOF
                         <div>
                             <div class="rounded bg-gray-100 border inline-flex px-2 py-0.5 text-xs text-gray-600">본인</div> {$record->user->phone} <br/>
-                            <div class="rounded bg-gray-100 border inline-flex px-2 py-0.5 text-xs text-gray-600">부</div> {$record->father_phone} <br/>
-                            <div class="rounded bg-gray-100 border inline-flex px-2 py-0.5 text-xs text-gray-600">모</div> {$record->mother_phone} <br/>
+                            <div class="rounded bg-gray-100 border inline-flex px-2 py-0.5 text-xs text-gray-600">부</div> {$record->phone_father} <br/>
+                            <div class="rounded bg-gray-100 border inline-flex px-2 py-0.5 text-xs text-gray-600">모</div> {$record->phone_mather} <br/>
                         </div>
                         EOF);
                     }),
