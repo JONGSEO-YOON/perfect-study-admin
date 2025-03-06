@@ -34,7 +34,7 @@ class WrongAnswerNote extends Model
         Carbon::parse($from)->startOfDay(),
         Carbon::parse($to)->endOfDay()
       ])
-      ->when($isDontKnowOnly, function ($query) {
+      ->when($isDontKnowOnly == true, function ($query) {
         return $query->where('dont_know', true);
       })
       ->get();

@@ -27,7 +27,7 @@ class TestSheetPrint extends Component
     $studentId = request()->query('student_id');
     $from = request()->query('from');
     $to = request()->query('to');
-    $is_dont_know_only = request()->query('is_dont_know_only');
+    $is_dont_know_only = request()->query('is_dont_know_only', false);
 
     if ($studentId && $from && $to) {
       $student = Student::findOrFail($studentId);
