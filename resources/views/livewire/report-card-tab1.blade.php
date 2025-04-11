@@ -117,7 +117,7 @@
                             <td class="px-1 py-3 border-b border-r">
                                 {{ $report['classroom_level'][$level]['total'] ?? 0 }}</td>
                             <td class="px-1 py-3 border-b border-r">
-                                {{ $report['classroom_level'][$level]['correct'] ?? 0 }}
+                                {{ round($report['classroom_level'][$level]['total'] * ($report['classroom_level'][$level]['percentage'] / 100), 1) ?? 0 }}
                             </td>
                             @if ($reportKey === 'hierarchy')
                                 <td class="px-1 py-3 border-b border-r">

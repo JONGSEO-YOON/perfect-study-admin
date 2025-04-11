@@ -71,7 +71,7 @@
                         @endphp
                         <td rowspan="{{ $majorRowspan }}"
                             style="text-align:center; height: 26px; vertical-align:center; padding: 10px; border: 1px solid #ddd;">
-                            {!! $item['major'] !!}
+                            {!! $cleanMathML($item['major']) !!}
                         </td>
                     @endif
 
@@ -84,13 +84,13 @@
                         @endphp
                         <td rowspan="{{ $middleRowspan }}"
                             style="text-align:center; height: 26px; vertical-align:center; padding: 10px; border: 1px solid #ddd;">
-                            {!! $item['middle'] !!}
+                            {!! $cleanMathML($item['middle']) !!}
                         </td>
                     @endif
 
                     <td
                         style="text-align:center; height: 26px; vertical-align:center; padding: 10px; border: 1px solid #ddd;">
-                        {!! $item['type'] !!}</td>
+                        {!! $cleanMathML($item['type']) !!}</td>
 
                     @for ($level = 1; $level <= 5; $level++)
                         <td
@@ -145,7 +145,7 @@
                     </td>
                     <td
                         style="text-align:center; height: 26px; vertical-align:center; padding: 10px; border: 1px solid #ddd; background-color: #f8f9fa;">
-                        {{ $report['classroom_level'][$level]['correct'] ?? 0 }}
+                        {{ round($report['classroom_level'][$level]['total'] * ($report['classroom_level'][$level]['percentage'] / 100), 1) ?? 0 }}
                     </td>
                     <td
                         style="text-align:center; height: 26px; vertical-align:center; padding: 10px; border: 1px solid #ddd; background-color: #f8f9fa;">
