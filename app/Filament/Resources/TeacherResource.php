@@ -78,7 +78,7 @@ class TeacherResource extends Resource
                                     ->inline()
                                     ->grouped()
                                     ->columnSpanFull()
-                                    ->default('default'),
+                                    ->default('general'),
                             ])->relationship('userable'),
 
                         TextInput::make('name')
