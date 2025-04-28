@@ -51,6 +51,7 @@ class TestSheetPrint extends Component
       $testSheet->print_layout = [
         'title' => $testSheet->title,
         'subTitle' => $testSheet->subTitle,
+        'grade' => $student->gradeSystem->display_name,
       ];
 
       $this->testSheet = $testSheet;
