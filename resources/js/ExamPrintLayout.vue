@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, nextTick, watch } from "vue";
 import { defineProps } from "vue";
-import html2canvas from "html2canvas";
+import domtoimage from "dom-to-image";
 
 const props = defineProps({
   wire: {},
@@ -433,32 +433,34 @@ const calculateExplanationPages = async () => {
 
   document.querySelector(".temp-explanation-container").style.width = `304.77px`;
 
-  // document.querySelector(".temp-explanation-container").style.width = `${
-  //     COLUMN_WIDTH * 3.779527559
-  // }px`;
-
   const elements = explanationContainer.value.getElementsByTagName("math");
   console.log(elements);
   await window.MathJax.typesetPromise([explanationContainer.value]);
 
-  // await new Promise((resolve) => setTimeout(resolve, 1000));
-
-  const canvas = await html2canvas(explanationContainer.value, {
-    scale: 1,
-    useCORS: true,
-    allowTaint: true,
-    backgroundColor: "#ffffff",
-    logging: false,
-    removeContainer: true,
-    foreignObjectRendering: false,
+  const dataUrl = await domtoimage.toPng(explanationContainer.value, {
+    quality: 0.95,
+    bgcolor: "#ffffff",
+    style: {
+      transform: "scale(1)",
+      "transform-origin": "top left",
+    },
   });
-  // const columnWidth = COLUMN_WIDTH * 3.779527559;
+
+  const img = new Image();
+  img.src = dataUrl;
+  await new Promise((resolve) => {
+    img.onload = resolve;
+  });
+
+  const canvas = document.createElement("canvas");
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0);
+
   const columnWidth = explanationContainer.value.offsetWidth;
-  // const columnHeight = PAGE_CONTENT_HEIGHT * 3.779527559;
   const columnHeight = 885.36;
 
-  // const columnWidth = COLUMN_WIDTH * 3.779527559;
-  // const columnHeight = PAGE_CONTENT_HEIGHT * 3.779527559;
   const pages = [];
 
   let currentY = 0;
