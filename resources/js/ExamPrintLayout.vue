@@ -442,11 +442,11 @@ const calculateExplanationPages = async () => {
   await window.MathJax.typesetPromise([explanationContainer.value]);
 
   // await new Promise((resolve) => setTimeout(resolve, 1000));
-
+  console.log(explanationContainer.value);
   const canvas = await html2canvas(explanationContainer.value, {
     scale: 1,
-    useCORS: true,
-    allowTaint: true,
+    // useCORS: true,
+    // allowTaint: true,
     backgroundColor: "#ffffff",
     logging: false,
     removeContainer: true,
@@ -1072,7 +1072,9 @@ onMounted(() => {
             <img class="w-full" :src="'/storage' + question.explanation_image_path" />
           </template>
           <template v-else-if="question.explanation_display_type === 'content'">
-            <div v-html="question.explanation" class=""></div>
+            <div
+              v-html="question.explanation ? question.explanation.replace('https://perfectstudy.co.kr', '') : ''"
+              class=""></div>
           </template>
         </div>
       </div>

@@ -37,7 +37,7 @@
             @endif
             @foreach ($materials->where('type', 'folder')->sortBy('created_at') as $material)
                 <div class="flex flex-col items-center space-y-2 hover:brightness-90 cursor-pointer transition-all"
-                    wire:click="$set('selectedMaterialId', {{ $material->id }})"
+                    wire:click="setSelectedMaterial({{ $material->id }})"
                     wire:dblclick="redirectTo(location.href, {{ $material->id }}) ">
                     <div class="aspect-[2/3] w-full flex items-center justify-center bg-gray-100 rounded-lg">
                         <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

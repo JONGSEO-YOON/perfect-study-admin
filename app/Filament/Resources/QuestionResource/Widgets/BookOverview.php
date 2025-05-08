@@ -69,6 +69,12 @@ class BookOverview extends Widget implements HasForms, HasActions
             ->get();
     }
 
+    public function setSelectedMaterial($materialId)
+    {
+        $this->selectedMaterialId = $materialId;
+        $this->selectedMaterial = Material::findOrFail($materialId);
+    }
+
     public function materialForm()
     {
         return [
@@ -191,6 +197,9 @@ class BookOverview extends Widget implements HasForms, HasActions
                     'image_path' => $data['image_path'] ?? null,
                 ]);
                 $material->visibleUsers()->sync($data['visible_user_ids']);
+                redirect('/admin/questions?' . http_build_query([
+                    'parent_id' => $this->folderId,
+                ]));
                 Notification::make()
                     ->title('수정되었습니다.')
                     ->success()
