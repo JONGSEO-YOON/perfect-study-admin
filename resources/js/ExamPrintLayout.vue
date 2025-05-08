@@ -444,8 +444,13 @@ const calculateExplanationPages = async () => {
   // await new Promise((resolve) => setTimeout(resolve, 1000));
 
   const canvas = await html2canvas(explanationContainer.value, {
-    // dpi: 2000,
     scale: 1,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: "#ffffff",
+    logging: false,
+    removeContainer: true,
+    foreignObjectRendering: false,
   });
   // const columnWidth = COLUMN_WIDTH * 3.779527559;
   const columnWidth = explanationContainer.value.offsetWidth;
