@@ -442,11 +442,11 @@ const calculateExplanationPages = async () => {
   await window.MathJax.typesetPromise([explanationContainer.value]);
 
   // await new Promise((resolve) => setTimeout(resolve, 1000));
-  console.log(explanationContainer.value);
+
   const canvas = await html2canvas(explanationContainer.value, {
     scale: 1,
-    // useCORS: true,
-    // allowTaint: true,
+    useCORS: true,
+    allowTaint: true,
     backgroundColor: "#ffffff",
     logging: false,
     removeContainer: true,
