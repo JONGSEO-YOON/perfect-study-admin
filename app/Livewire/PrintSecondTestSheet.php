@@ -64,7 +64,7 @@ class PrintSecondTestSheet extends Component implements HasActions, HasForms, Ha
         Action::make('print-test-sheet')
           ->label('오답 테스트 출력')
           ->icon('heroicon-m-printer')
-          ->url(fn($record) => '/admin/test-sheet/print?test_sheet_id=' . $record->test_sheet_id . '&retry_count=2')
+          ->url(fn($record) => '/admin/test-sheet/print?test_sheet_id=' . $record->test_sheet_id . '&retry_count=2&student_id=' . $record->testSheet->getTargetStudents()->first()->id)
           ->openUrlInNewTab(),
 
       ]);

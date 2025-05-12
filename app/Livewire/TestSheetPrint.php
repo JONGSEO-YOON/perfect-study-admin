@@ -19,6 +19,16 @@ class TestSheetPrint extends Component
     // 일반 시험지 조회인 경우
     if (request()->query('test_sheet_id')) {
       $this->testSheet = TestSheet::findOrFail(request()->query('test_sheet_id'));
+      $studentId = request()->query('student_id');
+      if ($studentId) {
+        $student = Student::findOrFail($studentId);
+
+        $this->testSheet->print_layout = [
+          'title' => "{$student->user->name} 학생 오답 문제 모음",
+          'subTitle' => $this->testSheet->sub_title,
+          'grade' => $student->gradeSystem->display_name,
+        ];
+      }
       return;
     }
 
