@@ -41,7 +41,8 @@ class TestSheetViewer extends Component
 
   protected function getQuestions(): array
   {
-    return session($this->sessionKey) ?? [];
+    // return session($this->sessionKey) ?? [];
+    return $this->testsheet->questions ?? [];
   }
 
 
@@ -68,7 +69,7 @@ class TestSheetViewer extends Component
       $this->dontKnowAnswers = [];
     }
 
-    session([$this->sessionKey => $this->testsheet->questions]);
+    // session([$this->sessionKey => $this->testsheet->questions]);
     // $this->questions = $this->testsheet->questions;
 
     $this->currentQuestion = $this->getQuestions()[$this->currentQuestionIndex];

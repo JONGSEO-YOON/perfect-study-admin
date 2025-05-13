@@ -355,15 +355,19 @@ class TestSheet extends Model
         ]);
         $newTestSheet->save();
 
-        // WrongAnswerTestSheet 생성
-        WrongAnswerTestSheet::create([
-            'original_test_sheet_id' => $this->id,
-            'test_sheet_id' => $newTestSheet->id,
-            'user_id' => $userId,
-            'retry_count' => 1,
-            'is_linked_to_original' => true,
-            'wrong_answer_questions' => $validMappings,
-        ]);
+        // WrongAnswerTestSheet 생성 또는 업데이트
+        WrongAnswerTestSheet::updateOrCreate(
+            [
+                'original_test_sheet_id' => $this->id,
+                'user_id' => $userId,
+                'retry_count' => 1
+            ],
+            [
+                'test_sheet_id' => $newTestSheet->id,
+                'is_linked_to_original' => true,
+                'wrong_answer_questions' => $validMappings,
+            ]
+        );
     }
 
     /**
