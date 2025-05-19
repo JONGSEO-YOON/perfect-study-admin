@@ -8,6 +8,7 @@ use App\Models\WrongAnswerNote;
 use Carbon\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\Attributes\Title;
 
 class TestSheetPrint extends Component
 {
@@ -22,12 +23,11 @@ class TestSheetPrint extends Component
       $studentId = request()->query('student_id');
       if ($studentId) {
         $student = Student::findOrFail($studentId);
-
-        $this->testSheet->print_layout = [
-          'title' => "{$student->user->name} 학생 오답 문제 모음",
-          'subTitle' => $this->testSheet->sub_title,
-          'grade' => $student->gradeSystem->display_name,
-        ];
+        $printLayout = $this->testSheet->print_layout ?? [];
+        $printLayout['title'] = "{$student->user->name} 학생 오답 문제 모음";
+        $printLayout['subTitle'] = $this->testSheet->sub_title;
+        $printLayout['grade'] = $student->gradeSystem->display_name;
+        $this->testSheet->print_layout = $printLayout;
       }
       return;
     }
@@ -68,6 +68,7 @@ class TestSheetPrint extends Component
     }
   }
 
+  #[Title('문제 출력')]
   #[Layout('components.layouts.print')]
   public function render()
   {

@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\Student;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\Attributes\Title;
 
 class StudentReportCardPrint extends Component
 {
@@ -21,6 +22,7 @@ class StudentReportCardPrint extends Component
     $this->dateUntil = request()->query('date_until');
   }
 
+  #[Title('성적표 출력')]
   #[Layout('components.layouts.print')]
   public function render()
   {
