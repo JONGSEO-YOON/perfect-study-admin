@@ -42,6 +42,8 @@ const pages = ref([]);
 const explanationContainer = ref(null);
 const explanationPages = ref([]);
 
+const startingNumber = ref(1);
+
 const customLogo = ref("/test_removed.png");
 const grade = ref("중1");
 
@@ -143,6 +145,7 @@ const getPrintLayoutData = () => {
         color: color.value,
         customLogo: customLogo.value,
         grade: grade.value,
+        startingNumber: startingNumber.value,
     };
 };
 
@@ -370,7 +373,7 @@ const calculateChoicesHeight = (question) => {
 };
 
 const getQuestionNumber = (pageIndex, isLeft, imgIndex) => {
-    let number = 1;
+    let number = startingNumber.value;
     for (let i = 0; i < pageIndex; i++) {
         number += pages.value[i].left.length + pages.value[i].right.length;
     }
@@ -641,6 +644,8 @@ const restorePrintLayout = (layoutData) => {
 
     customLogo.value = layoutData.customLogo ?? "/test_removed.png";
     grade.value = layoutData.grade ?? "중1";
+
+    startingNumber.value = layoutData.startingNumber ?? 1;
 };
 
 // watch selectedIndex
@@ -1368,7 +1373,7 @@ onMounted(() => {
                 class="flex flex-row gap-x-4"
             >
                 <!-- scale: tracking-[7px]  -->
-                <h3>{{ index + 1 }})</h3>
+                <h3>{{ index + startingNumber }})</h3>
                 <div class="break-words break-all">
                     <!-- scale: leading-8 -->
                     정답 {{ question.answer }}
@@ -1382,7 +1387,7 @@ onMounted(() => {
             <div v-for="(question, index) in questions" :key="'exp-' + index">
                 <!-- scale: tracking-[7px]  -->
                 <div class="flex flex-row gap-x-4">
-                    <h3>{{ index + 1 }})</h3>
+                    <h3>{{ index + startingNumber }})</h3>
                     <div class="break-words break-all">
                         <!-- scale: leading-8 -->
                         정답 {{ question.answer }}
