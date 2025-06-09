@@ -119,7 +119,8 @@
                                     <div wire:key="question-{{ $question->id }}"
                                         wire:sortable.item="{{ $question->id }}"
                                         class="grid grid-cols-12 gap-2 px-2 py-3 bg-white hover:bg-gray-50 transition-colors">
-                                        <div class="col-span-1 text-center text-sm text-gray-900">{{ $index + 1 }}
+                                        <div class="col-span-1 text-center text-sm text-gray-900">
+                                            {{ ($query['material_range_start'] ?? 1) + $index }}
                                         </div>
                                         <div class="col-span-2 text-center text-sm text-gray-900">레벨
                                             {{ $question->level }}
@@ -153,7 +154,7 @@
                             <div class="bg-white shadow flex flex-col rounded-lg">
                                 <div
                                     class="text-2xl bg-primary-400 text-white font-bold px-4 py-2.5 rounded-t-lg flex items-center">
-                                    {{ $number + 1 }}
+                                    {{ ($query['material_range_start'] ?? 1) + $number }}
                                     <h2 class="flex items-center ml-4 text-base">
                                         {!! $question->questionType?->name !!}
                                     </h2>
@@ -248,7 +249,8 @@
                                     <div wire:key="question-{{ $question->id }}"
                                         wire:sortable.item="{{ $question->id }}"
                                         class="grid grid-cols-12 gap-2 px-2 py-3 bg-white hover:bg-gray-50 transition-colors">
-                                        <div class="col-span-1 text-center text-xs text-gray-900">{{ $index + 1 }}
+                                        <div class="col-span-1 text-center text-xs text-gray-900">
+                                            {{ ($query['material_range_start'] ?? 1) + $index }}
                                         </div>
                                         <div class="col-span-2 text-center text-xs text-gray-900">레벨
                                             {{ $question->level }}

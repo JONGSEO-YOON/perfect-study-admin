@@ -458,6 +458,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                 'grade' => $this->data['grade'],
             ];
         }
+        $this->initialPrintLayout['startingNumber'] = (int) ($query['material_range_start'] ?? 1);
         $this->data['full_page_split'] = $this->data['split'];
 
         $this->summary = self::getDistributionSummary($this->questions);
