@@ -54,7 +54,7 @@
 
 <x-filament-panels::page>
 
-    <div class="flex flex-col mx-auto">
+    <div class="flex flex-col mx-auto overflow-x-auto w-full lg:max-w-[1350px]">
         <x-filament-actions::modals />
         @if ($state === 'question-selection')
             <div class="flex flex-row mb-3 justify-between">
@@ -62,7 +62,7 @@
                 {{ $this->confirmQuestion }}
             </div>
             <div class="flex flex-row gap-x-2">
-                <div class="flex flex-col flex-1">
+                <div class="flex flex-col flex-1 min-w-[375px]">
                     <div class="w-full bg-white border rounded-lg p-4 flex flex-col items-center justify-center mb-1">
                         <h1 class="font-medium text-gray-600">총 문제</h1>
                         <h1 class="font-bold text-gray-800 text-2xl">{{ count($questions) }}문제</h1>
