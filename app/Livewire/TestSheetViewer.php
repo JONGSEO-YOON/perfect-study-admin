@@ -100,11 +100,12 @@ class TestSheetViewer extends Component
   {
     $total = count($this->getQuestions());
     $answered = count(array_filter($this->answers, fn($answer) => $answer !== null));
-
+    $startNumber = $this->testsheet->print_layout['startingNumber'] ?? 1;
     $this->progress = [
       'current' => $this->currentQuestionIndex + 1,
       'total' => $total,
-      'percentage' => (($this->currentQuestionIndex + 1) / $total) * 100
+      'percentage' => (($this->currentQuestionIndex + 1) / $total) * 100,
+      'questionNumber' => $this->currentQuestionIndex + $startNumber,
     ];
     $this->currentAnswer = $this->answers[$this->currentQuestionIndex] ?? '';
   }

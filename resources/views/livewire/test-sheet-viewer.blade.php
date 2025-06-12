@@ -55,7 +55,7 @@
             </div>
             <div wire:key="question-{{ $currentQuestionIndex }}" class="question-transition flex flex-col">
                 <div class="flex flex-col font-semibold py-2 md:py-4 mt-1 md:mt-2 text-lg border-b px-4 md:px-0">
-                    문제 {{ $progress['current'] }})
+                    문제 {{ $progress['questionNumber'] }})
                     @if ($testsheet->use_score_table)
                         <h1 class="text-gray-500 font-medium text-base mt-0.5">
                             [{{ $testsheet->parsed_score_table['table'][$progress['current']] }}점]

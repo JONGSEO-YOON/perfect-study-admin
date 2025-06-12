@@ -93,12 +93,12 @@
                         <a href="/test-sheet-result/{{ $testsheet->id }}/{{ $index + 1 }}"
                             x-show="!showWrongOnly || !{{ $status['isCorrect'] ? 'true' : 'false' }}"
                             class="md:!hidden rounded-full w-[54px] h-[54px] cursor-pointer hover:brightness-90 transition-all font-medium border flex items-center justify-center text-white {{ $status['isCorrect'] ? 'border-[#6156EF] bg-[#6156EF]/70' : 'border-[#FF4F57] bg-[#FF4F57]/70' }}">
-                            {{ $index + 1 }}
+                            {{ $index + $startNumber }}
                         </a>
                         <button wire:click="selectQuestion({{ $index + 1 }})"
                             x-show="!showWrongOnly || !{{ $status['isCorrect'] ? 'true' : 'false' }}"
                             class="hidden md:flex min-h-[54px] max-h-[54px] rounded-full w-[54px] h-[54px] cursor-pointer hover:brightness-90 transition-all font-medium border items-center justify-center text-white {{ $status['isCorrect'] ? 'border-[#6156EF] bg-[#6156EF]/70' : 'border-[#FF4F57] bg-[#FF4F57]/70' }}">
-                            {{ $index + 1 }}
+                            {{ $index + $startNumber }}
                         </button>
                     @endforeach
                 </div>
@@ -108,6 +108,7 @@
                     @if ($selectedQuestionNo)
                         <div class="bg-white w-full text-black">
                             <livewire:test-sheet-question-result-detail :testsheet="$testsheet" :question-no="$selectedQuestionNo"
+                                :start-number="$startNumber"
                                 :wire:key="$selectedQuestionNo" />
                         </div>
                     @else

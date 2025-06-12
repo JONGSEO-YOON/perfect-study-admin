@@ -17,6 +17,7 @@ class TestSheetResult extends Component
   public $answers = [];
 
   public $selectedQuestionNo = null;
+  public $startNumber = 1;
 
 
   public function mount($id)
@@ -31,6 +32,7 @@ class TestSheetResult extends Component
     $this->correctCount = $this->testSheetAnswer->correct_count;
     $this->totalQuestions = $this->testsheet->total_score;
     $this->percentage = round(($this->correctCount / $this->totalQuestions) * 100);
+    $this->startNumber = $this->testsheet->print_layout['startingNumber'] ?? 1;
   }
 
   public function getAnswerStatus($questionIndex)

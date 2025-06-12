@@ -13,11 +13,15 @@ class TestSheetQuestionResultDetail extends Component
   public $userAnswer;
   public $isCorrect;
   public $showDetail = false;
+  public $startNumber;
+  public $questionNumber;
 
-  public function mount($testsheet, $questionNo)
+  public function mount($testsheet, $questionNo, $startNumber)
   {
     $this->testsheet = $testsheet;
     $this->questionNo = $questionNo;
+    $this->startNumber = $startNumber;
+    $this->questionNumber = $questionNo + $startNumber - 1;
     $this->question = $this->testsheet->questions[$questionNo - 1];
     $this->showDetail = false;
 

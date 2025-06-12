@@ -18,7 +18,7 @@
             @endif
         </h1>
         <h1 class="mt-3 flex items-center">
-            문제 {{ $questionNo }})
+            문제 {{ $questionNumber }})
 
         </h1>
         @if ($testsheet->use_score_table)
