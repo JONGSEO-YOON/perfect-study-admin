@@ -24,6 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'student.check' => StudentCheckMiddleware::class,
         ]);
+        $middleware->validateCsrfTokens(except: [
+            '/login',
+        ]);
 
         // 글로벌 미들웨어 등록
         // $middleware->append([
