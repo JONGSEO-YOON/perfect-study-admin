@@ -18,5 +18,6 @@
             목록으로
         </button>
     </div>
-    <livewire:test-sheet-question-result-detail :testsheet="$testsheet" :question-no="$questionNo" />
+    <livewire:test-sheet-question-result-detail :testsheet="$testsheet" :question-no="$questionNo"
+        :start-number="$startNumber" />
 </div>

@@ -10,11 +10,13 @@ class TestSheetQuestionResult extends Component
 {
   public $testsheet;
   public $questionNo;
+  public $startNumber;
 
   public function mount($id, $questionNo)
   {
     $this->testsheet = TestSheet::findOrFail($id);
     $this->questionNo = $questionNo;
+    $this->startNumber = $this->testsheet->print_layout['startingNumber'] ?? 1;
   }
 
   public function backToList()
