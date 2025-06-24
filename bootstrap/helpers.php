@@ -27,7 +27,7 @@ if (!function_exists('fix_mathtype_mfenced')) {
 
                 $open = $openMatch[1] ?? '(';
                 $close = $closeMatch[1] ?? ')';
-                $separator = $sepMatch[1] ?? ',';
+                $separator = $sepMatch[1] ?? null;
 
                 // mfenced 전용 속성 제거하고 나머지 보존
                 $otherAttrs = preg_replace('/\s*(open|close|separators)\s*=\s*["\'][^"\']*["\']/', '', $attributes);
@@ -51,8 +51,8 @@ if (!function_exists('fix_mathtype_mfenced')) {
                 foreach ($elements as $index => $element) {
                     $result .= $element;
 
-                    // 마지막 요소가 아니면 구분자 추가
-                    if ($index < count($elements) - 1) {
+                    // 마지막 요소가 아니고 구분자가 명시적으로 지정된 경우에만 구분자 추가
+                    if ($index < count($elements) - 1 && $separator !== null) {
                         $sep = isset($separator[$index]) ? $separator[$index] : ($separator[0] ?? ',');
                         $result .= '<mo>' . htmlspecialchars($sep) . '</mo>';
                     }
