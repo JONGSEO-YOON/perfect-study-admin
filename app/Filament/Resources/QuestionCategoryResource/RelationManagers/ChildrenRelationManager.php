@@ -47,7 +47,8 @@ class ChildrenRelationManager extends RelationManager
                 TinyEditor::make('name')
                     ->label('이름')
                     ->required()
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
+                    ->dehydrateStateUsing(fn($state) => fix_mathtype_mfenced($state)),
                 Select::make('order')
                     ->label('순서')
                     ->required()

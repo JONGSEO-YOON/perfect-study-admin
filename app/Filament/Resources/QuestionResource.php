@@ -172,7 +172,8 @@ class QuestionResource extends Resource
                         ->label('문제 내용')
                         ->required()
                         ->placeholder('문제 내용을 입력하세요.')
-                        ->columnSpanFull(),
+                        ->columnSpanFull()
+                        ->dehydrateStateUsing(fn($state) => fix_mathtype_mfenced($state)),
                     Select::make('level')
                         ->label('레벨')
                         ->required()
@@ -293,7 +294,8 @@ class QuestionResource extends Resource
                                                 ->label('내용')
                                                 ->placeholder('선택지를 입력하세요.')
                                                 ->visible(fn(Get $get) => $get($prefix . '.display_type') === 'content')
-                                                ->columnSpanFull(),
+                                                ->columnSpanFull()
+                                                ->dehydrateStateUsing(fn($state) => fix_mathtype_mfenced($state)),
                                         ])
                                 );
                             }
@@ -335,7 +337,8 @@ class QuestionResource extends Resource
                         ->label('해설 내용')
                         ->required()
                         ->placeholder('해설 내용을 입력하세요.')
-                        ->columnSpanFull(),
+                        ->columnSpanFull()
+                        ->dehydrateStateUsing(fn($state) => fix_mathtype_mfenced($state)),
                     FileUpload::make('explanation_video_url')
                         ->label('해설 영상')
                         ->placeholder('해설 영상 업로드')

@@ -46,5 +46,9 @@ class AppServiceProvider extends ServiceProvider
                     ->icon('heroicon-m-cog-6-tooth'),
             ]);
         });
+
+        if (file_exists(base_path('bootstrap/helpers.php'))) {
+            require_once base_path('bootstrap/helpers.php');
+        }
     }
 }
