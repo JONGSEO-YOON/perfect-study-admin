@@ -68,7 +68,10 @@ class TestSheetResource extends Resource
         return $table
             ->modifyQueryUsing(function ($query) {
                 return $query->originals()
-                    ->where('user_id', auth()->user()->id);
+                    ->when(auth()->user()->role === 'general', function ($query) {
+                        return $query->where('user_id', auth()->user()->id);
+                    });
+                // ->where('user_id', auth()->user()->id);
             })
             ->defaultSort('id', 'desc')
             ->columns([
@@ -383,6 +386,11 @@ class TestSheetResource extends Resource
                     ->url(fn($record) => '/admin/test-sheets/create/' . $record->temp_data_id . '?test_sheet_id=' . $record->id)
                     ->visible(fn($record) => $record->status === 'pending'),
                 ActionGroup::make([
+                    Tables\Actions\DeleteAction::make()
+                        ->label('삭제')
+                        ->modalHeading('시험지 삭제')
+                        ->icon('heroicon-m-trash')
+                        ->visible(fn($record) => $record->status === 'pending'),
                     Tables\Actions\Action::make('print-test-sheet')
                         ->label('문제지 출력')
                         ->icon('heroicon-m-printer')
