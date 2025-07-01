@@ -1617,7 +1617,7 @@ class TestSheet extends Model
                 'classroom_level' => $report['level_analysis']['classroom'] ?? []
             ];
         })->filter(function ($report) {
-            return $report['hierarchy'] && $report['personal_level'] && $report['classroom_level'];
+            return $report && $report['hierarchy'] && $report['personal_level'] && $report['classroom_level'];
         })->values();
     }
 
