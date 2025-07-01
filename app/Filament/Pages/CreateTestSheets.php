@@ -97,13 +97,13 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         'split' => 'default',
         'full_page_split' => 'default',
         'selected_page_index' => -1,
-        'title' => '수학 영역(미적분)',
-        'sub_title' => '2023년 대학수학능력시험 실전 모의고사 22회',
+        'title' => '',
+        'sub_title' => '',
         'use_score_table' => false,
         'show_explanation_video' => true,
         'score_table' => [],
         'color' => '#0ea5e9',
-        'grade' => '중1',
+        'grade' => '',
         'custom_logo' => [],
 
     ];
@@ -248,6 +248,8 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                         ->live()
                         ->options([
                             'default' => '기본',
+                            'simple' => '간단',
+                            'friendly' => '친근',
                             'high3' => '고3',
                         ])
                         ->inline()
@@ -267,7 +269,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                         ->live()
                         ->view('filament.components.forms.preset-color-picker')
                         ->columnSpanFull()
-                        ->visible(fn(Get $get) => $get('template') === 'default'),
+                        ->visible(fn(Get $get) => $get('template') !== 'default'),
                     TextInput::make('grade')
                         ->label('학년')
                         ->columnSpanFull()
