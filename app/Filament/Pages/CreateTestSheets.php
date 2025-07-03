@@ -65,6 +65,9 @@ class CreateTestSheets extends Page implements HasForms, HasActions
     #[Url]
     public $test_sheet_id;
 
+    #[Url]
+    public $copy;
+
     public $id;
 
     public $arguments = [];
@@ -412,6 +415,8 @@ class CreateTestSheets extends Page implements HasForms, HasActions
     public function mount($id)
     {
         $query = TempData::findOrFail($id)?->value;
+        // dd($query);
+
         if ($this->test_sheet_id !== null) {
             $testSheet = TestSheet::findOrFail($this->test_sheet_id);
             $this->questions = Question::whereIn('id', collect($testSheet->questions)->pluck('id'))
@@ -425,10 +430,19 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                     );
                 })
                 ->values();
+
+
             $this->data = array_merge(
                 $this->data,
                 $testSheet->toArray()
             );
+            if ($this->copy) {
+                $this->data['target_group'] = '';
+                $this->data['target_grades'] = [];
+                $this->data['target_levels'] = [];
+                $this->data['target_classrooms'] = [];
+                $this->data['target_students'] = [];
+            }
             $this->data['tags'] = collect($this->data['tags'])->values()->toArray();
             $this->data['tags_toggle'] = '';
             $this->initialPrintLayout = $testSheet->print_layout ?? [];
@@ -441,6 +455,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                 $query
             );
             //get first question
+
             if ($query['target_group'] === 'grade' || $query['target_group'] === 'level') {
                 $grade = GradeSystem::findOrFail($query['target_grades'][0]);
             } else if ($query['target_group'] === 'classroom') {
@@ -451,7 +466,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                 $grade = GradeSystem::findOrFail($student->grade_system_id);
             }
 
-            $this->data['grade'] = $grade->display_name;
+            $this->data['grade'] = $grade->display_name ?? '';
 
             if ($query['material_id'] ?? false) {
                 $this->data['tags_toggle'] = '숙제';

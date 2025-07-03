@@ -409,7 +409,11 @@ class TestSheetResource extends Resource
                                 ->exists();
                         })
                         ->modalSubmitActionLabel(false)
-                        ->modalSubmitAction(false)
+                        ->modalSubmitAction(false),
+                    Tables\Actions\Action::make('copy-test-sheet')
+                        ->label('문제지 복제')
+                        ->icon('heroicon-m-document-duplicate')
+                        ->url(fn($record) => '/admin/test-sheets/create/' . $record->temp_data_id . '?test_sheet_id=' . $record->id . '&copy=true')
                 ]),
             ])
             ->bulkActions([
