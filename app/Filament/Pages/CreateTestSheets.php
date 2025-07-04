@@ -1015,7 +1015,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             'parsed_score_table' => $parsed_score_table,
             'print_layout' => $this->printLayout,
         ];
-        if ($this->test_sheet_id) {
+        if ($this->test_sheet_id && !$this->copy) {
             TestSheet::find($this->test_sheet_id)->update($upsertData);
             Notification::make()
                 ->title('시험지가 수정되었습니다.')
