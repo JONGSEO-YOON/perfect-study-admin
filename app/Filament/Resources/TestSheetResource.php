@@ -78,6 +78,10 @@ class TestSheetResource extends Resource
                 TextColumn::make('id')
                     ->label('No')
                     ->rowIndex(),
+                TextColumn::make('user.name')
+                    ->label('출제자')
+                    ->sortable()
+                    ->searchable(),
                 TextColumn::make('tags')
                     ->label('태그')
                     ->sortable()
@@ -100,6 +104,7 @@ class TestSheetResource extends Resource
 
                 //         EOF;
                 //     }),
+
                 TextColumn::make('target_group_label')
                     ->state(true)
                     ->label('출제 대상')
