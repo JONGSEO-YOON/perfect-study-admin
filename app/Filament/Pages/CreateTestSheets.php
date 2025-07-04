@@ -251,6 +251,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                         ->live()
                         ->options([
                             'default' => '기본',
+                            'round' => '둥근',
                             'simple' => '간단',
                             'friendly' => '친근',
                             'high3' => '고3',
@@ -272,7 +273,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                         ->live()
                         ->view('filament.components.forms.preset-color-picker')
                         ->columnSpanFull()
-                        ->visible(fn(Get $get) => $get('template') !== 'default'),
+                        ->visible(fn(Get $get) => $get('template') !== 'high3'),
                     TextInput::make('grade')
                         ->label('학년')
                         ->columnSpanFull()
@@ -290,7 +291,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                         ->placeholder('학원 이미지 업로드')
                         ->previewable(true)
                         ->downloadable(true)
-                        ->visible(fn(Get $get) => $get('template') === 'default')
+                        ->visible(fn(Get $get) => $get('template') !== 'high3')
                         ->afterStateUpdated(function (Get $get, Set $set) {
                             $key = array_key_first($this->data['custom_logo']);
                             $file = $this->data['custom_logo'][$key];

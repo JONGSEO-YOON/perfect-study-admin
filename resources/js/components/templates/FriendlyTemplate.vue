@@ -125,10 +125,11 @@ const props = defineProps({
 
     <!-- 첫 페이지일 경우 헤더 표시 -->
     <template v-if="pageIndex === 0">
+      <img :src="customLogo" alt="" class="absolute max-w-40 max-h-12 right-20 top-20" />
       <div class="border-b pb-2 mb-3" :style="{ borderColor: color }">
         <div class="p-2 rounded-lg mb-2 relative">
           <!-- 귀여운 곰돌이 아이콘 (헤더 왼쪽) -->
-          <div class="absolute left-4 top-1/2 transform -translate-y-1/2">
+          <div class="absolute left-0 top-3">
             <svg
               version="1.0"
               xmlns="http://www.w3.org/2000/svg"
@@ -208,8 +209,11 @@ c-2 59 1 88 9 94 49 31 60 94 21 121 -28 20 -138 21 -191 1z" />
             </svg>
           </div>
 
-          <div class="text-center">
-            <h1 class="text-3xl font-bold" :style="{ color: color }">{{ title }}</h1>
+          <div class="ml-10">
+            <h1 class="text-3xl font-bold">
+              {{ grade }}
+              <span :style="{ color: color }">{{ title }}</span>
+            </h1>
             <p class="text-sm text-gray-600">
               {{ subTitle }}
               <span
@@ -236,7 +240,7 @@ c-2 59 1 88 9 94 49 31 60 94 21 121 -28 20 -138 21 -191 1z" />
       <div class="border-b pb-1.5 mb-3" :style="{ borderColor: color }">
         <div class="p-1.5 rounded-lg relative">
           <!-- 귀여운 곰돌이 아이콘 -->
-          <div class="absolute left-3 top-1/2 transform -translate-y-1/2">
+          <div class="absolute left-0 -top-1">
             <svg
               version="1.0"
               xmlns="http://www.w3.org/2000/svg"
@@ -316,7 +320,7 @@ c-2 59 1 88 9 94 49 31 60 94 21 121 -28 20 -138 21 -191 1z" />
             </svg>
           </div>
 
-          <h1 class="text-2xl font-bold text-center" :style="{ color: color }">{{ title }}</h1>
+          <h1 class="text-2xl font-bold ml-12" :style="{ color: color }">{{ title }}</h1>
         </div>
       </div>
     </template>

@@ -71,6 +71,24 @@ const props = defineProps({
     required: true,
   },
 });
+
+const getHeaderImagePath = () => {
+  if (props.color.toLocaleUpperCase() === "#0EA5E9") {
+    return "/images/bg-template-round-blue.jpeg";
+  } else if (props.color.toLocaleUpperCase() === "#F43F5E") {
+    return "/images/bg-template-round-red.jpeg";
+  } else if (props.color.toLocaleUpperCase() === "#8B5CF6") {
+    return "/images/bg-template-round-purple.jpeg";
+  } else if (props.color.toLocaleUpperCase() === "#22C55E") {
+    return "/images/bg-template-round-green.jpeg";
+  } else if (props.color.toLocaleUpperCase() === "#EAB308") {
+    return "/images/bg-template-round-amber.jpeg";
+  } else if (props.color.toLocaleUpperCase() === "#F97316") {
+    return "/images/bg-template-round-orange.jpeg";
+  }
+
+  return "/images/bg-template-round-blue.jpeg";
+};
 </script>
 
 <template>
@@ -90,45 +108,67 @@ const props = defineProps({
         clip-rule="evenodd" />
     </svg>
 
+    <!-- 기본 템플릿 헤더 -->
+    <div class="left-0 right-0 bottom-0 absolute">
+      <img
+        :src="getHeaderImagePath()"
+        alt=""
+        class="w-full h-[40px] object-cover absolute bottom-0 left-0 right-0 opacity-50" />
+      <div class="absolute bottom-0 left-0 right-0 h-[40px] bg-gradient-to-b from-white/100 to-white/20"></div>
+    </div>
+
+    <!-- 기본 템플릿 푸터 -->
+    <div class="absolute px-[20mm] w-full left-0 right-0 top-0 pb-5">
+      <img
+        :src="getHeaderImagePath()"
+        alt=""
+        class="w-full h-[110px] object-cover absolute top-0 left-0 right-0 opacity-50" />
+      <div class="absolute inset-0 h-[110px] bg-gradient-to-b from-white/0 to-white"></div>
+    </div>
+
+    <!-- 로고 이미지 -->
+    <img src="/logo-grayscaled.png" alt="" class="w-28 opacity-40 left-10 bottom-10 absolute" />
+
     <!-- 첫 페이지일 경우 헤더 표시 -->
     <template v-if="pageIndex === 0">
+      <div class="w-full h-28"></div>
       <img :src="customLogo" alt="" class="absolute max-w-40 max-h-12 right-20 top-20" />
-      <div class="border-b pb-2 mb-3" :style="{ borderColor: color }">
-        <div class="p-2 rounded-lg mb-2" :style="{ background: `linear-gradient(to right, ${color}10, ${color}20)` }">
-          <h1 class="text-lg font-bold">
-            {{ grade }}
-            <span :style="{ color: color }">{{ title }}</span>
+      <div class="absolute px-[20mm] w-full left-0 right-0 top-0 pb-5">
+        <div class="relative z-10 pt-16">
+          <h1 class="text-2xl text-gray-800 m-0 py-2 font-bold">
+            <span :style="{ color: color }">{{ grade }}</span>
+            {{ title }}
           </h1>
-          <p class="text-sm text-gray-600">
+          <p class="text-base text-gray-500 mt-1 font-semibold tracking-tight">
             {{ subTitle }}
-            <span
-              class="text-xs px-2 py-0.5 rounded-full ml-2"
-              :style="{ backgroundColor: color + '20', color: color }">
-              {{ questions.length }} 문제
-            </span>
+            <span class="text-sm text-gray-400 font-medium ml-0.5">| {{ questions.length }} 문제</span>
           </p>
         </div>
 
         <!-- Student Info -->
-        <div class="flex justify-end mt-2">
-          <p class="text-sm text-gray-700">이름 _________________________</p>
+        <div class="flex justify-end mt-5">
+          <p class="text-sm text-gray-700">&nbsp;&nbsp; 이름 _________________________</p>
         </div>
       </div>
     </template>
 
     <!-- 다른 페이지일 경우 간단한 헤더 -->
     <template v-else>
-      <div class="border-b pb-1.5 mb-3" :style="{ borderColor: color }">
-        <div class="p-1.5 rounded-lg" :style="{ background: `linear-gradient(to right, ${color}10, ${color}20)` }">
-          <h1 class="text-lg font-bold text-center" :style="{ color: color }">{{ title }}</h1>
-        </div>
+      <div
+        class="pb-1 flex items-center relative justify-center text-2xl tracking-tighter font-bold mt-1.5 border-b border-gray-300">
+        {{ title }}
       </div>
     </template>
 
     <!-- 문제 영역 -->
-    <div class="flex-1 flex flex-row overflow-hidden h-0 min-h-0">
+    <div
+      class="flex-1 border-black flex flex-row overflow-hidden h-0 min-h-0"
+      :class="{
+        'border-t border-gray-200': pageIndex === 0,
+        'mt-4': pageIndex === 0,
+      }">
       <!-- 왼쪽 컬럼 -->
-      <div class="flex-1 pr-4 question-columns flex flex-col">
+      <div class="flex-1 pt-5 pr-4 question-columns flex flex-col">
         <div
           class="flex flex-row gap-x-1"
           v-for="(question, imgIndex) in page.left"
@@ -136,9 +176,9 @@ const props = defineProps({
             'flex-1 h-0 overflow-hidden': getPageLayoutMode(pageIndex).includes('Items'),
           }"
           :key="`left-${imgIndex}`">
-          <h1 class="font-bold text-lg mr-2">
-            <span class="text-lg font-bold" :style="{ color: color }">
-              {{ getQuestionNumber(pageIndex, true, imgIndex) }}.
+          <h1 class="font-bold text-2xl text-sky-500 mr-1">
+            <span :style="{ color: color }">
+              {{ getQuestionNumber(pageIndex, true, imgIndex)?.toString().padStart(2, "0") }}
             </span>
           </h1>
           <div
@@ -185,10 +225,15 @@ const props = defineProps({
       </div>
 
       <!-- 중앙 구분선 -->
-      <div class="bg-gray-300 w-px mx-4"></div>
+      <div
+        class="bg-gray-200"
+        :class="{
+          'w-px': pageIndex === 0,
+          'w-px mt-10 mb-4': pageIndex !== 0,
+        }"></div>
 
       <!-- 오른쪽 컬럼 -->
-      <div class="flex-1 pl-4 question-columns flex flex-col">
+      <div class="flex-1 pt-5 pl-4 question-columns flex flex-col">
         <div
           class="flex flex-row gap-x-1"
           :class="{
@@ -196,9 +241,9 @@ const props = defineProps({
           }"
           v-for="(question, imgIndex) in page.right"
           :key="`right-${imgIndex}`">
-          <h1 class="font-bold text-lg mr-2">
-            <span class="text-lg font-bold" :style="{ color: color }">
-              {{ getQuestionNumber(pageIndex, false, imgIndex) }}.
+          <h1 class="font-bold text-2xl text-sky-500 mr-1">
+            <span :style="{ color: color }">
+              {{ getQuestionNumber(pageIndex, false, imgIndex)?.toString().padStart(2, "0") }}
             </span>
           </h1>
 
@@ -246,16 +291,15 @@ const props = defineProps({
     </div>
 
     <!-- 페이지 번호 -->
-    <div class="flex items-center justify-center mt-4">
-      <div class="flex items-center gap-x-2 px-4 py-2 rounded-full" :style="{ backgroundColor: color + '10' }">
-        <span class="text-sm font-bold" :style="{ color: color }">{{ pageIndex + 1 }}</span>
-        <span class="text-sm text-gray-500">/</span>
-        <span class="text-sm text-gray-600">{{ pages.length }}</span>
+    <div class="flex items-center justify-center mt-1 relative">
+      <div class="text-base font-medium text-gray-500 flex items-center gap-x-1 mt-2">
+        <div :style="{ color: color }" class="text-sky-500 font-bold">
+          {{ pageIndex + 1 }}
+        </div>
+        /
+        <div>{{ pages.length }}</div>
       </div>
     </div>
-
-    <!-- 로고 이미지 -->
-    <img src="/logo-grayscaled.png" alt="" class="w-28 opacity-40 left-10 bottom-10 absolute" />
   </div>
 </template>
 

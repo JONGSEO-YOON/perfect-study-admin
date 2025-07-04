@@ -4,6 +4,7 @@ import DefaultTemplate from "./DefaultTemplate.vue";
 import High3Template from "./High3Template.vue";
 import SimpleTemplate from "./SimpleTemplate.vue";
 import FriendlyTemplate from "./FriendlyTemplate.vue";
+import RoundTemplate from "./RoundTemplate.vue";
 
 const props = defineProps({
   templateMode: {
@@ -103,6 +104,8 @@ const getTemplateComponent = () => {
         return SimpleTemplate;
       case "friendly":
         return FriendlyTemplate;
+      case "round":
+        return RoundTemplate;
       default:
         return DefaultTemplate;
     }
