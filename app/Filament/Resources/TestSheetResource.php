@@ -88,7 +88,6 @@ class TestSheetResource extends Resource
                     ->searchable(),
                 ViewColumn::make('name')
                     ->view('filament.components.columns.testsheet-question-category-render')
-                    ->label('이름')
                     ->label('문제 유형'),
                 // TextColumn::make('name')
                 //     ->label('시험지 명')
