@@ -50,6 +50,7 @@ class Attendance extends Component
             $key_word = $attendanceLog ? '하원' : '출석';
             $this->message = $user->name . '님의 ' . $key_word . '이 확인되었습니다.';
             $this->messageType = 'success';
+            $this->phone = '010-';
 
             // 3초 후 메시지 초기화
             $this->dispatch('clearMessageAfterDelay');

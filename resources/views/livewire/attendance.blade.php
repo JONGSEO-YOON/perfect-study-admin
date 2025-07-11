@@ -231,7 +231,6 @@
                 // 3초 후 메시지 초기화 이벤트 리스너
                 $wire.on('clearMessageAfterDelay', () => {
                     setTimeout(() => {
-                        $wire.phone = '010-';
                         clearMessage();
                     }, 3000); // 3초 후 초기화
                 });
