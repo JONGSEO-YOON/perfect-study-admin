@@ -376,6 +376,19 @@ class StudentResource extends Resource
                     }),
             ], layout: FiltersLayout::AboveContent)
             ->actions([
+                Tables\Actions\Action::make('attendance')
+                    ->label('출석')
+                    ->icon('heroicon-m-calendar')
+                    ->modalSubmitAction(false)
+                    ->modalContent(fn($record) => view('filament.components.modals.attendance', [
+                        'shareLink' =>  route("attendance-calendar", [
+                            "studentData" => base64_encode(json_encode([
+                                'student_id' => $record->id,
+                                'name' => $record->user->name
+                            ]))
+                        ]),
+                    ]))
+                    ->modalWidth('7xl'),
                 Tables\Actions\Action::make('view-report-card')
                     ->label('성적표')
                     ->icon('heroicon-m-newspaper')

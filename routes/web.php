@@ -14,7 +14,11 @@ use App\Livewire\TestSheetPrint;
 use App\Livewire\TestSheetQuestionResult;
 use App\Livewire\TestSheetResult;
 use App\Livewire\TestSheetViewer;
+use App\Livewire\AttendanceCalendar;
+use App\Livewire\Attendance;
 
+Route::get('/attendance', Attendance::class)->name('attendance');
+Route::get('/attendance-calendar/{studentData}', AttendanceCalendar::class)->name('attendance-calendar');
 
 Route::get('/login', [UserWebController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [UserWebController::class, 'login']);

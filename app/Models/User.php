@@ -159,4 +159,10 @@ class User extends Authenticatable implements FilamentUser
         return $this->belongsTo(Student::class, 'userable_id')
             ->where('users.userable_type', Student::class);
     }
+
+
+    public function isStudent(): bool
+    {
+        return $this->userable_type === Student::class;
+    }
 }
