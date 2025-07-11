@@ -41,6 +41,9 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\HtmlString;
 use Psy\VersionUpdater\Checker;
+use Closure;
+use Filament\Forms\Get;
+use App\Models\User;
 
 class StudentResource extends Resource
 {
@@ -57,6 +60,43 @@ class StudentResource extends Resource
     public static function getBreadcrumb(): string
     {
         return '';
+    }
+
+    /**
+     * 전화번호 유효성 검사
+     * 
+     * @param array $value 전화번호 배열 [첫번째, 두번째, 세번째]
+     * @return array ['is_valid' => bool, 'message' => string]
+     */
+    static function validatePhoneNumber($value)
+    {
+        // $value가 배열인지 확인
+        if (!is_array($value)) {
+            return ['is_valid' => false, 'message' => '전화번호 형식이 올바르지 않습니다.'];
+        }
+
+        // 배열의 길이가 3인지 확인
+        if (count($value) !== 3) {
+            return ['is_valid' => false, 'message' => '전화번호 형식이 올바르지 않습니다.'];
+        }
+        $number = '';
+        if ($value[0] === '010') {
+            $number = '4';
+        } else {
+            $number = '3,4';
+        }
+
+        // 두 번째 요소가 3자리 또는 4자리 숫자인지 확인
+        if (!preg_match('/^\d{' . $number . '}$/', $value[1])) {
+            return ['is_valid' => false, 'message' => '전화번호 중간 자리는 ' . $number . '자리 숫자여야 합니다.'];
+        }
+
+        // 세 번째 요소가 4자리 숫자인지 확인
+        if (!preg_match('/^\d{4}$/', $value[2])) {
+            return ['is_valid' => false, 'message' => '전화번호 마지막 자리는 4자리 숫자여야 합니다.'];
+        }
+
+        return ['is_valid' => true, 'message' => ''];
     }
 
     public static function _form(bool $simplified = false): array
@@ -139,7 +179,21 @@ class StudentResource extends Resource
                     Grid::make(2)
                         ->schema([
                             PhoneInput::make('phone')
-                                ->label('전화번호 (본인)'),
+                                ->label('전화번호 (본인)')
+                                ->required()
+                                ->rules([
+                                    fn(Get $get): Closure => function (string $attribute, $value, Closure $fail) use ($get) {
+                                        $result = self::validatePhoneNumber($value);
+                                        if (!$result['is_valid']) {
+                                            $fail($result['message']);
+                                        }
+
+                                        $phone = implode('-', $value);
+                                        if (User::where('phone', $phone)->where('id', '!=', $get('id'))->exists()) {
+                                            $fail('이미 존재하는 전화번호입니다.');
+                                        }
+                                    },
+                                ]),
                             PhoneInput::make('landline')
                                 ->label('전화번호 (자택)'),
                         ])
@@ -148,9 +202,29 @@ class StudentResource extends Resource
                         ->hidden(fn($get) => $get('../privacy'))
                         ->schema([
                             PhoneInput::make('phone_mother')
-                                ->label('전화번호 (모)'),
+                                ->label('전화번호 (모)')
+                                ->rules([
+                                    fn(Get $get): Closure => function (string $attribute, $value, Closure $fail) use ($get) {
+                                        if (!self::validatePhoneNumber($get('phone_father'))['is_valid']) {
+                                            $result = self::validatePhoneNumber($value);
+                                            if (!$result['is_valid']) {
+                                                $fail('부모님 전화번호 중 하나는 입력해야합니다.');
+                                            }
+                                        }
+                                    },
+                                ]),
                             PhoneInput::make('phone_father')
-                                ->label('전화번호 (부)'),
+                                ->label('전화번호 (부)')
+                                ->rules([
+                                    fn(Get $get): Closure => function (string $attribute, $value, Closure $fail) use ($get) {
+                                        if (!self::validatePhoneNumber($get('phone_mother'))['is_valid']) {
+                                            $result = self::validatePhoneNumber($value);
+                                            if (!$result['is_valid']) {
+                                                $fail('부모님 전화번호 중 하나는 입력해야합니다.');
+                                            }
+                                        }
+                                    },
+                                ]),
                             Toggle::make('sms_agree')
                                 ->label('SMS 수신 여부')
                                 ->inlineLabel()
