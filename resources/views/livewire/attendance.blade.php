@@ -1,23 +1,19 @@
-<div class="bg-gradient-to-br from-violet-500 to-fuchsia-300">
-    <div class="px-4">
+<div class="bg-gradient-to-br from-violet-400 to-fuchsia-600">
+    <div class="mx-auto max-w-7xl px-4">
         <x-slot:title>
             출석체크 -
             {{ config("app.name", "Laravel") }}
         </x-slot>
 
         <div
-            class="flex h-dvh flex-col items-center justify-center tracking-tight"
+            class="flex h-dvh w-full flex-col items-center justify-center tracking-tight"
         >
-            <div class="relative mb-6">
-                <!-- 말풍선 바디 -->
-                <div class="relative rounded-3xl bg-white px-8 py-6 shadow-md">
-                    <!-- 말풍선 꼬리 -->
-                    <div
-                        class="absolute -bottom-3 left-1/2 h-0 w-0 -translate-x-1/2 transform border-l-[12px] border-r-[12px] border-t-[16px] border-l-transparent border-r-transparent border-t-white"
-                    ></div>
-
+            <div
+                class="grid w-full max-w-sm grid-cols-3 gap-5 rounded-3xl border border-stone-200 bg-white p-6 shadow-md"
+            >
+                <div class="col-span-3">
                     <h1
-                        class="mb-4 flex items-center gap-1 text-3xl font-bold text-violet-600"
+                        class="mb-2 flex items-center gap-1 text-xl font-bold text-violet-600"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -36,7 +32,7 @@
                         출석체크
                     </h1>
                     <div
-                        class="flex items-center gap-1 text-xl font-semibold text-stone-400"
+                        class="flex items-center gap-1 text-lg font-semibold text-stone-400"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -55,20 +51,18 @@
                         {{ now()->format("Y년 n월 j일") }}
                     </div>
                 </div>
-            </div>
 
-            <div class=" hidden w-full max-w-sm px-16 md:block">
-                <img
-                    src="{{ asset("/images/login-main.png") }}"
-                    alt="logo"
-                    class="w-full mb-4"
+                <input
+                    id="phone"
+                    type="text"
+                    maxlength="13"
+                    placeholder="010-xxxx-xxxx"
+                    class="col-span-3 h-14 w-full max-w-sm !rounded-2xl border-2 !border-violet-200 text-center text-2xl font-bold text-violet-600 transition-all focus:!border-violet-400 focus:ring-2 focus:!ring-violet-300"
+                    x-model="$wire.phone"
+                    readonly
                 />
-            </div>
-            <div
-                class="grid w-full max-w-sm grid-cols-3 gap-5 rounded-3xl border border-stone-200 bg-white p-6 shadow-md"
-            >
                 <div
-                    class="col-span-3 mb-2 text-center text-base font-medium"
+                    class="col-span-3 mb-6 text-center text-base font-medium"
                     :class="{
                     'text-green-600': $wire.messageType === 'success',
                     'text-red-600': $wire.messageType === 'error',
@@ -79,15 +73,6 @@
                         x-text="$wire.message || '휴대전화번호 뒤 8자리를 입력하세요'"
                     ></span>
                 </div>
-                <input
-                    id="phone"
-                    type="text"
-                    maxlength="13"
-                    placeholder="010-xxxx-xxxx"
-                    class="col-span-3 mb-8 h-14 w-full max-w-sm !rounded-2xl border-2 border-violet-200 text-center text-2xl font-bold text-violet-600 transition-all focus:border-violet-400 focus:ring-2 focus:ring-violet-300"
-                    x-model="$wire.phone"
-                    readonly
-                />
                 <button
                     type="button"
                     class="rounded-xl bg-stone-50 py-3 text-2xl font-bold text-violet-500 shadow transition-all hover:bg-stone-100 active:bg-stone-200"
@@ -172,9 +157,9 @@
                 >
                     ←
                 </button>
-             <button
+                <button
                     type="button"
-                    class="col-span-3 w-full max-w-sm rounded-2xl bg-gradient-to-r from-fuchsia-500 to-violet-700 py-4 text-xl font-bold text-white shadow-md transition-all hover:from-fuchsia-600 hover:to-violet-800 active:from-fuchsia-700 active:to-violet-900"
+                    class="col-span-3 w-full max-w-sm rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 py-4 text-xl font-bold text-white shadow-md transition-all hover:from-violet-600 hover:to-fuchsia-600 active:from-violet-700 active:to-fuchsia-700"
                     wire:click="checkAttendance"
                 >
                     확인
