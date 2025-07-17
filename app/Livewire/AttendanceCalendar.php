@@ -8,6 +8,7 @@ use Illuminate\Support\Collection;
 use Livewire\Attributes\Url;
 use Livewire\Attributes\Layout;
 use App\Models\AttendanceLog;
+use App\Models\WeeklyTestReport;
 use App\Models\Student;
 
 #[Layout('layouts.public')]
@@ -42,20 +43,50 @@ class AttendanceCalendar extends CalendarWidget
             if ($attendanceLog->check_in_time) {
                 $isoString = $attendanceLog->attendance_date . 'T' . $attendanceLog->check_in_time . 'Z';
                 $events[] = CalendarEvent::make()
-                    ->title('등원')
-                    ->start($isoString)
-                    ->end($isoString)
-                    ->backgroundColor('#1b76a3');
-            }
-            if ($attendanceLog->check_out_time) {
-                $isoString = $attendanceLog->attendance_date . 'T' . $attendanceLog->check_out_time . 'Z';
-                $events[] = CalendarEvent::make()
-                    ->title('하원')
+                    ->title('(보충)등원')
                     ->start($isoString)
                     ->end($isoString)
                     ->backgroundColor('#8b5cf6');
             }
+            if ($attendanceLog->check_out_time) {
+                $isoString = $attendanceLog->attendance_date . 'T' . $attendanceLog->check_out_time . 'Z';
+                $events[] = CalendarEvent::make()
+                    ->title('(보충)하원')
+                    ->start($isoString)
+                    ->end($isoString)
+                    ->backgroundColor('#a78bfa');
+            }
         }
+
+        $weeklyTestReports = WeeklyTestReport::where('student_id', $this->studentId)
+            ->where('type', 'attendance')
+            ->whereBetween('created_at', [$fetchInfo['startStr'], $fetchInfo['endStr']])
+            ->get();
+
+        foreach ($weeklyTestReports as $weeklyTestReport) {
+            $reportData = $weeklyTestReport->report;
+            foreach ($reportData as $report) {
+                if (isset($report['check_in_time']) && $report['check_in_time'] !== null) {
+                    $isoString = $report['date'] . 'T' . $report['check_in_time'] . 'Z';
+                    $events[] = CalendarEvent::make()
+                        ->title('(정규)등원')
+                        ->start($isoString)
+                        ->end($isoString)
+                        ->backgroundColor('#06b6d4');
+                }
+                if (isset($report['check_out_time']) && $report['check_out_time'] !== null) {
+                    $isoString = $report['date'] . 'T' . $report['check_out_time'] . 'Z';
+                    $events[] = CalendarEvent::make()
+                        ->title('(정규)하원')
+                        ->start($isoString)
+                        ->end($isoString)
+                        ->backgroundColor('#22d3ee');
+                }
+            }
+        }
+
+
+
         return $events;
     }
 }
