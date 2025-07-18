@@ -97,8 +97,8 @@
                             </tr>
                             <tr class="bg-gray-100 text-center">
                                 <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">날짜</th>
-                                <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">출결</th>
-                                <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">지각, 결석 사유</th>
+                                <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">시간</th>
+                                <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">타입</th>
                                 <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">비고</th>
                                 <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b"></th>
                             </tr>
@@ -110,10 +110,10 @@
                                         <td class="px-6 py-3 border-b">
                                             {{ Carbon\Carbon::parse($attendance['date'])->format('m월d일') }}
                                         </td>
-                                        <td class="px-6 py-3 border-b">{{ $attendance['attendance'] }}</td>
                                         <td class="px-6 py-3 border-b">
-                                            <div class="w-[150px]">{{ $attendance['memo1'] }}</div>
+                                            <div class="w-[198px]">{{ $attendance['check_in_time'] }}(등원) - {{ $attendance['check_out_time'] }}(하원)</div>
                                         </td>
+                                        <td class="px-6 py-3 border-b">{{ $attendance['attendance'] }}</td>
                                         <td class="px-6 py-3 border-b">
                                             <div class="w-[150px]">{{ $attendance['memo2'] }}</div>
                                         </td>

@@ -34,7 +34,6 @@ class Attendance extends Component
         ) {
             // 여기에 실제 출석체크 로직을 구현하세요
             // 예: 데이터베이스에 출석 기록 저장
-            // dd($user->userable->classrooms);
             $classroom_id = null;
             $attendance_type = '정규';
             $currentTime = now();
