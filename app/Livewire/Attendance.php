@@ -38,26 +38,14 @@ class Attendance extends Component
             $attendance_type = '정규';
             $currentTime = now();
             $currentDay = strtolower($currentTime->format('D')); // mon, tue, wed, thu, fri, sat, sun
-            $currentTimeStr = $currentTime->format('H:i');
 
             foreach ($user->userable->classrooms as $classroom) {
                 $timetable = $classroom->timetable;
 
-                // 현재 요일의 수업시간이 있는지 확인
+                // 오늘 해당 요일에 스케줄이 있는지만 확인
                 if (isset($timetable[$currentDay])) {
-                    $schedule = $timetable[$currentDay];
-                    $startTime = $schedule['start'];
-                    $endTime = $schedule['end'];
-
-                    // 수업시간 전 30분부터 후 30분까지 유효
-                    $validStartTime = $this->subtractMinutes($startTime, 30);
-                    $validEndTime = $this->addMinutes($endTime, 30);
-
-                    // 현재 시간이 유효한 수업시간 범위에 있는지 확인
-                    if ($this->isTimeBetween($currentTimeStr, $validStartTime, $validEndTime)) {
-                        $classroom_id = $classroom->id;
-                        break;
-                    }
+                    $classroom_id = $classroom->id;
+                    break;
                 }
             }
 
@@ -128,37 +116,5 @@ class Attendance extends Component
             $this->message = '올바른 휴대전화번호를 입력해주세요.';
             $this->messageType = 'error';
         }
-    }
-
-    /**
-     * 시간에서 분을 빼는 메서드
-     */
-    private function subtractMinutes($time, $minutes)
-    {
-        $timeObj = \DateTime::createFromFormat('H:i', $time);
-        $timeObj->sub(new \DateInterval("PT{$minutes}M"));
-        return $timeObj->format('H:i');
-    }
-
-    /**
-     * 시간에 분을 더하는 메서드
-     */
-    private function addMinutes($time, $minutes)
-    {
-        $timeObj = \DateTime::createFromFormat('H:i', $time);
-        $timeObj->add(new \DateInterval("PT{$minutes}M"));
-        return $timeObj->format('H:i');
-    }
-
-    /**
-     * 주어진 시간이 두 시간 사이에 있는지 확인하는 메서드
-     */
-    private function isTimeBetween($time, $start, $end)
-    {
-        $timeObj = \DateTime::createFromFormat('H:i', $time);
-        $startObj = \DateTime::createFromFormat('H:i', $start);
-        $endObj = \DateTime::createFromFormat('H:i', $end);
-
-        return $timeObj >= $startObj && $timeObj <= $endObj;
     }
 }

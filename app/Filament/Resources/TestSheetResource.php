@@ -8,6 +8,7 @@ use App\Models\Classroom;
 use App\Models\GradeSystem;
 use App\Models\Student;
 use App\Models\TestSheet;
+use App\Models\TempData;
 use App\Models\User;
 use App\Models\WrongAnswerTestSheet;
 use Carbon\Carbon;
@@ -417,7 +418,36 @@ class TestSheetResource extends Resource
                     Tables\Actions\Action::make('copy-test-sheet')
                         ->label('문제지 복제')
                         ->icon('heroicon-m-document-duplicate')
-                        ->url(fn($record) => '/admin/test-sheets/create/' . $record->temp_data_id . '?test_sheet_id=' . $record->id . '&copy=true')
+                        ->url(fn($record) => '/admin/test-sheets/create/' . $record->temp_data_id . '?test_sheet_id=' . $record->id . '&copy=true'),
+                    Tables\Actions\Action::make('assign-teachers')
+                        ->label('강사 할당')
+                        ->icon('heroicon-m-share')
+                        ->modalHeading('강사 할당')
+                        ->form([
+                            Select::make('teacher_ids')
+                                ->label('강사')
+                                ->options(function () {
+                                    return \App\Models\Teacher::where('role', '!=', 'root_admin')->with('user')
+                                        ->get()
+                                        ->mapWithKeys(function ($teacher) {
+                                            return [$teacher->id => $teacher->user->name];
+                                        });
+                                })
+                                ->multiple()
+                                ->searchable()
+                                ->preload()
+                                ->placeholder('강사 선택')
+                                ->required(),
+                        ])
+                        ->action(function ($record, $data) {
+                            // 해당 문제지를 할당한 강사들에게 문제지 할당
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('강사에게 할당되었습니다.')
+                                ->success()
+                                ->send();
+                        })
+                        ->hidden(true),
                 ]),
             ])
             ->bulkActions([
