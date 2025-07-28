@@ -15,4 +15,10 @@ class Teacher extends Model
     {
         return $this->hasMany(Classroom::class);
     }
+
+    // 시험지와의 다대다 관계
+    public function testSheets()
+    {
+        return $this->belongsToMany(TestSheet::class, 'test_sheet_teacher');
+    }
 }

@@ -88,6 +88,8 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         'name' => null,
         'tags_toggle' => '기본',
         'tags' => [],
+        'teacher_ids' => [],
+        'assignment_type' => 'student',
         'target_group' => 'grade',
         'target_grades' => [],
         'target_levels' => [],
@@ -155,13 +157,55 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                         ->default([])
                         ->placeholder('태그를 입력하세요.')
                         ->columnSpanFull(),
+
+                    ToggleButtons::make('assignment_type')
+                        ->label('생성 방식')
+                        ->options([
+                            'student' => '학생 출제',
+                            'teacher' => '강사 할당',
+                        ])
+                        ->default('teacher')
+                        ->inline()
+                        ->columns(2)
+                        ->columnSpanFull()
+                        ->visible(!$this->test_sheet_id && auth()->user()->role !== 'general')
+                        ->live()
+                        ->afterStateUpdated(function (Get $get, Set $set) {
+                            // 출제 대상 초기화
+                            $set('target_group', null);
+                            $set('target_grades', []);
+                            $set('target_levels', []);
+                            $set('target_classrooms', []);
+                            $set('target_students', []);
+
+                            // 강사 할당 초기화
+                            $set('teacher_ids', []);
+
+                            // 자동 출제 초기화 - 생성 방식에 따라 다르게 설정
+                            $assignmentType = $get('assignment_type');
+                            $set('is_auto', $assignmentType === 'student');
+                            $set('start_date', null);
+                            $set('end_date', null);
+                        }),
+                    Select::make('teacher_ids')
+                        ->label('강사 할당')
+                        ->options(function () {
+                            return \App\Models\Teacher::where('role', '!=', 'root_admin')->with('user')
+                                ->get()
+                                ->mapWithKeys(function ($teacher) {
+                                    return [$teacher->id => $teacher->user->name];
+                                });
+                        })
+                        ->multiple()
+                        ->columnSpanFull()
+                        ->visible(fn(Get $get) => $get('assignment_type') === 'teacher'),
                     Grid::make(4)
                         ->schema([
                             Radio::make('target_group')
                                 ->label('출제 대상')
-                                ->required()
                                 ->live()
                                 ->reactive()
+                                ->required()
                                 ->options([
                                     'grade' => '학년',
                                     'level' => '레벨',
@@ -171,6 +215,8 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                                 ->default('grade')
                                 ->columns(4)
                                 ->columnSpanFull()
+                                ->visible(fn(Get $get) => $get('assignment_type') === 'student'),
+
                         ])->columnSpanFull(),
                     Grid::make(2)
                         ->schema([
@@ -207,10 +253,11 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                                         ->pluck('name', 'id');
                                 })
                                 ->visible(fn(Get $get) => $get('target_group') === 'classroom'),
-                            Select::make('target_students')
+                            ToggleButtons::make('target_students')
                                 ->label('학생')
                                 ->multiple()
                                 ->required()
+                                ->inline()
                                 ->options(function () {
                                     $classroomIds = Classroom::query()
                                         ->orderBy('name')
@@ -222,23 +269,26 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                                         ->get()
                                         ->mapWithKeys(fn($student) => [$student->user->id => $student->user->name]);
                                 })
-                                ->visible(fn(Get $get) => $get('target_group') === 'student'),
+                                ->visible(fn(Get $get) => $get('target_group') === 'student' && $get('assignment_type') === 'student'),
                         ]),
                     Checkbox::make('is_auto')
                         ->default(true)
                         ->live()
-                        ->label('자동 출제'),
+                        ->label('자동 출제')
+                        ->visible(fn(Get $get) => $get('assignment_type') === 'student'),
                     DateTimePicker::make('start_date')
                         ->label('출제일')
                         ->columnStart(1)
                         ->columnSpan(2)
-                        ->visible(fn(Get $get) => $get('is_auto'))
-                        ->required(),
+                        ->required()
+                        ->visible(fn(Get $get) => $get('is_auto')),
                     DateTimePicker::make('end_date')
                         ->label('마감일')
                         ->visible(fn(Get $get) => $get('is_auto'))
-                        ->columnSpan(2)
-                        ->required(),
+                        ->required()
+                        ->columnSpan(2),
+
+
                 ]),
             Section::make('문제지 템플릿')
                 ->label('문제지 템플릿')
@@ -438,7 +488,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                 $testSheet->toArray()
             );
             if ($this->copy) {
-                $this->data['target_group'] = '';
+                $this->data['target_group'] = null;
                 $this->data['target_grades'] = [];
                 $this->data['target_levels'] = [];
                 $this->data['target_classrooms'] = [];
@@ -1023,6 +1073,9 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                 ->send();
         } else {
             $testSheet = TestSheet::create($upsertData);
+            if (isset($formData['teacher_ids']) && !empty($formData['teacher_ids'])) {
+                $testSheet->teachers()->attach($formData['teacher_ids']);
+            }
             Notification::make()
                 ->title('시험지가 생성되었습니다.')
                 ->success()

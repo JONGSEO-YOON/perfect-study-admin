@@ -7,6 +7,7 @@ use App\Models\Classroom;
 use App\Models\GradeSystem;
 use App\Models\Student;
 use App\Models\TempData;
+use App\Models\TestSheet;
 use Filament\Actions;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Grid;
@@ -35,6 +36,35 @@ class ListTestSheets extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Actions\CreateAction::make('my-test-sheet')
+                ->icon('heroicon-m-document-text')
+                ->modalHeading('내 문제지 사용하기')
+                ->modalWidth('2xl')
+                ->createAnother(false)
+                ->label('내 문제지')
+                ->form([
+
+                    Select::make('my_test_sheet_id')
+                        ->label('내 문제지 선택')
+                        ->options(function () {
+                            $user = auth()->user();
+                            return $user->userable->testSheets()
+                                ->get()
+                                ->mapWithKeys(function ($testSheet) {
+                                    return [$testSheet->id => $testSheet->name];
+                                });
+                        })
+                        ->searchable()
+                        ->required()
+                        ->columnSpanFull(),
+                ])
+                ->action(function ($data) {
+                    $testSheet = TestSheet::find($data['my_test_sheet_id']);
+
+                    redirect('/admin/test-sheets/create/' . $testSheet->temp_data_id . '?test_sheet_id=' . $testSheet->id . '&copy=true');
+                })
+                ->modalSubmitActionLabel('문제지 선택')
+                ->visible(fn() => auth()->user()->role === 'general'),
             Actions\CreateAction::make('create-test-sheet-by-book')
                 ->icon('heroicon-m-plus-circle')
                 ->modalHeading('교재 문제지 추가하기')
@@ -87,75 +117,76 @@ class ListTestSheets extends ListRecords
                                     }
                                 }),
                         ]),
-                    Grid::make(4)
-                        ->schema([
-                            Radio::make('target_group')
-                                ->label('출제 대상')
-                                ->required()
-                                ->live()
-                                ->reactive()
-                                ->options([
-                                    'grade' => '학년',
-                                    'level' => '레벨',
-                                    'classroom' => '교실/반',
-                                    'student' => '학생',
-                                ])
-                                ->default('grade')
-                                ->columns(4)
-                                ->columnSpanFull()
-                        ])->columnSpanFull(),
-                    Grid::make(2)
-                        ->schema([
-                            Select::make('target_grades')
-                                ->label('학년')
-                                ->multiple()
-                                ->required()
-                                ->options(function () {
-                                    return GradeSystem::query()
-                                        ->orderBy('sequential_order')
-                                        ->pluck(
-                                            'display_name',
-                                            'id',
-                                        );
-                                })
-                                ->visible(fn(Get $get) => $get('target_group') === 'grade' || $get('target_group') === 'level'),
-                            Select::make('target_levels')
-                                ->label('레벨')
-                                ->multiple()
-                                ->required()
-                                ->options([
-                                    'A' => 'A',
-                                    'M' => 'M',
-                                    'S' => 'S',
-                                ])
-                                ->visible(fn(Get $get) => $get('target_group') === 'level'),
-                            Select::make('target_classrooms')
-                                ->label('반')
-                                ->multiple()
-                                ->required()
-                                ->options(function () {
-                                    return Classroom::query()
-                                        ->orderBy('name')
-                                        ->pluck('name', 'id');
-                                })
-                                ->visible(fn(Get $get) => $get('target_group') === 'classroom'),
-                            Select::make('target_students')
-                                ->label('학생')
-                                ->multiple()
-                                ->required()
-                                ->options(function () {
-                                    $classroomIds = Classroom::query()
-                                        ->orderBy('name')
-                                        ->pluck('id');
-                                    return Student::query()
-                                        ->whereHas('classrooms', function ($q) use ($classroomIds) {
-                                            $q->whereIn('classrooms.id', $classroomIds);
-                                        })
-                                        ->get()
-                                        ->mapWithKeys(fn($student) => [$student->user->id => $student->user->name]);
-                                })
-                                ->visible(fn(Get $get) => $get('target_group') === 'student'),
-                        ]),
+                    // Grid::make(4)
+                    //     ->schema([
+                    //         Radio::make('target_group')
+                    //             ->label('출제 대상')
+                    //             ->required()
+                    //             ->live()
+                    //             ->reactive()
+                    //             ->options([
+                    //                 'grade' => '학년',
+                    //                 'level' => '레벨',
+                    //                 'classroom' => '교실/반',
+                    //                 'student' => '학생',
+                    //             ])
+                    //             ->default('grade')
+                    //             ->columns(4)
+                    //             ->columnSpanFull()
+                    //     ])->columnSpanFull(),
+                    // Grid::make(2)
+                    //     ->schema([
+                    //         Select::make('target_grades')
+                    //             ->label('학년')
+                    //             ->multiple()
+                    //             ->required()
+                    //             ->options(function () {
+                    //                 return GradeSystem::query()
+                    //                     ->orderBy('sequential_order')
+                    //                     ->pluck(
+                    //                         'display_name',
+                    //                         'id',
+                    //                     );
+                    //             })
+                    //             ->visible(fn(Get $get) => $get('target_group') === 'grade' || $get('target_group') === 'level'),
+                    //         Select::make('target_levels')
+                    //             ->label('레벨')
+                    //             ->multiple()
+                    //             ->required()
+                    //             ->options([
+                    //                 'A' => 'A',
+                    //                 'M' => 'M',
+                    //                 'S' => 'S',
+                    //             ])
+                    //             ->visible(fn(Get $get) => $get('target_group') === 'level'),
+                    //         Select::make('target_classrooms')
+                    //             ->label('반')
+                    //             ->multiple()
+                    //             ->required()
+                    //             ->options(function () {
+                    //                 return Classroom::query()
+                    //                     ->orderBy('name')
+                    //                     ->pluck('name', 'id');
+                    //             })
+                    //             ->visible(fn(Get $get) => $get('target_group') === 'classroom'),
+                    //         Select::make('target_students')
+                    //             ->label('학생')
+                    //             ->multiple()
+                    //             ->required()
+                    //             ->options(function () {
+                    //                 $classroomIds = Classroom::query()
+                    //                     ->orderBy('name')
+                    //                     ->pluck('id');
+                    //                 return Student::query()
+                    //                     ->whereHas('classrooms', function ($q) use ($classroomIds) {
+                    //                         $q->whereIn('classrooms.id', $classroomIds);
+                    //                     })
+                    //                     ->get()
+                    //                     ->mapWithKeys(fn($student) => [$student->user->id => $student->user->name]);
+                    //             })
+                    //             ->visible(fn(Get $get) => $get('target_group') === 'student'),
+                    //     ]),
+                    Hidden::make('target_group')->default(null),
                     Hidden::make('question_count')
                         ->default(50),
                 ])
@@ -173,75 +204,76 @@ class ListTestSheets extends ListRecords
                 ->createAnother(false)
                 ->label('문제지 추가하기')
                 ->form([
-                    Grid::make(4)
-                        ->schema([
-                            Radio::make('target_group')
-                                ->label('출제 대상')
-                                ->required()
-                                ->live()
-                                ->reactive()
-                                ->options([
-                                    'grade' => '학년',
-                                    'level' => '레벨',
-                                    'classroom' => '교실/반',
-                                    'student' => '학생',
-                                ])
-                                ->default('grade')
-                                ->columns(4)
-                                ->columnSpanFull()
-                        ])->columnSpanFull(),
-                    Grid::make(2)
-                        ->schema([
-                            Select::make('target_grades')
-                                ->label('학년')
-                                ->multiple()
-                                ->required()
-                                ->options(function () {
-                                    return GradeSystem::query()
-                                        ->orderBy('sequential_order')
-                                        ->pluck(
-                                            'display_name',
-                                            'id',
-                                        );
-                                })
-                                ->visible(fn(Get $get) => $get('target_group') === 'grade' || $get('target_group') === 'level'),
-                            Select::make('target_levels')
-                                ->label('레벨')
-                                ->multiple()
-                                ->required()
-                                ->options([
-                                    'A' => 'A',
-                                    'M' => 'M',
-                                    'S' => 'S',
-                                ])
-                                ->visible(fn(Get $get) => $get('target_group') === 'level'),
-                            Select::make('target_classrooms')
-                                ->label('반')
-                                ->multiple()
-                                ->required()
-                                ->options(function () {
-                                    return Classroom::query()
-                                        ->orderBy('name')
-                                        ->pluck('name', 'id');
-                                })
-                                ->visible(fn(Get $get) => $get('target_group') === 'classroom'),
-                            Select::make('target_students')
-                                ->label('학생')
-                                ->multiple()
-                                ->required()
-                                ->options(function () {
-                                    $classroomIds = Classroom::query()
-                                        ->orderBy('name')
-                                        ->pluck('id');
-                                    return Student::query()
-                                        ->whereHas('classrooms', function ($q) use ($classroomIds) {
-                                            $q->whereIn('classrooms.id', $classroomIds);
-                                        })
-                                        ->get()
-                                        ->mapWithKeys(fn($student) => [$student->user->id => $student->user->name]);
-                                })
-                                ->visible(fn(Get $get) => $get('target_group') === 'student'),
-                        ]),
+                    // Grid::make(4)
+                    //     ->schema([
+                    //         Radio::make('target_group')
+                    //             ->label('출제 대상')
+                    //             ->required()
+                    //             ->live()
+                    //             ->reactive()
+                    //             ->options([
+                    //                 'grade' => '학년',
+                    //                 'level' => '레벨',
+                    //                 'classroom' => '교실/반',
+                    //                 'student' => '학생',
+                    //             ])
+                    //             ->default('grade')
+                    //             ->columns(4)
+                    //             ->columnSpanFull()
+                    //     ])->columnSpanFull(),
+                    // Grid::make(2)
+                    //     ->schema([
+                    //         Select::make('target_grades')
+                    //             ->label('학년')
+                    //             ->multiple()
+                    //             ->required()
+                    //             ->options(function () {
+                    //                 return GradeSystem::query()
+                    //                     ->orderBy('sequential_order')
+                    //                     ->pluck(
+                    //                         'display_name',
+                    //                         'id',
+                    //                     );
+                    //             })
+                    //             ->visible(fn(Get $get) => $get('target_group') === 'grade' || $get('target_group') === 'level'),
+                    //         Select::make('target_levels')
+                    //             ->label('레벨')
+                    //             ->multiple()
+                    //             ->required()
+                    //             ->options([
+                    //                 'A' => 'A',
+                    //                 'M' => 'M',
+                    //                 'S' => 'S',
+                    //             ])
+                    //             ->visible(fn(Get $get) => $get('target_group') === 'level'),
+                    //         Select::make('target_classrooms')
+                    //             ->label('반')
+                    //             ->multiple()
+                    //             ->required()
+                    //             ->options(function () {
+                    //                 return Classroom::query()
+                    //                     ->orderBy('name')
+                    //                     ->pluck('name', 'id');
+                    //             })
+                    //             ->visible(fn(Get $get) => $get('target_group') === 'classroom'),
+                    //         Select::make('target_students')
+                    //             ->label('학생')
+                    //             ->multiple()
+                    //             ->required()
+                    //             ->options(function () {
+                    //                 $classroomIds = Classroom::query()
+                    //                     ->orderBy('name')
+                    //                     ->pluck('id');
+                    //                 return Student::query()
+                    //                     ->whereHas('classrooms', function ($q) use ($classroomIds) {
+                    //                         $q->whereIn('classrooms.id', $classroomIds);
+                    //                     })
+                    //                     ->get()
+                    //                     ->mapWithKeys(fn($student) => [$student->user->id => $student->user->name]);
+                    //             })
+                    //             ->visible(fn(Get $get) => $get('target_group') === 'student'),
+                    //     ]),
+                    Hidden::make('target_group')->default(null),
                     ViewField::make('question_type_ids')
                         ->label('문제 유형')
                         ->view('filament.components.forms.question-type', [

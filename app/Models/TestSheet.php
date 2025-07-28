@@ -42,6 +42,12 @@ class TestSheet extends Model
         return $this->belongsTo(User::class);
     }
 
+    // 교사와의 다대다 관계
+    public function teachers()
+    {
+        return $this->belongsToMany(Teacher::class, 'test_sheet_teacher');
+    }
+
     protected static function boot()
     {
         parent::boot();

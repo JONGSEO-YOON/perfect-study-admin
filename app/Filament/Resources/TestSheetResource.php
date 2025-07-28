@@ -69,6 +69,7 @@ class TestSheetResource extends Resource
         return $table
             ->modifyQueryUsing(function ($query) {
                 return $query->originals()
+                    ->whereNotNull('target_group')
                     ->when(auth()->user()->role === 'general', function ($query) {
                         return $query->where('user_id', auth()->user()->id);
                     });
@@ -421,13 +422,14 @@ class TestSheetResource extends Resource
                         ->url(fn($record) => '/admin/test-sheets/create/' . $record->temp_data_id . '?test_sheet_id=' . $record->id . '&copy=true'),
                     Tables\Actions\Action::make('assign-teachers')
                         ->label('강사 할당')
-                        ->icon('heroicon-m-share')
+                        ->icon('heroicon-m-document-text')
                         ->modalHeading('강사 할당')
+                        ->visible(fn() => auth()->user()->role !== 'general')
                         ->form([
                             Select::make('teacher_ids')
                                 ->label('강사')
                                 ->options(function () {
-                                    return \App\Models\Teacher::where('role', '!=', 'root_admin')->with('user')
+                                    return \App\Models\Teacher::where('role', 'general')->with('user')
                                         ->get()
                                         ->mapWithKeys(function ($teacher) {
                                             return [$teacher->id => $teacher->user->name];
@@ -440,14 +442,41 @@ class TestSheetResource extends Resource
                                 ->required(),
                         ])
                         ->action(function ($record, $data) {
-                            // 해당 문제지를 할당한 강사들에게 문제지 할당
+                            // 기존에 할당된 강사들 확인
+                            $existingTeacherIds = $record->teachers()->pluck('teachers.id')->toArray();
+                            $newTeacherIds = $data['teacher_ids'];
 
-                            \Filament\Notifications\Notification::make()
-                                ->title('강사에게 할당되었습니다.')
-                                ->success()
-                                ->send();
-                        })
-                        ->hidden(true),
+                            // 중복되지 않는 새로운 강사들만 필터링
+                            $uniqueTeacherIds = array_diff($newTeacherIds, $existingTeacherIds);
+
+                            if (empty($uniqueTeacherIds)) {
+                                // 모든 강사가 이미 할당된 경우
+                                \Filament\Notifications\Notification::make()
+                                    ->title('이미 할당된 강사들입니다.')
+                                    ->warning()
+                                    ->send();
+                                return;
+                            }
+
+                            // 중복되지 않는 강사들만 할당
+                            $record->teachers()->attach($uniqueTeacherIds);
+
+                            // 중복된 강사가 있었는지 확인
+                            $duplicateCount = count($newTeacherIds) - count($uniqueTeacherIds);
+
+                            if ($duplicateCount > 0) {
+                                \Filament\Notifications\Notification::make()
+                                    ->title("강사 할당 완료")
+                                    ->body("{$duplicateCount}명의 강사는 이미 할당되어 있습니다.")
+                                    ->success()
+                                    ->send();
+                            } else {
+                                \Filament\Notifications\Notification::make()
+                                    ->title('강사에게 할당되었습니다.')
+                                    ->success()
+                                    ->send();
+                            }
+                        }),
                 ]),
             ])
             ->bulkActions([
