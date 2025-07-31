@@ -139,6 +139,10 @@ class ClassroomResource extends Resource
                             ->pluck('display_name')
                             ->join(', ');
                     }),
+                TextColumn::make('target_level')
+                    ->label('레벨')
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('students_count')
                     ->counts('students')
                     ->label('학생 수')

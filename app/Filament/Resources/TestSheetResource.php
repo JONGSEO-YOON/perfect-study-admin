@@ -71,7 +71,17 @@ class TestSheetResource extends Resource
                 return $query->originals()
                     ->whereNotNull('target_group')
                     ->when(auth()->user()->role === 'general', function ($query) {
-                        return $query->where('user_id', auth()->user()->id);
+                        // 일반 강사인 경우 해당 강사의 클래스들에 해당하는 시험지만 조회
+                        $teacher = auth()->user()->userable;
+                        $classrooms = $teacher->classrooms;
+                        // dd($classrooms);
+                        return $query->where(function ($subQuery) use ($classrooms) {
+                            foreach ($classrooms as $classroom) {
+                                $subQuery->orWhere(function ($q) use ($classroom) {
+                                    $q->availableForClass($classroom);
+                                });
+                            }
+                        });
                     });
                 // ->where('user_id', auth()->user()->id);
             })
@@ -84,11 +94,15 @@ class TestSheetResource extends Resource
                     ->label('출제자')
                     ->sortable()
                     ->searchable(),
+                TextColumn::make('name')
+                    ->label('시험지 명')
+                    ->sortable()
+                    ->searchable(),
                 TextColumn::make('tags')
                     ->label('태그')
                     ->sortable()
                     ->searchable(),
-                ViewColumn::make('name')
+                ViewColumn::make('question_category')
                     ->view('filament.components.columns.testsheet-question-category-render')
                     ->label('문제 유형'),
                 // TextColumn::make('name')
@@ -109,7 +123,7 @@ class TestSheetResource extends Resource
                 TextColumn::make('target_group_label')
                     ->state(true)
                     ->label('출제 대상')
-                    ->searchable()
+                    // ->searchable()
                     ->html()
                     ->formatStateUsing(function ($record) {
                         if ($record->target_group === 'grade') {
@@ -229,6 +243,7 @@ class TestSheetResource extends Resource
                                         'progress' => '출제 중',
                                         'completed' => '출제 종료',
                                     ])
+                                    ->native(false)
                                     ->default('all')
                                     ->label(false),
                             ]),

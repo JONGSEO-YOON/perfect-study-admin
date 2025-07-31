@@ -16,6 +16,16 @@ use App\Livewire\TestSheetResult;
 use App\Livewire\TestSheetViewer;
 use App\Livewire\AttendanceCalendar;
 use App\Livewire\Attendance;
+use App\Livewire\Parent\Login;
+use App\Livewire\Parent\Main;
+use App\Livewire\Parent\Home;
+
+// 부모 로그인 그룹
+Route::prefix('parent')->group(function () {
+    Route::get('/login', Login::class)->name('parent.login');
+    Route::get('/', Home::class)->name('parent.home');
+});
+
 
 Route::get('/attendance', Attendance::class)->name('attendance');
 Route::get('/attendance-calendar/{studentData}', AttendanceCalendar::class)->name('attendance-calendar');

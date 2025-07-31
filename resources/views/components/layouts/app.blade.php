@@ -21,7 +21,7 @@
 <body>
     <!-- Page Content -->
     <main class="h-full">
-        {{ $slot }}
+       {{ $slot }}
     </main>
 
     <!-- Livewire Scripts -->

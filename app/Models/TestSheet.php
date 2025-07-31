@@ -147,6 +147,51 @@ class TestSheet extends Model
     }
 
     /**
+     * target_group 조건들을 쿼리에 추가 (클래스 기반)
+     */
+    protected function addTargetGroupConditionsForClass($query, Classroom $classroom): void
+    {
+        // 학년 대상
+        $query->where(function ($subQ) use ($classroom) {
+            $targetGrades = $classroom->target_grades ?? [];
+
+            if (!empty($targetGrades)) {
+                $subQ->where('target_group', 'grade')
+                    ->where(function ($jsonQ) use ($targetGrades) {
+                        foreach ($targetGrades as $gradeId) {
+                            $jsonQ->orWhereJsonContains('target_grades', $gradeId)
+                                ->orWhereJsonContains('target_grades', (string)$gradeId);
+                        }
+                    });
+            }
+        })
+            // 반 대상
+            ->orWhere(function ($subQ) use ($classroom) {
+                $subQ->where('target_group', 'classroom')
+                    ->where(function ($jsonQ) use ($classroom) {
+                        $jsonQ->orWhereJsonContains('target_classrooms', $classroom->id)
+                            ->orWhereJsonContains('target_classrooms', (string)$classroom->id);
+                    });
+            });
+
+        // 레벨 대상
+        if ($classroom->target_level && !empty($classroom->target_grades)) {
+            $query->orWhere(function ($subQ) use ($classroom) {
+                $subQ->where('target_group', 'level')
+                    ->where(function ($jsonQ) use ($classroom) {
+                        $jsonQ->orWhereJsonContains('target_levels', $classroom->target_level);
+                    })
+                    ->where(function ($jsonQ) use ($classroom) {
+                        foreach ($classroom->target_grades as $gradeId) {
+                            $jsonQ->orWhereJsonContains('target_grades', $gradeId)
+                                ->orWhereJsonContains('target_grades', (string)$gradeId);
+                        }
+                    });
+            });
+        }
+    }
+
+    /**
      * target_group 조건들을 쿼리에 추가
      */
     protected function addTargetGroupConditions($query, Student $student): void
@@ -1797,5 +1842,23 @@ class TestSheet extends Model
         }
 
         return $result;
+    }
+
+    /**
+     * 클래스에 해당되는 시험지만 조회하는 스코프
+     */
+    public function scopeAvailableForClass(Builder $query, Classroom $classroom): Builder
+    {
+        $teacherId = $classroom->teacher->user->id;
+
+        return $query->where(function ($query) use ($classroom, $teacherId) {
+            // 출제자가 클래스의 강사인 경우만
+            // $query->where('user_id', $teacherId);
+
+            // target_group별 조건 체크
+            $query->where(function ($q) use ($classroom) {
+                $this->addTargetGroupConditionsForClass($q, $classroom);
+            });
+        });
     }
 }

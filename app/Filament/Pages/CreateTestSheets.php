@@ -95,7 +95,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         'target_levels' => [],
         'target_classrooms' => [],
         'target_students' => [],
-        'is_auto' => true,
+        'is_auto' => false,
         'start_date' => null,
         'end_date' => null,
         'template' => 'default',
@@ -158,47 +158,47 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                         ->placeholder('태그를 입력하세요.')
                         ->columnSpanFull(),
 
-                    ToggleButtons::make('assignment_type')
-                        ->label('생성 방식')
-                        ->options([
-                            'student' => '학생 출제',
-                            'teacher' => '강사 할당',
-                        ])
-                        ->default('teacher')
-                        ->inline()
-                        ->columns(2)
-                        ->columnSpanFull()
-                        ->visible(!$this->test_sheet_id && auth()->user()->role !== 'general')
-                        ->live()
-                        ->afterStateUpdated(function (Get $get, Set $set) {
-                            // 출제 대상 초기화
-                            $set('target_group', null);
-                            $set('target_grades', []);
-                            $set('target_levels', []);
-                            $set('target_classrooms', []);
-                            $set('target_students', []);
+                    // ToggleButtons::make('assignment_type')
+                    //     ->label('생성 방식')
+                    //     ->options([
+                    //         'student' => '학생 출제',
+                    //         'teacher' => '강사 할당',
+                    //     ])
+                    //     ->default('teacher')
+                    //     ->inline()
+                    //     ->columns(2)
+                    //     ->columnSpanFull()
+                    //     ->visible(!$this->test_sheet_id && auth()->user()->role !== 'general')
+                    //     ->live()
+                    //     ->afterStateUpdated(function (Get $get, Set $set) {
+                    //         // 출제 대상 초기화
+                    //         $set('target_group', null);
+                    //         $set('target_grades', []);
+                    //         $set('target_levels', []);
+                    //         $set('target_classrooms', []);
+                    //         $set('target_students', []);
 
-                            // 강사 할당 초기화
-                            $set('teacher_ids', []);
+                    //         // 강사 할당 초기화
+                    //         $set('teacher_ids', []);
 
-                            // 자동 출제 초기화 - 생성 방식에 따라 다르게 설정
-                            $assignmentType = $get('assignment_type');
-                            $set('is_auto', $assignmentType === 'student');
-                            $set('start_date', null);
-                            $set('end_date', null);
-                        }),
-                    Select::make('teacher_ids')
-                        ->label('강사 할당')
-                        ->options(function () {
-                            return \App\Models\Teacher::where('role', '!=', 'root_admin')->with('user')
-                                ->get()
-                                ->mapWithKeys(function ($teacher) {
-                                    return [$teacher->id => $teacher->user->name];
-                                });
-                        })
-                        ->multiple()
-                        ->columnSpanFull()
-                        ->visible(fn(Get $get) => $get('assignment_type') === 'teacher'),
+                    //         // 자동 출제 초기화 - 생성 방식에 따라 다르게 설정
+                    //         $assignmentType = $get('assignment_type');
+                    //         $set('is_auto', $assignmentType === 'student');
+                    //         $set('start_date', null);
+                    //         $set('end_date', null);
+                    //     }),
+                    // Select::make('teacher_ids')
+                    //     ->label('강사 할당')
+                    //     ->options(function () {
+                    //         return \App\Models\Teacher::where('role', '!=', 'root_admin')->with('user')
+                    //             ->get()
+                    //             ->mapWithKeys(function ($teacher) {
+                    //                 return [$teacher->id => $teacher->user->name];
+                    //             });
+                    //     })
+                    //     ->multiple()
+                    //     ->columnSpanFull()
+                    //     ->visible(fn(Get $get) => $get('assignment_type') === 'teacher'),
                     Grid::make(4)
                         ->schema([
                             Radio::make('target_group')
