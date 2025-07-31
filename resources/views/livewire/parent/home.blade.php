@@ -56,13 +56,13 @@
         <div class="bg-gradient-to-br from-violet-400 to-fuchsia-600 rounded-lg shadow-sm p-4 mb-3">
             <div class=" flex justify-between items-start">
                 <div>
-                    <h2 class="text-xl font-bold text-violet-900">김철수 학생</h2>
-                    <p class="text-white">학부모님 반갑습니다.</p>
+                    <h2 class="text-lg font-bold text-violet-900">김철수 학생</h2>
+                    <p class="text-white text-sm">학부모님 반갑습니다.</p>
                 </div>
             </div>
             <div class="mt-4 border-t-[1px] border-white  py-3">
-                <div class="flex flex-col gap-2 items-start text-white">
-                    <span class="">5월 7일 수요일</span> 
+                <div class="flex flex-col items-start text-white">
+                    <span class="text-sm">5월 7일 수요일</span> 
                     <span class="text-lg font-semibold">오늘의 출석 기록이 없습니다.</span>
                 </div>
             </div>
