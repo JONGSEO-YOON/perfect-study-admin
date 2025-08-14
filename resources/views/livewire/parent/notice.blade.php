@@ -1,7 +1,4 @@
 <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <livewire:parent.header />
-    <livewire:parent.navigation />
 
     <!-- Main Content Area -->
     <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -42,7 +39,7 @@
 
             <!-- Notice Content -->
             <div class="px-6 py-6">
-                <div class="prose max-w-none">
+                <div class="max-w-none">
                     <div class="text-gray-800 leading-relaxed whitespace-pre-wrap">
                         {!! $notice->content !!}
                     </div>
