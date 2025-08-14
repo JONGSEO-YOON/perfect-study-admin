@@ -20,7 +20,10 @@ class Home extends Component
 
     public function mount()
     {
-        $this->student = Student::find(session('students')->first());
+        $parent_phone = session('parent_phone');
+        $this->student = Student::where('phone_father', $parent_phone)
+            ->orWhere('phone_mother', $parent_phone)
+            ->first();
 
         // AttendanceLog와 WeeklyTestReport 모델의 메서드 사용
         $attendanceLogData = AttendanceLog::getTodayAttendanceForStudent($this->student->id);
