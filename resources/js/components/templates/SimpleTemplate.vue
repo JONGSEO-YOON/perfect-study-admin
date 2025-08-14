@@ -186,7 +186,8 @@ const props = defineProps({
 
       <!-- 중앙 구분선 -->
       <div
-        :style="{ backgroundColor: color }"
+        :style="{ borderColor: color }"
+        class="border-r"
         :class="{
           'w-px': pageIndex === 0,
           'w-px mt-10 mb-4': pageIndex !== 0,

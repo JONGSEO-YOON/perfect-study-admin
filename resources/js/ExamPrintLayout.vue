@@ -739,7 +739,7 @@ onMounted(() => {
         </div>
 
         <!-- 중앙 구분선 -->
-        <div class="bg-black w-px mt-10 mb-4"></div>
+        <div class="border-black border-r w-px mt-10 mb-4"></div>
 
         <!-- 오른쪽 컬럼 -->
         <div class="flex-1 pl-4 relative" @click="(e) => handleExplanationClick(e, pageIndex, 'right')">

@@ -187,7 +187,7 @@ const props = defineProps({
 
       <!-- 중앙 구분선 -->
       <div
-        class="bg-black"
+        class="border-black border-[1px]"
         :class="{
           '!w-[2px]': pageIndex === 0,
           '!w-[2px] mt-10 mb-4': pageIndex !== 0,
