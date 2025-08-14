@@ -387,7 +387,12 @@ c-2 59 1 88 9 94 49 31 60 94 21 121 -28 20 -138 21 -191 1z" />
       </div>
 
       <!-- 중앙 구분선 -->
-      <div class="bg-gray-300 w-px mx-4"></div>
+      <div
+        :style="{ backgroundColor: color }"
+        :class="{
+          'w-px': pageIndex === 0,
+          'w-px mt-10 mb-4': pageIndex !== 0,
+        }"></div>
 
       <!-- 오른쪽 컬럼 -->
       <div class="flex-1 pl-4 question-columns flex flex-col">

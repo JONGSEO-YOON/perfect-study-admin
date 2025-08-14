@@ -189,8 +189,8 @@ const props = defineProps({
       <div
         class="bg-black"
         :class="{
-          'w-[2px]': pageIndex === 0,
-          'w-px mt-10 mb-4': pageIndex !== 0,
+          '!w-[2px]': pageIndex === 0,
+          '!w-[2px] mt-10 mb-4': pageIndex !== 0,
         }"></div>
 
       <!-- 오른쪽 컬럼 -->
