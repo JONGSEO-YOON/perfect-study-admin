@@ -142,4 +142,64 @@ class WeeklyTestReport extends Model
             ->values()
             ->all();
     }
+
+    /**
+     * 24시간 형식의 시간을 오전/오후 형식으로 변환
+     */
+    public static function formatTimeToKorean($time)
+    {
+        if (empty($time)) {
+            return '';
+        }
+
+        // 시간 부분만 추출 (초 제거)
+        $timeParts = explode(':', $time);
+        $hour = (int) $timeParts[0];
+        $minute = $timeParts[1] ?? '00';
+
+        if ($hour < 12) {
+            $period = '오전';
+            $displayHour = $hour === 0 ? 12 : $hour;
+        } else {
+            $period = '오후';
+            $displayHour = $hour === 12 ? 12 : $hour - 12;
+        }
+
+        return $period . ' ' . $displayHour . ':' . $minute;
+    }
+
+    /**
+     * 특정 학생의 오늘 출석 리포트 데이터를 포맷된 형태로 반환
+     */
+    public static function getTodayAttendanceReportForStudent($studentId)
+    {
+        $attendances = [];
+
+        $weeklyTestReports = static::where('student_id', $studentId)
+            ->where('type', 'attendance')
+            ->whereDate('created_at', now())
+            ->get();
+
+        foreach ($weeklyTestReports as $weeklyTestReport) {
+            $reportData = $weeklyTestReport->report;
+            foreach ($reportData as $report) {
+                if (isset($report['check_in_time']) && $report['check_in_time'] !== null) {
+                    $attendances[] = [
+                        'title' => '(정규)등원',
+                        'time' => static::formatTimeToKorean($report['check_in_time']),
+                        'color' => '#06b6d4',
+                    ];
+                }
+                if (isset($report['check_out_time']) && $report['check_out_time'] !== null) {
+                    $attendances[] = [
+                        'title' => '(정규)하원',
+                        'time' => static::formatTimeToKorean($report['check_out_time']),
+                        'color' => '#22d3ee',
+                    ];
+                }
+            }
+        }
+
+        return $attendances;
+    }
 }

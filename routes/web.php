@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\JusoPopupController;
+use App\Http\Middleware\ParentSession;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserWebController;
 use App\Livewire\MyReportCard;
@@ -19,13 +20,16 @@ use App\Livewire\Attendance;
 use App\Livewire\Parent\Login;
 use App\Livewire\Parent\Main;
 use App\Livewire\Parent\Home;
+use App\Livewire\Parent\Report;
+use App\Livewire\Parent\Attendance as ParentAttendance;
 
 // 부모 로그인 그룹
 Route::prefix('parent')->group(function () {
-    Route::get('/login', Login::class)->name('parent.login');
-    Route::get('/', Home::class)->name('parent.home');
+    Route::get('/', Login::class)->name('parent.login');
+    Route::get('/home', Home::class)->name('parent.home')->middleware(ParentSession::class);
+    Route::get('/attendance', ParentAttendance::class)->name('parent.attendance');
+    Route::get('/report', Report::class)->name('parent.report');
 });
-
 
 Route::get('/attendance', Attendance::class)->name('attendance');
 Route::get('/attendance-calendar/{studentData}', AttendanceCalendar::class)->name('attendance-calendar');

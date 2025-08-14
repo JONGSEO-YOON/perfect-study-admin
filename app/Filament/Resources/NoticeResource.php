@@ -55,8 +55,9 @@ class NoticeResource extends Resource
                                         '강사' => '강사',
                                         '학생' => '학생',
                                         '상담실' => '상담실',
+                                        '학부모' => '학부모',
                                     ])
-                                    ->default(['관리자', '강사', '학생', '상담실'])
+                                    ->default(['관리자', '강사', '학생', '상담실', '학부모'])
                                     ->columns(4)
                                     ->columnSpan(3),
                             ])->columnSpanFull(),

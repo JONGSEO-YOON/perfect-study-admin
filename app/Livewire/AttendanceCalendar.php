@@ -10,6 +10,7 @@ use Livewire\Attributes\Layout;
 use App\Models\AttendanceLog;
 use App\Models\WeeklyTestReport;
 use App\Models\Student;
+use App\Helpers\TimeHelper;
 
 #[Layout('layouts.public')]
 class AttendanceCalendar extends CalendarWidget
@@ -43,7 +44,7 @@ class AttendanceCalendar extends CalendarWidget
             if ($attendanceLog->check_in_time) {
                 $isoString = $attendanceLog->attendance_date . 'T' . $attendanceLog->check_in_time . 'Z';
                 $events[] = CalendarEvent::make()
-                    ->title('(보충)등원')
+                    ->title('(보충)등원 ' . TimeHelper::formatTimeToKorean($attendanceLog->check_in_time))
                     ->start($isoString)
                     ->end($isoString)
                     ->backgroundColor('#8b5cf6');
@@ -51,7 +52,7 @@ class AttendanceCalendar extends CalendarWidget
             if ($attendanceLog->check_out_time) {
                 $isoString = $attendanceLog->attendance_date . 'T' . $attendanceLog->check_out_time . 'Z';
                 $events[] = CalendarEvent::make()
-                    ->title('(보충)하원')
+                    ->title('(보충)하원 ' . TimeHelper::formatTimeToKorean($attendanceLog->check_out_time))
                     ->start($isoString)
                     ->end($isoString)
                     ->backgroundColor('#a78bfa');
@@ -69,7 +70,7 @@ class AttendanceCalendar extends CalendarWidget
                 if (isset($report['check_in_time']) && $report['check_in_time'] !== null) {
                     $isoString = $report['date'] . 'T' . $report['check_in_time'] . 'Z';
                     $events[] = CalendarEvent::make()
-                        ->title('(정규)등원')
+                        ->title('(정규)등원 ' . TimeHelper::formatTimeToKorean($report['check_in_time']))
                         ->start($isoString)
                         ->end($isoString)
                         ->backgroundColor('#06b6d4');
@@ -77,7 +78,7 @@ class AttendanceCalendar extends CalendarWidget
                 if (isset($report['check_out_time']) && $report['check_out_time'] !== null) {
                     $isoString = $report['date'] . 'T' . $report['check_out_time'] . 'Z';
                     $events[] = CalendarEvent::make()
-                        ->title('(정규)하원')
+                        ->title('(정규)하원 ' . TimeHelper::formatTimeToKorean($report['check_out_time']))
                         ->start($isoString)
                         ->end($isoString)
                         ->backgroundColor('#22d3ee');
