@@ -21,7 +21,10 @@ class Attendance extends Component
 
     public function mount()
     {
-        $this->student = Student::find(session('students')->first());
+        $parent_phone = session('parent_phone');
+        $this->student = Student::where('phone_father', $parent_phone)
+            ->orWhere('phone_mother', $parent_phone)
+            ->first();
 
         // 기본 날짜 설정: 오늘로부터 한 달 이전까지
         $this->endDate = now()->format('Y-m-d');
