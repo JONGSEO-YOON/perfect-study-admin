@@ -74,9 +74,7 @@ const props = defineProps({
 </script>
 
 <template>
-  <div
-    class="page flex flex-col hover:scale-105 cursor-pointer transition-all hover:brightness-90 relative"
-    @click="$emit('click')">
+  <div class="page flex flex-col hover:scale-105 cursor-pointer transition-all hover:brightness-90 relative">
     <!-- 선택 표시 아이콘 -->
     <svg
       xmlns="http://www.w3.org/2000/svg"

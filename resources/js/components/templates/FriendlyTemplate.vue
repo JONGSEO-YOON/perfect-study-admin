@@ -74,9 +74,7 @@ const props = defineProps({
 </script>
 
 <template>
-  <div
-    class="page flex flex-col hover:scale-105 cursor-pointer transition-all hover:brightness-90 relative"
-    @click="$emit('click')">
+  <div class="page flex flex-col hover:scale-105 cursor-pointer transition-all hover:brightness-90 relative">
     <!-- 배경 장식 요소들 -->
     <div class="absolute inset-0 pointer-events-none opacity-10">
       <!-- 왼쪽 상단 별 -->

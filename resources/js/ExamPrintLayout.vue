@@ -431,6 +431,17 @@ const handleDragEnd = () => {
   document.body.style.userSelect = "";
 };
 
+const handlePageClick = (pageIndex) => {
+  // pageIndex가 정수가 아니면 동작하지 않음
+  if (!Number.isInteger(pageIndex)) {
+    return;
+  }
+
+  console.log("clicked", pageIndex);
+
+  selectedIndex.value = selectedIndex.value === pageIndex ? null : pageIndex;
+};
+
 const calculateExplanationPages = async () => {
   await nextTick();
   if (!explanationContainer.value) return;
@@ -688,7 +699,7 @@ onMounted(() => {
       :get-page-layout-mode="getPageLayoutMode"
       :get-question-number="getQuestionNumber"
       :handle-drag-start="handleDragStart"
-      @click="selectedIndex = selectedIndex === pageIndex ? null : pageIndex" />
+      @click="(i) => handlePageClick(i)" />
     <div class="flex no-print items-center justify-center font-semibold text-gray-700 text-xl flex-row gap-x-4">
       <div class="flex-1 h-px bg-gray-500"></div>
       해설 영역 입니다.

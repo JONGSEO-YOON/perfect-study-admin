@@ -133,5 +133,5 @@ const getTemplateComponent = () => {
     :get-page-layout-mode="getPageLayoutMode"
     :get-question-number="getQuestionNumber"
     :handle-drag-start="handleDragStart"
-    @click="$emit('click')" />
+    @click="$emit('click', pageIndex)" />
 </template>
