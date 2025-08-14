@@ -3,11 +3,10 @@
         <div class="flex justify-between items-center h-16">
             <!-- Logo and Brand -->
             <div class="flex items-center ">
-                <img src="{{ asset('logo.png') }}" alt="퍼펙트 스터디" class="h-10">
-
+                <a href="{{ route('parent.home') }}">
+                    <img src="{{ asset('logo.png') }}" alt="퍼펙트 스터디" class="h-10">
+                </a>
             </div>
-
-
             <!-- User Menu -->
             <div class="flex items-center">
 
