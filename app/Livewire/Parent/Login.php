@@ -74,7 +74,7 @@ class Login extends Component
         if ($students->count() === 0) {
             session()->flash('error', '학생을 찾을 수 없습니다.');
         } else {
-            session(['students' => $students->pluck('id')]);
+            session(['parent_phone' => $formattedPhone]);
             return $this->redirect(route('parent.home'));
         }
 

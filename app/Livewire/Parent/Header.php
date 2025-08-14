@@ -13,11 +13,12 @@ class Header extends Component
 
     public function mount()
     {
-        $this->students = Student::whereIn('id', session('students'))
-            ->with('user')
+        $parent_phone = session('parent_phone');
+        $students = Student::where('phone_father', $parent_phone)
+            ->orWhere('phone_mother', $parent_phone)
             ->get();
-
-        $this->studentId = $this->students->first()->id;
+        $this->students = $students;
+        $this->studentId = $students->first()->id;
     }
 
     public function changeStudent()

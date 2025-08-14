@@ -202,4 +202,41 @@ class WeeklyTestReport extends Model
 
         return $attendances;
     }
+
+    /**
+     * 특정 학생의 날짜 범위별 출석 리포트 데이터를 포맷된 형태로 반환
+     */
+    public static function getAttendanceReportForStudentByDateRange($studentId, $startDate, $endDate)
+    {
+        $attendances = [];
+
+        $weeklyTestReports = static::where('student_id', $studentId)
+            ->where('type', 'attendance')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->get();
+
+        foreach ($weeklyTestReports as $weeklyTestReport) {
+            $reportData = $weeklyTestReport->report;
+            foreach ($reportData as $report) {
+                if (isset($report['check_in_time']) && $report['check_in_time'] !== null) {
+                    $attendances[] = [
+                        'date' => $report['date'],
+                        'title' => '(정규)등원',
+                        'time' => static::formatTimeToKorean($report['check_in_time']),
+                        'color' => '#06b6d4',
+                    ];
+                }
+                if (isset($report['check_out_time']) && $report['check_out_time'] !== null) {
+                    $attendances[] = [
+                        'date' => $report['date'],
+                        'title' => '(정규)하원',
+                        'time' => static::formatTimeToKorean($report['check_out_time']),
+                        'color' => '#22d3ee',
+                    ];
+                }
+            }
+        }
+
+        return $attendances;
+    }
 }

@@ -19,6 +19,8 @@
 </head>
 
 <body>
+    <livewire:parent.header />
+    <livewire:parent.navigation />
     <!-- Page Content -->
     <main class="h-full">
        {{ $slot }}

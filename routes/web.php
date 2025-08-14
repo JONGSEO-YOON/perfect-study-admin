@@ -22,11 +22,13 @@ use App\Livewire\Parent\Main;
 use App\Livewire\Parent\Home;
 use App\Livewire\Parent\Report;
 use App\Livewire\Parent\Attendance as ParentAttendance;
+use App\Livewire\Parent\Notice;
 
 // 부모 로그인 그룹
 Route::prefix('parent')->group(function () {
     Route::get('/', Login::class)->name('parent.login');
     Route::get('/home', Home::class)->name('parent.home')->middleware(ParentSession::class);
+    Route::get('/notice/{id}', Notice::class)->name('parent.notice')->middleware(ParentSession::class);
     Route::get('/attendance', ParentAttendance::class)->name('parent.attendance');
     Route::get('/report', Report::class)->name('parent.report');
 });

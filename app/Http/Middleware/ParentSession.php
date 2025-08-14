@@ -15,8 +15,8 @@ class ParentSession
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $students = session('students');
-        if (isset($students)) {
+        $parent_phone = session('parent_phone');
+        if (isset($parent_phone)) {
             return $next($request);
         } else {
             return redirect(route('parent.login'));
