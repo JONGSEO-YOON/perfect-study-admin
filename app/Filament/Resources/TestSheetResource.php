@@ -78,12 +78,12 @@ class TestSheetResource extends Resource
                         return $query->where(function ($subQuery) use ($classrooms) {
                             foreach ($classrooms as $classroom) {
                                 $subQuery->orWhere(function ($q) use ($classroom) {
-                                    $q->availableForClass($classroom);
+                                    $q->availableForClass($classroom)->orWhere('user_id', auth()->user()->id);
                                 });
                             }
                         });
                     });
-                // ->where('user_id', auth()->user()->id);
+                // ->orWhere('user_id', auth()->user()->id);
             })
             ->defaultSort('id', 'desc')
             ->columns([
