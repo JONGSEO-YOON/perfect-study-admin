@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="manifest" href="/manifest_parent.json">
-    
+
     <title>{{ config('app.name', 'Laravel') }}</title>
 
     <!-- Scripts -->
@@ -20,8 +20,10 @@
 </head>
 
 <body>
-    <livewire:parent.header />
-    <livewire:parent.navigation />
+    <div class="sticky top-0 z-10">
+        <livewire:parent.header />
+        <livewire:parent.navigation />
+    </div>
     <!-- Page Content -->
     <main class="h-full">
        {{ $slot }}
