@@ -111,7 +111,7 @@
                                             {{ Carbon\Carbon::parse($attendance['date'])->format('m월d일') }}
                                         </td>
                                         <td class="px-6 py-3 border-b">
-                                            <div class="w-[198px]">{{ $attendance['check_in_time'] }}(등원) - {{ $attendance['check_out_time'] }}(하원)</div>
+                                            <div class="w-[198px]">{{ $attendance['check_in_time'] ?? '' }}(등원) - {{ $attendance['check_out_time'] ?? '' }}(하원)</div>
                                         </td>
                                         <td class="px-6 py-3 border-b">{{ $attendance['attendance'] }}</td>
                                         <td class="px-6 py-3 border-b">
