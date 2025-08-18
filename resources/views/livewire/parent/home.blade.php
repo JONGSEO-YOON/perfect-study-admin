@@ -1,7 +1,7 @@
 <div class="min-h-screen bg-gray-50">
 
     <!-- Main Content Area -->
-    <main class="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+    <main class="max-w-6xl mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-4">
         <!-- Welcome Section with Attendance -->
         <div class="bg-gradient-to-br from-violet-400 to-fuchsia-600 rounded-lg shadow-sm p-3 sm:p-4 mb-4">
             <div class=" flex justify-between items-start">

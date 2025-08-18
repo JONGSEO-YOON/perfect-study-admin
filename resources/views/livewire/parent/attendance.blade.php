@@ -1,7 +1,7 @@
 <div class="min-h-screen bg-gray-50">
 
     <!-- Main Content Area -->
-    <main class="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+    <main class="max-w-6xl mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-4">
         <!-- Date Range Filter -->
         <div class="bg-gradient-to-br from-violet-400 to-fuchsia-600 p-3 sm:p-4 rounded-lg shadow-sm mb-4">
             <h2 class="text-lg sm:text-xl font-bold text-white mb-3">출결 기록 조회</h2>
