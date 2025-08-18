@@ -1,7 +1,7 @@
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen bg-gray-50 flex flex-col">
 
     <!-- Main Content Area -->
-    <main class="max-w-6xl mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-4">
+    <main class="flex-1 max-w-6xl mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-4 w-full">
         <!-- Welcome Section with Attendance -->
         <div class="bg-gradient-to-br from-violet-400 to-fuchsia-600 rounded-lg shadow-sm p-3 sm:p-4 mb-4">
             <div class=" flex justify-between items-start">
@@ -137,5 +137,12 @@
             </div>
         </div>
         @endif
+        <!-- Footer Actions -->
+        <div class="max-w-6xl mx-auto px-2 sm:px-4 lg:px-6 pb-6 mt-16 w-full">
+            <form method="POST" action="{{ route('parent.logout') }}">
+                @csrf
+                <button type="submit" class="w-full py-3 text-center bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-violet-400 font-semibold">로그아웃</button>
+            </form>
+        </div>
     </main>
 </div>

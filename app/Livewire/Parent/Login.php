@@ -9,6 +9,13 @@ use App\Models\Student;
 
 class Login extends Component
 {
+    public function mount()
+    {
+        if (session('parent_phone')) {
+            return $this->redirect(route('parent.home'));
+        }
+    }
+
     #[Validate('required|numeric|min:10|max:11')]
     public $phone = '';
 
