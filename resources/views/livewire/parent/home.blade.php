@@ -27,7 +27,7 @@
 
         <!-- Learning Status -->
         <div class="bg-fuchsia-50 rounded-lg shadow-sm p-3 sm:p-4 mb-4">
-            @if ($weeklyReport)
+            @if ($weeklyReport['test_report'] || $weeklyReport['homework_report'] || $weeklyReport['comment_report'])
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-bold text-gray-900">학습현황</h3>
                     <div class="flex items-center space-x-2">

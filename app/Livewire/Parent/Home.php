@@ -79,7 +79,7 @@ class Home extends Component
             return;
         }
 
-        $now = now()->subMonth(3);
+        $now = now();
         $startOfWeek = $now->startOfWeek(1)->format('Y-m-d');
         $endOfWeek = $now->endOfWeek(7)->format('Y-m-d');
         $dateRange = "{$startOfWeek}/{$endOfWeek}";
