@@ -7,6 +7,7 @@ use App\Models\Student;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use App\Models\WeeklyTestReport;
+use Livewire\Attributes\On;
 
 class Report extends Component
 {
@@ -105,6 +106,14 @@ class Report extends Component
             'week' => $week,
             'type' => 'comment'
         ]);
+    }
+
+    #[On('change-student')]
+    public function setStudent($id)
+    {
+        $this->student = Student::find($id);
+        $this->weeklyReports = $this->getWeeklyReports();
+        $this->initializeComments();
     }
 
     #[Layout('layouts.parent')]

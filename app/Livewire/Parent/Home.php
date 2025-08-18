@@ -13,10 +13,9 @@ use Livewire\Attributes\Layout;
 class Home extends Component
 {
     public $student;
-
     public $attendances = [];
-
     public $notices = [];
+    public $weeklyReport; // 추가: 오늘 주차 성적표
 
     public function mount()
     {
@@ -39,6 +38,9 @@ class Home extends Component
             ->orWhereJsonContains('target_groups', '"학부모"')
             ->orderBy('pinned_at', 'desc')
             ->get();
+
+        // 오늘 날짜 기준 주차 성적표 가져오기
+        $this->loadWeeklyReport();
     }
 
     #[On('change-student')]
@@ -58,6 +60,36 @@ class Home extends Component
             ->orWhereJsonContains('target_groups', '"학부모"')
             ->orderBy('pinned_at', 'desc')
             ->get();
+
+        // 학생 변경 시 성적표도 다시 로드
+        $this->loadWeeklyReport();
+    }
+
+    // 오늘 날짜 기준 주차 성적표 로드
+    protected function loadWeeklyReport()
+    {
+        if (!$this->student) {
+            $this->weeklyReport = null;
+            return;
+        }
+
+        $classroomId = $this->student->classrooms->first()?->id ?? null;
+        if (!$classroomId) {
+            $this->weeklyReport = null;
+            return;
+        }
+
+        $now = now();
+        $startOfWeek = $now->startOfWeek(1)->format('Y-m-d');
+        $endOfWeek = $now->endOfWeek(7)->format('Y-m-d');
+        $dateRange = "{$startOfWeek}/{$endOfWeek}";
+
+        $this->weeklyReport = WeeklyTestReport::getFormattedWeeklyReport(
+            $this->student,
+            $dateRange,
+            $dateRange,
+            $classroomId
+        )->first(); // 첫 번째 항목만 가져오기 (오늘 주차)
     }
 
     #[Layout('layouts.parent')]

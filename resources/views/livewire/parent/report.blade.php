@@ -29,11 +29,11 @@
         </div>
 
         {{-- 주간 보고서 테이블 --}}
-        <div class="bg-white rounded-lg shadow-sm mb-4">
+        <div class="bg-white rounded-lg shadow-sm">
              <div class="overflow-x-auto">
                 @forelse ($weeklyReports as $weekReport)
                     {{-- 주차 전체 컨테이너 --}}
-                    <div class="bg-white border border-gray-200 rounded-lg shadow-sm mb-8 overflow-hidden">
+                    <div class="bg-white border border-purple-200 rounded-lg shadow-sm overflow-hidden">
                         {{-- 주간 헤더 --}}
                         <div class="relative">
                             <!-- 배경 -->
@@ -194,7 +194,7 @@
                                     <div class="w-2 h-6 bg-purple-500 rounded-full mr-3"></div>
                                     <h3 class="text-lg font-bold text-gray-800">{{ $weekReport['week_label'] }} 강사 코멘트</h3>
                                 </div>
-                                <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-6 border border-purple-200">
+                                <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-2 border border-purple-200">
                                     @if ($weekReport['comment_report'])
                                         <p class="text-gray-800 text-sm leading-relaxed">{{ $weekReport['comment_report'] }}</p>
                                     @else

@@ -27,70 +27,102 @@
 
         <!-- Learning Status -->
         <div class="bg-fuchsia-50 rounded-lg shadow-sm p-3 sm:p-4 mb-4">
-            <div class="flex flex-col items-center justify-center py-8 sm:py-12">
-           
-                
-                <!-- Text with gradient -->
-                <div class="mt-4 sm:mt-6 text-center">
-                    <h4 class="text-lg sm:text-xl font-bold bg-gradient-to-r from-fuchsia-600 to-violet-600 bg-clip-text text-transparent">
-                        성적표 준비중...
-                    </h4>
+            @if ($weeklyReport)
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-gray-900">학습현황</h3>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-600">{{ $weeklyReport['week_label'] }}</span>
+                        <a href="{{ route('parent.report') }}" class="text-sm text-purple-600 flex items-center">
+                            성적표 상세
+                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    </div>
                 </div>
-                
-              
-            </div>
-            {{-- <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-gray-900">학습현황</h3>
-                <div class="flex items-center space-x-2">
-                    <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">B</span>
-                    <span class="text-sm text-gray-600">5월 1주차</span>
-                    <a href="#" class="text-sm text-purple-600 flex items-center">
-                        성적표 상세
-                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                        </svg>
-                    </a>
+
+                @if ($weeklyReport['test_report'])
+                    <!-- 주간테스트 요약 -->
+                    <div class="mb-4">
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">주간테스트</h4>
+                        @foreach ($weeklyReport['test_report'] as $test)
+                            <div class="mb-3 p-3 bg-fuchsia-100 rounded-lg">
+                                <div class="text-xs font-medium text-fuchsia-800 mb-2">{{ $test['name'] }}</div>
+                                <div class="grid grid-cols-3 gap-4 text-sm">
+                                    @php
+                                        $total = $test['total'] ?? null;
+                                    @endphp
+                                    @if ($total)
+                                        <div class="text-center">
+                                            <p class="text-gray-600 mb-1">개인점수</p>
+                                            <p class="font-bold text-gray-900">{{ number_format($total['personal_score']) }}/{{ number_format($total['total_questions'] ?? 0) }}</p>
+                                        </div>
+                                        <div class="text-center">
+                                            <p class="text-gray-600 mb-1">반평균</p>
+                                            <p class="font-bold text-gray-900">{{ number_format($total['classroom_average']) }}</p>
+                                        </div>
+                                        <div class="text-center">
+                                            <p class="text-gray-600 mb-1">반별 등수</p>
+                                            <p class="font-bold text-gray-900">{{ $total['classroom_rank'] }}등 ({{ $total['classroom_students_count'] ?? 0 }})</p>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
+                @if ($weeklyReport['homework_report'])
+                    <!-- 주간숙제 요약 -->
+                    <div class="mb-4">
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">주간숙제</h4>
+                        @foreach ($weeklyReport['homework_report'] as $homework)
+                            <div class="mb-3 p-3 bg-violet-100 rounded-lg">
+                                <div class="text-xs font-medium text-violet-800 mb-2">{{ $homework['name'] }}</div>
+                                <div class="grid grid-cols-3 gap-4 text-sm">
+                                    @php
+                                        $total = $homework['total'] ?? null;
+                                    @endphp
+                                    @if ($total)
+                                        <div class="text-center">
+                                            <p class="text-gray-600 mb-1">이행도</p>
+                                            <p class="font-bold text-gray-900">{{ number_format($total['attempt_rate'], 1) }}%</p>
+                                        </div>
+                                        <div class="text-center">
+                                            <p class="text-gray-600 mb-1">정답률</p>
+                                            <p class="font-bold text-gray-900">{{ number_format($total['correct_rate'], 1) }}%</p>
+                                        </div>
+                                        <div class="text-center">
+                                            <p class="text-gray-600 mb-1">문제 수</p>
+                                            <p class="font-bold text-gray-900">{{ $total['correct_count'] }}/{{ $total['total_count'] }}</p>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
+                @if ($weeklyReport['comment_report'])
+                    <!-- 강사 코멘트 -->
+                    <div class="border-t pt-4">
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">강사 코멘트</h4>
+                        <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-2 border border-purple-200">
+                            <p class="text-gray-800 text-sm leading-relaxed">{{ $weeklyReport['comment_report'] }}</p>
+                        </div>
+                    </div>
+                @endif
+            @else
+                <!-- 성적표가 없을 때 -->
+                <div class="flex flex-col items-center justify-center py-8 sm:py-12">
+                    <div class="mt-4 sm:mt-6 text-center">
+                        <h4 class="text-lg sm:text-xl font-bold bg-gradient-to-r from-fuchsia-600 to-violet-600 bg-clip-text text-transparent">
+                            이번 주차 성적표 없음
+                        </h4>
+                        <p class="text-sm text-gray-500 mt-2">이번 주에는 성적표 데이터가 없습니다.</p>
+                    </div>
                 </div>
-            </div>
-            
-            <!-- Score Table -->
-            <div class="grid grid-cols-3 gap-4 mb-4 text-sm">
-                <div class="text-center">
-                    <p class="text-gray-600 mb-1">개인점수</p>
-                    <p class="font-bold text-gray-900">12/20</p>
-                </div>
-                <div class="text-center">
-                    <p class="text-gray-600 mb-1">반평균</p>
-                    <p class="font-bold text-gray-900">10</p>
-                </div>
-                <div class="text-center">
-                    <p class="text-gray-600 mb-1">레벨평균</p>
-                    <p class="font-bold text-gray-900">10</p>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-3 gap-4 mb-4 text-sm">
-                <div class="text-center">
-                    <p class="text-gray-600 mb-1">반별 등수</p>
-                    <p class="font-bold text-gray-900">2등 (5)</p>
-                </div>
-                <div class="text-center">
-                    <p class="text-gray-600 mb-1">학년평균</p>
-                    <p class="font-bold text-gray-900">10</p>
-                </div>
-                <div class="text-center">
-                    <p class="text-gray-600 mb-1">학년 등수</p>
-                    <p class="font-bold text-gray-900">2등 (5)</p>
-                </div>
-            </div>
-            
-            <hr class="my-4">
-            
-            <!-- Instructor Comment -->
-            <div>
-                <p class="text-sm font-medium text-gray-900 mb-2">강사 코멘트</p>
-                <p class="text-sm text-gray-500">입력된 코멘트가 없습니다.</p>
-            </div> --}}
+            @endif
         </div>
         @if (count($notices) > 0)
         <!-- Announcements -->
