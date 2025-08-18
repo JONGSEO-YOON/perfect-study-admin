@@ -36,14 +36,14 @@ class Report extends Component
     }
 
 
-    public function updatedDateFrom($value)
+    public function updatedDateFrom()
     {
 
         $this->weeklyReports = $this->getWeeklyReports();
         $this->initializeComments();
     }
 
-    public function updatedDateUntil($value)
+    public function updatedDateUntil()
     {
 
         $this->weeklyReports = $this->getWeeklyReports();
