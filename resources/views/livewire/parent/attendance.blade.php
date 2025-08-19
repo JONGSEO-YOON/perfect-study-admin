@@ -1,25 +1,25 @@
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen">
 
     <!-- Main Content Area -->
     <main class="max-w-6xl mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-4">
         <!-- Date Range Filter -->
-        <div class="bg-gradient-to-br from-violet-400 to-fuchsia-600 p-3 sm:p-4 rounded-lg shadow-sm mb-4">
-            <h2 class="text-lg sm:text-xl font-bold text-white mb-3">출결 기록 조회</h2>
+        <div class="bg-violet-50 p-3 sm:p-4 rounded-lg shadow-sm mb-4">
+            <h2 class="text-lg sm:text-xl font-bold text-stone-900 mb-3">출결 기록 조회</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                    <label for="start_date" class="block text-sm font-medium text-white">시작 날짜</label>
+                    <label for="start_date" class="block text-sm font-medium text-violet-600">시작 날짜</label>
                     <input type="date" 
                            wire:model.live="startDate"
                            id="start_date"
-                           class="mt-1 block w-full rounded-md border-transparent bg-white/20 text-white placeholder-white/70 shadow-sm focus:border-violet-300 focus:ring-violet-300 sm:text-sm text-sm"
+                           class="mt-1 block w-full rounded-md border-transparent bg-violet-500 text-white placeholder-white/70 shadow-sm focus:border-violet-300 focus:ring-violet-300 sm:text-sm text-sm"
                            style="color-scheme: dark;">
                 </div>
                 <div>
-                    <label for="end_date" class="block text-sm font-medium text-white">종료 날짜</label>
+                    <label for="end_date" class="block text-sm font-medium text-violet-600">종료 날짜</label>
                     <input type="date" 
                            wire:model.live="endDate"
                            id="end_date"
-                           class="mt-1 block w-full rounded-md border-transparent bg-white/20 text-white placeholder-white/70 shadow-sm focus:border-violet-300 focus:ring-violet-300 sm:text-sm text-sm"
+                           class="mt-1 block w-full rounded-md border-transparent bg-violet-500 text-white placeholder-white/70 shadow-sm focus:border-violet-300 focus:ring-violet-300 sm:text-sm text-sm"
                            style="color-scheme: dark;">
                 </div>
             </div>
@@ -35,8 +35,8 @@
                     </svg>
                 </div>
                 <div>
-                    <h3 class="text-base sm:text-lg font-bold text-gray-900">{{ $student?->user?->name }} 학생</h3>
-                    <p class="text-xs sm:text-sm text-gray-600">{{ $startDate }} ~ {{ $endDate }} 출결 기록</p>
+                    <h3 class="text-base sm:text-lg font-bold text-stone-900">{{ $student?->user?->name }} 학생</h3>
+                    <p class="text-xs sm:text-sm text-stone-600">{{ $startDate }} ~ {{ $endDate }} 출결 기록</p>
                 </div>
             </div>
         </div>
@@ -55,8 +55,8 @@
                                     </svg>
                                 </div>
                                 <div>
-                                    <h4 class="text-base sm:text-lg font-semibold text-gray-900">{{ $dayAttendance['date'] }} {{ $dayAttendance['day_of_week'] }}</h4>
-                                    <p class="text-xs sm:text-sm text-gray-600">{{ count($dayAttendance['records']) }}개의 출결 기록</p>
+                                    <h4 class="text-base sm:text-lg font-semibold text-stone-900">{{ $dayAttendance['date'] }} {{ $dayAttendance['day_of_week'] }}</h4>
+                                    <p class="text-xs sm:text-sm text-stone-600">{{ count($dayAttendance['records']) }}개의 출결 기록</p>
                                 </div>
                             </div>
                         </div>
@@ -64,12 +64,12 @@
                         @if(count($dayAttendance['records']) > 0)
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                                 @foreach($dayAttendance['records'] as $record)
-                                    <div class="bg-gray-50 rounded-lg p-2 sm:p-3 border-l-4" style="border-left-color: {{ $record['color'] }};">
+                                    <div class="bg-stone-50 rounded-lg p-2 sm:p-3 border-l-4" style="border-left-color: {{ $record['color'] }};">
                                         <div class="flex items-center">
                                             <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mr-2 sm:mr-3" style="background-color: {{ $record['color'] }};"></div>
                                             <div>
-                                                <p class="text-xs sm:text-sm font-medium text-gray-900">{{ $record['title'] }}</p>
-                                                <p class="text-xs sm:text-sm text-gray-600">{{ $record['time'] }}</p>
+                                                <p class="text-xs sm:text-sm font-medium text-stone-900">{{ $record['title'] }}</p>
+                                                <p class="text-xs sm:text-sm text-stone-600">{{ $record['time'] }}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -77,7 +77,7 @@
                             </div>
                         @else
                             <div class="text-center py-3 sm:py-4">
-                                <p class="text-gray-500 text-sm">해당 날짜에 출결 기록이 없습니다.</p>
+                                <p class="text-stone-500 text-sm">해당 날짜에 출결 기록이 없습니다.</p>
                             </div>
                         @endif
                     </div>
@@ -87,34 +87,34 @@
             <!-- No Records -->
             <div class="bg-white rounded-lg shadow-sm p-6 sm:p-8">
                 <div class="text-center">
-                    <svg class="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                     </svg>
-                    <h3 class="mt-2 text-sm font-medium text-gray-900">출결 기록이 없습니다</h3>
-                    <p class="mt-1 text-sm text-gray-500">선택한 기간 동안의 출결 기록이 없습니다.</p>
+                    <h3 class="mt-2 text-sm font-medium text-stone-900">출결 기록이 없습니다</h3>
+                    <p class="mt-1 text-sm text-stone-500">선택한 기간 동안의 출결 기록이 없습니다.</p>
                 </div>
             </div>
         @endif
 
         <!-- Legend -->
         <div class="bg-white rounded-lg shadow-sm p-3 sm:p-4 mt-4 sm:mt-6">
-            <h4 class="text-sm font-medium text-gray-900 mb-2 sm:mb-3">범례</h4>
+            <h4 class="text-sm font-medium text-stone-900 mb-2 sm:mb-3">범례</h4>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-xs sm:text-sm">
                 <div class="flex items-center">
                     <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mr-1.5 sm:mr-2" style="background-color: #06b6d4;"></div>
-                    <span class="text-gray-700">(정규)등원</span>
+                    <span class="text-stone-700">(정규)등원</span>
                 </div>
                 <div class="flex items-center">
                     <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mr-1.5 sm:mr-2" style="background-color: #22d3ee;"></div>
-                    <span class="text-gray-700">(정규)하원</span>
+                    <span class="text-stone-700">(정규)하원</span>
                 </div>
                 <div class="flex items-center">
                     <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mr-1.5 sm:mr-2" style="background-color: #8b5cf6;"></div>
-                    <span class="text-gray-700">(보충)등원</span>
+                    <span class="text-stone-700">(보충)등원</span>
                 </div>
                 <div class="flex items-center">
                     <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mr-1.5 sm:mr-2" style="background-color: #a78bfa;"></div>
-                    <span class="text-gray-700">(보충)하원</span>
+                    <span class="text-stone-700">(보충)하원</span>
                 </div>
             </div>
         </div>
