@@ -139,10 +139,20 @@
         @endif
         <!-- Footer Actions -->
         <div class="max-w-6xl mx-auto px-2 sm:px-4 lg:px-6 pb-6 mt-16 w-full">
-            <form method="POST" action="{{ route('parent.logout') }}">
-                @csrf
-                <button type="submit" class="w-full py-3 text-center bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-violet-400 font-semibold">로그아웃</button>
-            </form>
+            <button wire:click="logout" class="w-full py-3 text-center bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-violet-400 font-semibold">로그아웃</button>
         </div>
     </main>
 </div>
+
+@script
+<script>
+    // 로그아웃 시 로컬스토리지 정리
+    $wire.on('clear-local-storage', () => {
+        try {
+            localStorage.removeItem('parent_phone');
+        } catch (e) {
+            // 무시
+        }
+    });
+</script>
+@endscript

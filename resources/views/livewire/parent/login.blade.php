@@ -54,47 +54,26 @@
 </div>
 @script
 <script>
-    // 로컬스토리지에 저장된 세션 정보가 있으면 자동 복구 시도 (가능한 한 빨리 실행)
-    (function () {
-        const run = async () => {
-            try {
-                const storedPhone = (localStorage.getItem('parent_phone') || '').trim();
-                if (!storedPhone) return;
-
-                const tokenEl = document.querySelector('meta[name="csrf-token"]');
-                const token = tokenEl ? tokenEl.getAttribute('content') : '';
-                const resp = await fetch('/parent/restore', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': token,
-                        'Accept': 'application/json'
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ phone: storedPhone })
-                });
-
-                const data = await resp.json().catch(() => ({}));
-                if (resp.ok && data.ok) {
-                    window.location.replace('/parent/home');
-                    return;
-                }
-
-                if (!resp.ok) {
-                    localStorage.removeItem('parent_phone');
-                }
-            } catch (e) {
-                // 무시하고 수동 로그인으로 폴백
-            }
-        };
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', run, { once: true });
-        } else {
-            run();
+    // Livewire 컴포넌트가 로드된 후 세션 복구 시도
+    $wire.on('attempt-restore-session', () => {
+        const storedPhone = (localStorage.getItem('parent_phone') || '').trim();
+        if (storedPhone) {
+            $wire.restoreSession(storedPhone);
         }
-    })();
+    });
+
+    // Livewire 컴포넌트가 마운트된 후 자동으로 세션 복구 시도
+    document.addEventListener('livewire:init', () => {
+        const storedPhone = (localStorage.getItem('parent_phone') || '').trim();
+        if (storedPhone) {
+            // Livewire가 준비되면 세션 복구 시도
+            setTimeout(() => {
+                if ($wire) {
+                    $wire.restoreSession(storedPhone);
+                }
+            }, 100);
+        }
+    });
 
     let deferredPrompt;
     window.addEventListener('beforeinstallprompt', async (e) => {

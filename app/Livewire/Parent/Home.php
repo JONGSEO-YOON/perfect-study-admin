@@ -92,6 +92,19 @@ class Home extends Component
         )->first(); // 첫 번째 항목만 가져오기 (오늘 주차)
     }
 
+    public function logout()
+    {
+        // 서버 세션 초기화
+        session()->forget('parent_phone');
+        session()->save();
+
+        // 로컬스토리지 정리 이벤트 발생
+        $this->dispatch('clear-local-storage');
+
+        // 로그인 페이지로 리다이렉트
+        return $this->redirect('/parent');
+    }
+
     #[Layout('layouts.parent')]
     public function render()
     {

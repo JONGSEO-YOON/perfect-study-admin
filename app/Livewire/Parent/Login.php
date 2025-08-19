@@ -9,18 +9,42 @@ use App\Models\Student;
 
 class Login extends Component
 {
-    public function mount()
-    {
-        if (session('parent_phone')) {
-            return $this->redirect(route('parent.home'));
-        }
-    }
+
 
     #[Validate('required|numeric|min:10|max:11')]
     public $phone = '';
 
     #[Validate('required')]
     public $password = '';
+
+    public function mount()
+    {
+        if (session('parent_phone')) {
+            return $this->redirect(route('parent.home'));
+        }
+
+        // 자동 세션 복구 시도 - JavaScript에서 전달받은 전화번호로 처리
+        $this->dispatch('attempt-restore-session');
+    }
+
+    /**
+     * 세션 복구 처리
+     */
+    public function restoreSession($phone)
+    {
+        if (empty($phone)) {
+            return;
+        }
+
+        $studentExists = Student::where('phone_father', $phone)
+            ->orWhere('phone_mother', $phone)
+            ->exists();
+
+        if ($studentExists) {
+            session(['parent_phone' => $phone]);
+            $this->redirect(route('parent.home'));
+        }
+    }
 
     public function login()
     {

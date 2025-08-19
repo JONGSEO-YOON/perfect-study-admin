@@ -23,7 +23,6 @@ use App\Livewire\Parent\Home;
 use App\Livewire\Parent\Report;
 use App\Livewire\Parent\Attendance as ParentAttendance;
 use App\Livewire\Parent\Notice;
-use App\Http\Controllers\ParentAuthController;
 
 // 부모 로그인 그룹
 Route::prefix('parent')->group(function () {
@@ -32,9 +31,6 @@ Route::prefix('parent')->group(function () {
     Route::get('/notice/{id}', Notice::class)->name('parent.notice')->middleware(ParentSession::class);
     Route::get('/attendance', ParentAttendance::class)->name('parent.attendance');
     Route::get('/report', Report::class)->name('parent.report');
-    Route::post('/restore', [ParentAuthController::class, 'restore'])->name('parent.restore');
-    Route::get('/restore', [ParentAuthController::class, 'restoreAndRedirect'])->name('parent.restore.redirect');
-    Route::post('/logout', [ParentAuthController::class, 'logout'])->name('parent.logout');
 });
 
 Route::get('/attendance', Attendance::class)->name('attendance');
