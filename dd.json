@@ -1,8 +1,0 @@
-[
-  { "date": "2025-05-26", "memo1": null, "memo2": null, "attendance": "정규등원 (출석)" },
-  { "date": "2025-05-27", "memo1": null, "memo2": null, "attendance": "정규등원 (출석)" },
-  { "date": "2025-05-28", "memo1": null, "memo2": null, "attendance": "정규등원 (지각)" }
-]
-,
-
-[{"date": "2025-07-17", "memo1": null, "memo2": null, "attendance": "정규", "check_in_time": "14:18:43", "check_out_time": null}]

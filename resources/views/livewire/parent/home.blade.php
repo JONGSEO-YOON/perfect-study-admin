@@ -1,4 +1,16 @@
 <div class="min-h-screen flex flex-col">
+    <!-- Success/Error Messages -->
+    @if (session()->has('success'))
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 mx-2">
+            {{ session('success') }}
+        </div>
+    @endif
+    
+    @if (session()->has('error'))
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 mx-2">
+            {{ session('error') }}
+        </div>
+    @endif
 
     <!-- Main Content Area -->
     <main class="flex-1 max-w-6xl mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-4 w-full">
@@ -138,7 +150,8 @@
         </div>
         @endif
         <!-- Footer Actions -->
-        <div class="max-w-6xl mx-auto px-2 sm:px-4 lg:px-6 pb-6 mt-16 w-full">
+        <div class="max-w-6xl mx-auto px-2 sm:px-4 lg:px-6 pb-6 mt-16 w-full space-y-3">
+            <button wire:click="enableNotifications" class="w-full py-3 text-center bg-violet-500 hover:bg-violet-600 text-white rounded-lg font-semibold">알림 켜기</button>
             <button wire:click="logout" class="w-full py-3 text-center hover:bg-stone-100 border border-violet-500 rounded-lg text-violet-500 font-semibold">로그아웃</button>
         </div>
     </main>
@@ -146,12 +159,134 @@
 
 @script
 <script>
+    // 페이지 로드 시 Service Worker 등록
+    document.addEventListener('DOMContentLoaded', async () => {
+        if ('serviceWorker' in navigator) {
+            try {
+                const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                console.log('Service Worker 등록 성공:', registration);
+            } catch (error) {
+                console.error('Service Worker 등록 실패:', error);
+            }
+        }
+    });
     // 로그아웃 시 로컬스토리지 정리
     $wire.on('clear-local-storage', () => {
         try {
             localStorage.removeItem('parent_phone');
         } catch (e) {
             // 무시
+        }
+    });
+
+    // FCM 초기화 함수들
+    async function initializeFCM() {
+        try {
+            // Firebase SDK 동적 import
+            const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+            const { getMessaging, getToken, isSupported } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js');
+            
+            const firebaseConfig = {
+                apiKey: "AIzaSyBVxK6CCtCGABUWqCBt3DqAo_yF6bQ5m94",
+                authDomain: "perfact-study.firebaseapp.com",
+                projectId: "perfact-study",
+                storageBucket: "perfact-study.appspot.com",
+                messagingSenderId: "847897044429",
+                appId: "1:847897044429:web:7b566a588c912882ba1084"
+            };
+            
+            const firebaseApp = initializeApp(firebaseConfig);
+            
+            // FCM 지원 확인
+            const supported = await isSupported();
+            if (!supported) {
+                throw new Error('FCM이 지원되지 않는 브라우저입니다.');
+            }
+            
+            const messaging = getMessaging(firebaseApp);
+            
+            // 알림 권한 요청
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                throw new Error('알림 권한이 허용되지 않았습니다.');
+            }
+            
+            // Service Worker 등록 및 대기
+            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            console.log('Service Worker 등록 성공:', registration);
+            
+            // Service Worker가 완전히 준비될 때까지 대기
+            await navigator.serviceWorker.ready;
+            console.log('Service Worker 준비 완료');
+            
+            // FCM 토큰 생성
+            const currentToken = await getToken(messaging, { 
+                vapidKey: 'BB4OAtniiO1lEmvxHzpLlpn9zQuCJ0Sc9uIEfanUmpPBWAkJEYYIc5bsWz5A0mylGxWw3vgpHBUxIwcKpLqwYTk'
+            });
+            
+            if (currentToken) {
+                console.log('FCM 토큰:', currentToken);
+                
+                // 서버에 토큰 전송
+                await sendTokenToServer(currentToken);
+                
+                return currentToken;
+            } else {
+                console.log('FCM 토큰을 생성할 수 없습니다.');
+                return null;
+            }
+        } catch (error) {
+            console.error('FCM 초기화 실패:', error);
+            throw error;
+        }
+    }
+    
+    // 서버에 토큰 전송
+    async function sendTokenToServer(token) {
+        const parentPhone = localStorage.getItem('parent_phone');
+        
+        if (!parentPhone) {
+            throw new Error('부모 전화번호를 찾을 수 없습니다. 다시 로그인해주세요.');
+        }
+        
+        const response = await fetch('/api/fcm-token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                token: token,
+                parent_phone: parentPhone
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('토큰 전송 실패');
+        }
+        
+        console.log('FCM 토큰이 서버에 저장되었습니다.');
+    }
+
+    // Livewire 이벤트로 FCM 초기화
+    $wire.on('enable-fcm', async () => {
+        try {
+            const token = await initializeFCM();
+            
+            if (token) {
+                // 로컬 스토리지에 알림 상태 저장
+                localStorage.setItem('fcm_enabled', 'true');
+                localStorage.setItem('fcm_token', token);
+                
+                // Livewire에 성공 알림
+                $wire.call('fcmEnabled');
+            } else {
+                throw new Error('토큰 생성에 실패했습니다.');
+            }
+        } catch (error) {
+            console.error('FCM 초기화 오류:', error);
+            // Livewire에 오류 알림
+            $wire.call('fcmError', error.message);
         }
     });
 </script>

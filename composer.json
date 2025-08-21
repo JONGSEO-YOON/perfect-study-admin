@@ -11,6 +11,7 @@
     "php": "^8.2",
     "ext-imagick": "*",
     "filament/filament": "^3.3",
+    "google/apiclient": "^2.18",
     "guava/calendar": "^1.14",
     "hasnayeen/themes": "^3.0",
     "ijpatricio/mingle": "^0.0.18",

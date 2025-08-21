@@ -54,6 +54,7 @@
 </div>
 @script
 <script>
+
     // Livewire 컴포넌트가 로드된 후 세션 복구 시도
     $wire.on('attempt-restore-session', () => {
         const storedPhone = (localStorage.getItem('parent_phone') || '').trim();
@@ -85,8 +86,7 @@
     });
 
 
-
-     $js('install', () => {
+    $js('install', () => {
        // iOS Safari의 경우
         if (isIos() && !isInStandaloneMode()) {
             alert('Safari에서 하단 공유 버튼을 클릭한 후, [홈 화면에 추가] 버튼을 선택하세요');

@@ -92,6 +92,24 @@ class Home extends Component
         )->first(); // 첫 번째 항목만 가져오기 (오늘 주차)
     }
 
+    public function enableNotifications()
+    {
+        // JavaScript에서 FCM 초기화를 시작하도록 이벤트 발생
+        $this->dispatch('enable-fcm');
+    }
+
+    public function fcmEnabled()
+    {
+        // FCM 활성화 성공 시 호출되는 메서드
+        session()->flash('success', '알림이 활성화되었습니다!');
+    }
+
+    public function fcmError($message)
+    {
+        // FCM 활성화 실패 시 호출되는 메서드
+        session()->flash('error', '알림 활성화 중 오류가 발생했습니다: ' . $message);
+    }
+
     public function logout()
     {
         // 서버 세션 초기화
