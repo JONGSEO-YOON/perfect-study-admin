@@ -12,7 +12,7 @@
             </div>
             <div class="mt-3 sm:mt-4 border-t-[1px] border-violet-600 py-2 sm:py-3">
                 <div class="flex flex-col items-start text-violet-600">
-                    <span class="text-sm sm:text-base font-bold">5월 7일 수요일</span> 
+                    <span class="text-sm sm:text-base font-bold">{{ now()->locale('ko')->isoFormat('M월 D일 dddd') }}</span> 
 
                     @if (count($attendances) > 0)
                         @foreach ($attendances as $attendance)

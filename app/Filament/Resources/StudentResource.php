@@ -534,7 +534,7 @@ class StudentResource extends Resource
 
                     Tables\Actions\Action::make('create-wrong-note-test')
                         ->label('오답 노트 출제')
-                        ->icon('heroicon-m-academic-cap')
+                        ->icon('heroicon-m-document-arrow-up')
                         ->modalHeading('오답 노트 출제')
                         ->modalSubmitActionLabel('출제하기')
                         ->modalWidth('xl')
@@ -621,7 +621,7 @@ class StudentResource extends Resource
                             $from = Carbon::parse($data['from'])->startOfDay();
                             $to = Carbon::parse($data['to'])->endOfDay();
                             $isDontKnowOnly = $data['is_dont_know_only'];
-                            
+
                             // 문제 개수 확인
                             $questions = WrongAnswerNote::getQuestions(
                                 $record->id,
@@ -629,7 +629,7 @@ class StudentResource extends Resource
                                 $to->format('Y-m-d'),
                                 $isDontKnowOnly
                             );
-                            
+
                             if (empty($questions)) {
                                 Notification::make()
                                     ->title('출제될 문제가 없습니다.')
@@ -637,10 +637,10 @@ class StudentResource extends Resource
                                     ->send();
                                 return;
                             }
-                            
+
                             // 오답 노트 테스트 생성
                             $testSheet = static::createWrongNoteTestSheet($record, $questions, $from, $to, $isDontKnowOnly);
-                            
+
                             if ($testSheet) {
                                 Notification::make()
                                     ->title('오답 노트 테스트가 생성되었습니다.')
@@ -760,10 +760,10 @@ class StudentResource extends Resource
      * 오답 노트 기반으로 테스트 시트를 생성합니다.
      */
     public static function createWrongNoteTestSheet(
-        Student $student, 
-        array $questions, 
-        Carbon $from, 
-        Carbon $to, 
+        Student $student,
+        array $questions,
+        Carbon $from,
+        Carbon $to,
         bool $isDontKnowOnly = false
     ): ?TestSheet {
         if (empty($questions)) {
