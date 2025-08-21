@@ -36,35 +36,35 @@ class ListTestSheets extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            // Actions\CreateAction::make('my-test-sheet')
-            //     ->icon('heroicon-m-document-text')
-            //     ->modalHeading('내 문제지 사용하기')
-            //     ->modalWidth('2xl')
-            //     ->createAnother(false)
-            //     ->label('내 문제지')
-            //     ->form([
+            Actions\CreateAction::make('my-test-sheet')
+                ->icon('heroicon-m-document-text')
+                ->modalHeading('내 문제지 사용하기')
+                ->modalWidth('2xl')
+                ->createAnother(false)
+                ->label('내 문제지')
+                ->form([
 
-            //         Select::make('my_test_sheet_id')
-            //             ->label('내 문제지 선택')
-            //             ->options(function () {
-            //                 $user = auth()->user();
-            //                 return $user->userable->testSheets()
-            //                     ->get()
-            //                     ->mapWithKeys(function ($testSheet) {
-            //                         return [$testSheet->id => $testSheet->name];
-            //                     });
-            //             })
-            //             ->searchable()
-            //             ->required()
-            //             ->columnSpanFull(),
-            //     ])
-            //     ->action(function ($data) {
-            //         $testSheet = TestSheet::find($data['my_test_sheet_id']);
+                    Select::make('my_test_sheet_id')
+                        ->label('내 문제지 선택')
+                        ->options(function () {
+                            $user = auth()->user();
+                            return $user->userable->testSheets()
+                                ->get()
+                                ->mapWithKeys(function ($testSheet) {
+                                    return [$testSheet->id => $testSheet->name];
+                                });
+                        })
+                        ->searchable()
+                        ->required()
+                        ->columnSpanFull(),
+                ])
+                ->action(function ($data) {
+                    $testSheet = TestSheet::find($data['my_test_sheet_id']);
 
-            //         redirect('/admin/test-sheets/create/' . $testSheet->temp_data_id . '?test_sheet_id=' . $testSheet->id . '&copy=true');
-            //     })
-            //     ->modalSubmitActionLabel('문제지 선택')
-            //     ->visible(fn() => auth()->user()->role === 'general'),
+                    redirect('/admin/test-sheets/create/' . $testSheet->temp_data_id . '?test_sheet_id=' . $testSheet->id . '&copy=true');
+                })
+                ->modalSubmitActionLabel('문제지 선택')
+                ->visible(fn() => auth()->user()->role === 'general'),
             Actions\CreateAction::make('create-test-sheet-by-book')
                 ->icon('heroicon-m-plus-circle')
                 ->modalHeading('교재 문제지 추가하기')
