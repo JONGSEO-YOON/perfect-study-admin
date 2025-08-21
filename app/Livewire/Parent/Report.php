@@ -93,7 +93,13 @@ class Report extends Component
         foreach ($this->weeklyReports as $report) {
             $key = "{$report['year']}-{$report['week']}";
             $commentReport = $this->getWeeklyCommentReport($report['year'], $report['week']);
-            $this->comments[$key] = $commentReport->report['comment'] ?? '';
+            
+            // 학부모에게는 status가 'sent'인 코멘트만 표시
+            if (isset($commentReport->report['status']) && $commentReport->report['status'] === 'sent') {
+                $this->comments[$key] = $commentReport->report['comment'] ?? '';
+            } else {
+                $this->comments[$key] = '';
+            }
         }
     }
 

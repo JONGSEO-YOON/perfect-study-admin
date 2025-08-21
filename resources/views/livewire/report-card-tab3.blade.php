@@ -239,12 +239,32 @@
                                     </div>
                                 </div>
                                 @if (!$this->readonly)
-                                    <div class="flex justify-end mt-2">
-                                        <x-filament::button
-                                            wire:click="saveComment({{ $weekReport['year'] }}, {{ $weekReport['week'] }})"
-                                            size="sm">
-                                            저장
-                                        </x-filament::button>
+                                    <div class="flex justify-end gap-2 mt-2">
+                                        @if ($weekReport['comment_status'] === 'sent')
+                                            {{-- 학부모 전달 완료 상태 --}}
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-sm text-green-600 font-medium">✓ 학부모에게 전달됨</span>
+                                                <x-filament::button
+                                                    wire:click="deleteComment({{ $weekReport['year'] }}, {{ $weekReport['week'] }})"
+                                                    size="sm"
+                                                    color="danger">
+                                                    삭제
+                                                </x-filament::button>
+                                            </div>
+                                        @else
+                                            {{-- 임시 저장 또는 작성 중 상태 --}}
+                                            <x-filament::button
+                                                wire:click="saveComment({{ $weekReport['year'] }}, {{ $weekReport['week'] }})"
+                                                size="sm"
+                                                color="gray">
+                                                임시 저장
+                                            </x-filament::button>
+                                            <x-filament::button
+                                                wire:click="sendCommentToParent({{ $weekReport['year'] }}, {{ $weekReport['week'] }})"
+                                                size="sm">
+                                                학부모 전달
+                                            </x-filament::button>
+                                        @endif
                                     </div>
                                 @endif
                             </div>

@@ -95,7 +95,8 @@ class WeeklyTestReport extends Model
                     'test_report' => static::formatReport($weekReports->firstWhere('type', 'test')),
                     'homework_report' => static::formatReport($weekReports->firstWhere('type', 'homework')),
                     'attendance_report' => static::formatReport($weekReports->firstWhere('type', 'attendance')),
-                    'comment_report' => $weekReports->firstWhere('type', 'comment')?->report['comment'] ?? ''
+                    'comment_report' => static::getCommentForDisplay($weekReports->firstWhere('type', 'comment')),
+                    'comment_status' => static::getCommentStatus($weekReports->firstWhere('type', 'comment'))
                 ];
             }
 
@@ -141,6 +142,34 @@ class WeeklyTestReport extends Model
             })
             ->values()
             ->all();
+    }
+
+    protected static function getCommentForDisplay($commentReport): string
+    {
+        if (!$commentReport || !$commentReport->report) {
+            return '';
+        }
+
+        // 요청이 학부모 영역에서 온 경우 (URL 체크)
+        if (request()->is('parent*')) {
+            // 학부모에게는 status가 'sent'인 코멘트만 표시
+            if (isset($commentReport->report['status']) && $commentReport->report['status'] === 'sent') {
+                return $commentReport->report['comment'] ?? '';
+            }
+            return '';
+        }
+
+        // 관리자/강사 영역에서는 모든 코멘트 표시
+        return $commentReport->report['comment'] ?? '';
+    }
+
+    protected static function getCommentStatus($commentReport): string
+    {
+        if (!$commentReport || !$commentReport->report) {
+            return 'none';
+        }
+
+        return $commentReport->report['status'] ?? 'none';
     }
 
     /**

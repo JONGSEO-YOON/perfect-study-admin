@@ -230,7 +230,10 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
     if (empty($comment)) {
       $report->delete();
     } else {
-      $report->report = ['comment' => $comment];
+      $report->report = [
+        'comment' => $comment,
+        'status' => 'draft'
+      ];
       $report->save();
     }
 
@@ -238,7 +241,55 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
     $this->weeklyReports = $this->getWeeklyReports();
 
     Notification::make()
-      ->title('코멘트가 저장되었습니다.')
+      ->title('코멘트가 임시 저장되었습니다.')
+      ->success()
+      ->send();
+  }
+
+  public function sendCommentToParent($year, $week)
+  {
+    $key = "{$year}-{$week}";
+    $comment = $this->comments[$key] ?? '';
+    
+    if (empty($comment)) {
+      Notification::make()
+        ->title('전달할 코멘트가 없습니다.')
+        ->warning()
+        ->send();
+      return;
+    }
+
+    $report = $this->getWeeklyCommentReport($year, $week);
+    $report->report = [
+      'comment' => $comment,
+      'status' => 'sent',
+      'sent_at' => now()->format('Y-m-d H:i:s')
+    ];
+    $report->save();
+
+    // 저장 후 weeklyReports 새로고침
+    $this->weeklyReports = $this->getWeeklyReports();
+
+    Notification::make()
+      ->title('코멘트가 학부모에게 전달되었습니다.')
+      ->success()
+      ->send();
+  }
+
+  public function deleteComment($year, $week)
+  {
+    $report = $this->getWeeklyCommentReport($year, $week);
+    $report->delete();
+
+    // 로컬 상태도 초기화
+    $key = "{$year}-{$week}";
+    $this->comments[$key] = '';
+
+    // 저장 후 weeklyReports 새로고침
+    $this->weeklyReports = $this->getWeeklyReports();
+
+    Notification::make()
+      ->title('코멘트가 삭제되었습니다.')
       ->success()
       ->send();
   }
