@@ -32,7 +32,7 @@
                     <h3 class="text-lg font-bold text-stone-900">학습현황</h3>
                     <div class="flex items-center space-x-2">
                         <span class="text-sm text-stone-600">{{ $weeklyReport['week_label'] }}</span>
-                        <a href="{{ route('parent.report') }}" class="text-sm text-purple-600 flex items-center">
+                        <a href="{{ route('parent.report') }}" class="text-sm text-fuchsia-600 flex items-center">
                             성적표 상세
                             <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -105,7 +105,7 @@
 
                 @if ($weeklyReport['comment_report'])
                     <!-- 강사 코멘트 -->
-                    <div class="border-t pt-4">
+                    <div class="border-t pt-4 border-fuchsia-600">
                         <h4 class="text-sm font-medium text-stone-700 mb-2">강사 코멘트</h4>
                         <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-2 border border-purple-200">
                             <p class="text-stone-800 text-sm leading-relaxed">{{ $weeklyReport['comment_report'] }}</p>
