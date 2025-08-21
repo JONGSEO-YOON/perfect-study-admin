@@ -58,7 +58,7 @@ class FcmService
                         'title' => $title,
                         'body' => $body
                     ],
-                    'data' => $data,
+                    'data' => array_map('strval', $data),
                     'webpush' => [
                         'headers' => [
                             'Urgency' => 'high'
@@ -81,8 +81,8 @@ class FcmService
             ])->post("https://fcm.googleapis.com/v1/projects/{$this->projectId}/messages:send", $message);
 
 
-            Log::info('FCM Response Status: ' . $response->status());
-            Log::info('FCM Response Body: ' . $response->body());
+            // Log::info('FCM Response Status: ' . $response->status());
+            // Log::info('FCM Response Body: ' . $response->body());
             if ($response->successful()) {
 
                 Log::info('FCM 메시지 전송 성공: ' . $response->body());

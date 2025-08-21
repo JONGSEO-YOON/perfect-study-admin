@@ -152,9 +152,7 @@ class Attendance extends Component
             $body = "{$user->name} 학생이 {$currentTime}에 {$keyWord}하였습니다. ({$attendanceType})";
 
             // 각 부모에게 알림 전송
-            Log::info('Parent phones to send FCM: ', $parentPhones);
             foreach ($parentPhones as $parentPhone) {
-                Log::info('Sending FCM to: ' . $parentPhone);
                 $results = $fcmService->sendToParent(
                     $parentPhone,
                     $title,
