@@ -165,6 +165,22 @@
             try {
                 const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
                 console.log('Service Worker 등록 성공:', registration);
+                
+                // Service Worker 상태 변화 감지
+                if (registration.installing) {
+                    console.log('Service Worker 설치 중...');
+                    await new Promise(resolve => {
+                        registration.installing.addEventListener('statechange', () => {
+                            if (registration.installing.state === 'installed') {
+                                resolve();
+                            }
+                        });
+                    });
+                }
+                
+                await navigator.serviceWorker.ready;
+                console.log('Service Worker 완전히 준비됨');
+                
             } catch (error) {
                 console.error('Service Worker 등록 실패:', error);
             }
@@ -211,13 +227,30 @@
                 throw new Error('알림 권한이 허용되지 않았습니다.');
             }
             
-            // Service Worker 등록 및 대기
-            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-            console.log('Service Worker 등록 성공:', registration);
-            
-            // Service Worker가 완전히 준비될 때까지 대기
+            // Service Worker 준비 확인 및 등록
             await navigator.serviceWorker.ready;
-            console.log('Service Worker 준비 완료');
+            
+            let registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
+            if (!registration) {
+                registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                await navigator.serviceWorker.ready;
+            }
+            
+            console.log('Service Worker 준비 완료:', registration);
+            
+            // Service Worker 활성화 대기 (최대 5초)
+            let attempts = 0;
+            while ((!registration.active || registration.active.state !== 'activated') && attempts < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
+                attempts++;
+            }
+            
+            if (!registration.active || registration.active.state !== 'activated') {
+                throw new Error('Service Worker 활성화 시간 초과');
+            }
+            
+            console.log('Service Worker 활성화 확인됨');
             
             // FCM 토큰 생성
             const currentToken = await getToken(messaging, { 
