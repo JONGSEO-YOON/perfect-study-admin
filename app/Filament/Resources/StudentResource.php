@@ -11,6 +11,7 @@ use App\Models\Classroom;
 use App\Models\GradeSystem;
 use App\Models\School;
 use App\Models\Student;
+use App\Models\TestSheet;
 use App\Models\WrongAnswerNote;
 use Carbon\Carbon;
 use Filament\Forms;
@@ -531,6 +532,129 @@ class StudentResource extends Resource
                             return redirect('/admin/test-sheet/print?student_id=' . $record->id . '&from=' . $data['from'] . '&to=' . $data['to'] . '&is_dont_know_only=' . $isDontKnowOnly);
                         }),
 
+                    Tables\Actions\Action::make('create-wrong-note-test')
+                        ->label('오답 노트 출제')
+                        ->icon('heroicon-m-academic-cap')
+                        ->modalHeading('오답 노트 출제')
+                        ->modalSubmitActionLabel('출제하기')
+                        ->modalWidth('xl')
+                        ->fillForm(fn($record) => [
+                            'from' => now()->subMonth()->format('Y-m-d'),
+                            'to' => now()->format('Y-m-d'),
+                            'is_dont_know_only' => false,
+                            'question_count' => count(WrongAnswerNote::getQuestions(
+                                $record->id,
+                                now()->subMonth()->format('Y-m-d'),
+                                now()->format('Y-m-d')
+                            )),
+                        ])
+                        ->form([
+                            Grid::make(2)
+                                ->schema([
+                                    DatePicker::make('from')
+                                        ->live()
+                                        ->label('출제 시작일')
+                                        ->required()
+                                        ->afterStateUpdated(function ($get, $set, $record) {
+                                            $from = Carbon::parse($get('from'))->startOfDay();
+                                            $to = Carbon::parse($get('to'))->endOfDay();
+                                            $isDontKnowOnly = $get('is_dont_know_only');
+                                            $set(
+                                                'question_count',
+                                                count(WrongAnswerNote::getQuestions(
+                                                    $record->id,
+                                                    $from,
+                                                    $to,
+                                                    $isDontKnowOnly
+                                                ))
+                                            );
+                                        }),
+                                    DatePicker::make('to')
+                                        ->live()
+                                        ->label('출제 종료일')
+                                        ->required()
+                                        ->afterStateUpdated(function ($get, $set, $record) {
+                                            $from = Carbon::parse($get('from'))->startOfDay();
+                                            $to = Carbon::parse($get('to'))->endOfDay();
+                                            $isDontKnowOnly = $get('is_dont_know_only');
+                                            $set(
+                                                'question_count',
+                                                count(WrongAnswerNote::getQuestions(
+                                                    $record->id,
+                                                    $from,
+                                                    $to,
+                                                    $isDontKnowOnly
+                                                ))
+                                            );
+                                        }),
+                                    Toggle::make('is_dont_know_only')
+                                        ->label('[잘 모르겠음] 문제만 출제')
+                                        ->columnSpanFull()
+                                        ->inlineLabel()
+                                        ->inline()
+                                        ->reactive()
+                                        ->live()
+                                        ->afterStateUpdated(function ($get, $set, $record) {
+                                            $from = Carbon::parse($get('from'))->startOfDay();
+                                            $to = Carbon::parse($get('to'))->endOfDay();
+                                            $isDontKnowOnly = $get('is_dont_know_only');
+                                            $set(
+                                                'question_count',
+                                                count(WrongAnswerNote::getQuestions(
+                                                    $record->id,
+                                                    $from,
+                                                    $to,
+                                                    $isDontKnowOnly
+                                                ))
+                                            );
+                                        })
+                                        ->default(false),
+                                    TextInput::make('question_count')
+                                        ->numeric()
+                                        ->label('출제 문제 수')
+                                        ->readOnly()
+                                        ->disabled()
+                                        ->required(),
+                                ])
+                        ])
+                        ->action(function ($record, $data) {
+                            $from = Carbon::parse($data['from'])->startOfDay();
+                            $to = Carbon::parse($data['to'])->endOfDay();
+                            $isDontKnowOnly = $data['is_dont_know_only'];
+                            
+                            // 문제 개수 확인
+                            $questions = WrongAnswerNote::getQuestions(
+                                $record->id,
+                                $from->format('Y-m-d'),
+                                $to->format('Y-m-d'),
+                                $isDontKnowOnly
+                            );
+                            
+                            if (empty($questions)) {
+                                Notification::make()
+                                    ->title('출제될 문제가 없습니다.')
+                                    ->warning()
+                                    ->send();
+                                return;
+                            }
+                            
+                            // 오답 노트 테스트 생성
+                            $testSheet = static::createWrongNoteTestSheet($record, $questions, $from, $to, $isDontKnowOnly);
+                            
+                            if ($testSheet) {
+                                Notification::make()
+                                    ->title('오답 노트 테스트가 생성되었습니다.')
+                                    ->body("총 {$testSheet->total_score}문항의 테스트가 출제되었습니다.")
+                                    ->success()
+                                    ->send();
+                            } else {
+                                Notification::make()
+                                    ->title('테스트 생성에 실패했습니다.')
+                                    ->danger()
+                                    ->send();
+                            }
+                        }),
+
                     Tables\Actions\Action::make('manage-account')
                         ->label(fn($record) => '계정 관리')
                         ->visible(function ($record) {
@@ -630,5 +754,55 @@ class StudentResource extends Resource
             // 'create' => Pages\CreateStudent::route('/create'),
             // 'edit' => Pages\EditStudent::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * 오답 노트 기반으로 테스트 시트를 생성합니다.
+     */
+    public static function createWrongNoteTestSheet(
+        Student $student, 
+        array $questions, 
+        Carbon $from, 
+        Carbon $to, 
+        bool $isDontKnowOnly = false
+    ): ?TestSheet {
+        if (empty($questions)) {
+            return null;
+        }
+
+        // 테스트 이름 생성
+        $periodText = $from->format('m월d일') . ' ~ ' . $to->format('m월d일');
+        $typeText = $isDontKnowOnly ? ' (잘 모르는 문제)' : '';
+        $testName = "{$student->user->name} 학생 오답 노트 테스트 ({$periodText}){$typeText}";
+
+        // TestSheet 생성
+        $testSheet = TestSheet::create([
+            'name' => $testName,
+            'title' => $testName,
+            'sub_title' => $periodText,
+            'tags' => ['오답 노트'],
+            'target_group' => 'student',
+            'target_students' => [$student->user->id],
+            'questions' => $questions,
+            'status' => 'progress', // 바로 시작 상태로
+            'use_score_table' => false,
+            'is_auto' => false,
+            'user_id' => auth()->id(),
+            'start_date' => now(),
+            'end_date' => now()->addWeeks(2), // 2주 후 마감
+            'target_grades' => [],
+            'target_levels' => [],
+            'target_classrooms' => [],
+            'scopes' => ['오답 복습'],
+            'show_explanation_video' => false,
+            'print_layout' => [
+                'title' => $testName,
+                'subTitle' => $periodText,
+                'grade' => $student->gradeSystem->display_name ?? '',
+                'startingNumber' => 1,
+            ],
+        ]);
+
+        return $testSheet;
     }
 }
