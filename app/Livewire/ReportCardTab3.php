@@ -9,9 +9,7 @@ use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -220,6 +218,29 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
     usort($reportData, fn($a, $b) => strcmp($a['date'], $b['date']));
     $report->report = array_values($reportData);
     $report->save();
+  }
+
+  public function saveComment($year, $week)
+  {
+    $key = "{$year}-{$week}";
+    $comment = $this->comments[$key] ?? '';
+    
+    $report = $this->getWeeklyCommentReport($year, $week);
+
+    if (empty($comment)) {
+      $report->delete();
+    } else {
+      $report->report = ['comment' => $comment];
+      $report->save();
+    }
+
+    // 저장 후 weeklyReports 새로고침
+    $this->weeklyReports = $this->getWeeklyReports();
+
+    Notification::make()
+      ->title('코멘트가 저장되었습니다.')
+      ->success()
+      ->send();
   }
 
   public function updateComment($year, $week, $comment)

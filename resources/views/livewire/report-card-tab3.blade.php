@@ -232,12 +232,21 @@
                                                 @endif
                                             @else
                                                 <textarea rows="5"
-                                                    wire:change.throttle="updateComment({{ $weekReport['year'] }}, {{ $weekReport['week'] }}, $event.target.value)"
+                                                    wire:model.defer="comments.{{ $weekReport['year'] }}-{{ $weekReport['week'] }}"
                                                     class="block h-full w-full border-none bg-transparent px-3 py-1.5 text-base text-gray-950 placeholder:text-gray-400 focus:ring-0 disabled:text-gray-500 disabled:[-webkit-text-fill-color:theme(colors.gray.500)] disabled:placeholder:[-webkit-text-fill-color:theme(colors.gray.400)] dark:text-white dark:placeholder:text-gray-500 dark:disabled:text-gray-400 dark:disabled:[-webkit-text-fill-color:theme(colors.gray.400)] dark:disabled:placeholder:[-webkit-text-fill-color:theme(colors.gray.500)] sm:text-sm sm:leading-6">{{ $weekReport['comment_report'] }}</textarea>
                                             @endif
                                         </div>
                                     </div>
                                 </div>
+                                @if (!$this->readonly)
+                                    <div class="flex justify-end mt-2">
+                                        <x-filament::button
+                                            wire:click="saveComment({{ $weekReport['year'] }}, {{ $weekReport['week'] }})"
+                                            size="sm">
+                                            저장
+                                        </x-filament::button>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>
