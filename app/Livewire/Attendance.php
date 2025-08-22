@@ -151,26 +151,22 @@ class Attendance extends Component
             $title = "📍 {$user->name} 학생 {$keyWord} 알림";
             $body = "{$user->name} 학생이 {$currentTime}에 {$keyWord}하였습니다. ({$attendanceType})";
 
-            // 각 부모에게 알림 전송 - curl 방식과 완전 동일하게
             foreach (array_unique($parentPhones) as $parentPhone) {
-                $payload = json_encode([
-                    'parent_phone' => $parentPhone,
-                    'title' => $title,
-                    'body' => $body,
-                    'data' => [
-                        'test' => 'attendance'
+                $fcmService->sendToParent(
+                    $parentPhone,
+                    $title,
+                    $body,
+                    [
+                        'type' => 'attendance',
+                        'student_name' => $user->name,
+                        'student_id' => (string) $student->id,
+                        'action' => $keyWord,
+                        'attendance_type' => $attendanceType,
+                        'time' => $currentTime,
+                        'date' => now()->format('Y-m-d'),
+                        'timestamp' => now()->toISOString()
                     ]
-                ]);
-                
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, 'http://localhost/api/send-push-notification');
-                curl_setopt($ch, CURLOPT_POST, 1);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-                curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-                $result = curl_exec($ch);
-                curl_close($ch);
+                );
             }
         } catch (\Exception $e) {
             // 알림 전송 실패해도 출석 처리는 계속 진행
