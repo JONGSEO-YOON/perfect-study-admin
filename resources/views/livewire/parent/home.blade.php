@@ -159,23 +159,18 @@
 
 @script
 <script>
-    // 페이지 로드 시 Service Worker 등록
+    // 페이지 로드 시 Service Worker 등록 (한 번만)
     document.addEventListener('DOMContentLoaded', async () => {
         if ('serviceWorker' in navigator) {
             try {
-                const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                console.log('Service Worker 등록 성공:', registration);
+                // 이미 등록된 Service Worker가 있는지 확인
+                const existingRegistration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
                 
-                // Service Worker 상태 변화 감지
-                if (registration.installing) {
-                    console.log('Service Worker 설치 중...');
-                    await new Promise(resolve => {
-                        registration.installing.addEventListener('statechange', () => {
-                            if (registration.installing.state === 'installed') {
-                                resolve();
-                            }
-                        });
-                    });
+                if (!existingRegistration) {
+                    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                    console.log('Service Worker 등록 성공:', registration);
+                } else {
+                    console.log('Service Worker 이미 등록됨:', existingRegistration);
                 }
                 
                 await navigator.serviceWorker.ready;

@@ -142,7 +142,12 @@ class Attendance extends Component
                 $parentPhones[] = $student->phone_mother;
             }
 
-            if (empty($parentPhones)) {
+            // 중복 제거 및 로깅
+            $uniqueParentPhones = array_unique($parentPhones);
+            \Log::info("Parent phones to send FCM: ", $parentPhones);
+            \Log::info("Unique parent phones: ", $uniqueParentPhones);
+
+            if (empty($uniqueParentPhones)) {
                 \Log::info("학생 {$user->name}의 부모 연락처가 없습니다.");
                 return;
             }
@@ -151,7 +156,7 @@ class Attendance extends Component
             $title = "📍 {$user->name} 학생 {$keyWord} 알림";
             $body = "{$user->name} 학생이 {$currentTime}에 {$keyWord}하였습니다. ({$attendanceType})";
 
-            foreach (array_unique($parentPhones) as $parentPhone) {
+            foreach ($uniqueParentPhones as $parentPhone) {
                 $fcmService->sendToParent(
                     $parentPhone,
                     $title,
