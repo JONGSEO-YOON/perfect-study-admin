@@ -21,6 +21,7 @@ use App\Livewire\Parent\Login;
 use App\Livewire\Parent\Main;
 use App\Livewire\Parent\Home;
 use App\Livewire\Parent\Report;
+use App\Livewire\Parent\ReportDetail;
 use App\Livewire\Parent\Attendance as ParentAttendance;
 use App\Livewire\Parent\Notice;
 
@@ -31,6 +32,7 @@ Route::prefix('parent')->group(function () {
     Route::get('/notice/{id}', Notice::class)->name('parent.notice')->middleware(ParentSession::class);
     Route::get('/attendance', ParentAttendance::class)->name('parent.attendance');
     Route::get('/report', Report::class)->name('parent.report');
+    Route::get('/report-detail/{weekKey}', ReportDetail::class)->name('parent.report-detail')->middleware(ParentSession::class);
 });
 
 Route::get('/attendance', Attendance::class)->name('attendance');

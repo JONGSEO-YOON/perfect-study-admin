@@ -82,6 +82,7 @@ class WeeklyTestReport extends Model
                 $weekDate = Carbon::now()->setISODate($year, $week, 1);
                 $weekReports = $reports->get($key, collect());
 
+                $weekRange = static::getWeekRange($year, $week);
                 $allWeeks[$key] = [
                     'year' => $year,
                     'week' => $week,
@@ -91,7 +92,8 @@ class WeeklyTestReport extends Model
                         $weekDate->format('n'),
                         floor(($weekDate->format('d') - 1) / 7) + 1
                     ),
-                    'week_range' => static::getWeekRange($year, $week),
+                    'week_range' => $weekRange,
+                    'week_key' => $weekRange,
                     'test_report' => static::formatReport($weekReports->firstWhere('type', 'test')),
                     'homework_report' => static::formatReport($weekReports->firstWhere('type', 'homework')),
                     'attendance_report' => static::formatReport($weekReports->firstWhere('type', 'attendance')),

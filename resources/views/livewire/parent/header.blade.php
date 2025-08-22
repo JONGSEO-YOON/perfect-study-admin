@@ -3,7 +3,7 @@
         <div class="flex justify-between items-center h-16">
             <!-- Logo and Brand -->
             <div class="flex items-center ">
-                <a href="{{ route('parent.home') }}">
+                <a href="{{ route('parent.home') }}" wire:navigate>
                     <img src="{{ asset('logo.png') }}" alt="퍼펙트 스터디" class="h-10">
                 </a>
             </div>
