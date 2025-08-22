@@ -5,15 +5,15 @@ namespace App\Livewire\Parent;
 use App\Models\Student;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
-use App\Models\WeeklyTestReport;
+use Carbon\Carbon;
 
 class ReportDetail extends Component
 {
     public $weekKey;
     public $student;
     public $classroomId;
-    public $weeklyReport;
-    public $comments;
+    public $activeTab = 1;
+    public $weekLabel;
 
     public function mount($weekKey)
     {
@@ -26,54 +26,39 @@ class ReportDetail extends Component
         
         $this->classroomId = $this->student->classrooms->first()?->id ?? null;
         
-        $this->loadWeeklyReport();
+        $this->generateWeekLabel();
     }
 
-    protected function loadWeeklyReport()
+    private function generateWeekLabel()
     {
-        if (!$this->classroomId) {
-            $this->weeklyReport = null;
-            return;
-        }
-
-        // week_key 형태: "2024-08-19 ~ 2024-08-25"를 "2024-08-19/2024-08-25" 형태로 변환
-        $dates = explode(' ~ ', $this->weekKey);
-        if (count($dates) < 2) {
-            $this->weeklyReport = null;
-            return;
-        }
-        $formattedWeekKey = $dates[0] . '/' . $dates[1];
-        
-        $weeklyReports = WeeklyTestReport::getFormattedWeeklyReport(
-            $this->student,
-            $formattedWeekKey,
-            $formattedWeekKey,
-            $this->classroomId
-        );
-
-        $this->weeklyReport = $weeklyReports->first();
-
-        if ($this->weeklyReport) {
-            $key = "{$this->weeklyReport['year']}-{$this->weeklyReport['week']}";
-            $commentReport = $this->getWeeklyCommentReport($this->weeklyReport['year'], $this->weeklyReport['week']);
-            
-            if (isset($commentReport->report['status']) && $commentReport->report['status'] === 'sent') {
-                $this->comments[$key] = $commentReport->report['comment'] ?? '';
-            } else {
-                $this->comments[$key] = '';
+        if ($this->weekKey) {
+            // weekKey 파싱: "2024-08-19 ~ 2024-08-25"
+            $dates = explode(' ~ ', $this->weekKey);
+            if (count($dates) >= 2) {
+                $startDate = Carbon::parse($dates[0]);
+                $year = $startDate->year; // 2024 (Report.php와 동일하게 전체 연도 사용)
+                $month = $startDate->format('n'); // Report.php와 동일한 형식
+                $weekOfMonth = $startDate->weekOfMonth; // Carbon 내장 메소드 사용
+                
+                $this->weekLabel = "{$year}년 {$month}월 {$weekOfMonth}주차";
+                return;
             }
         }
+        
+        // 기본값: 현재 날짜 기준
+        $now = Carbon::now();
+        $year = $now->year;
+        $month = $now->format('n');
+        $weekOfMonth = $now->weekOfMonth;
+        
+        $this->weekLabel = "{$year}년 {$month}월 {$weekOfMonth}주차";
     }
 
-    protected function getWeeklyCommentReport(int $year, int $week): WeeklyTestReport
+
+
+    public function setActiveTab($tabNumber)
     {
-        return WeeklyTestReport::firstOrNew([
-            'student_id' => $this->student->id,
-            'classroom_id' => $this->classroomId,
-            'year' => $year,
-            'week' => $week,
-            'type' => 'comment'
-        ]);
+        $this->activeTab = $tabNumber;
     }
 
     #[Layout('layouts.parent')]
