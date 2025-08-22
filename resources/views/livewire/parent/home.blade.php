@@ -44,12 +44,14 @@
                     <h3 class="text-lg font-bold text-stone-900">학습현황</h3>
                     <div class="flex items-center space-x-2">
                         <span class="text-sm text-stone-600">{{ $weeklyReport['week_label'] }}</span>
-                        <a href="{{ route('parent.report') }}" class="text-sm text-fuchsia-600 flex items-center">
-                            성적표 상세
-                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                            </svg>
-                        </a>
+                        @if ($weeklyReport['test_report'] || $weeklyReport['homework_report'])
+                            <a href="{{ route('parent.report-detail', ['weekKey' => urlencode($weeklyReport['week_key'])]) }}" class="text-sm text-fuchsia-600 flex items-center" wire:navigate>
+                                성적표 상세
+                                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </a>
+                        @endif
                     </div>
                 </div>
 
