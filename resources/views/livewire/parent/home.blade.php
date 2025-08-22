@@ -159,28 +159,34 @@
 
 @script
 <script>
-    // 페이지 로드 시 Service Worker 등록 (한 번만)
-    document.addEventListener('DOMContentLoaded', async () => {
+    console.log('스크립트 블록 실행됨');
+    
+    // Service Worker 등록 함수
+    async function registerServiceWorker() {
+        console.log('registerServiceWorker 함수 호출됨');
+        
         if ('serviceWorker' in navigator) {
+            console.log('Service Worker 지원됨');
             try {
-                // 이미 등록된 Service Worker가 있는지 확인
-                const existingRegistration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
-                
-                if (!existingRegistration) {
-                    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                    console.log('Service Worker 등록 성공:', registration);
-                } else {
-                    console.log('Service Worker 이미 등록됨:', existingRegistration);
-                }
+                const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                console.log('Service Worker 등록 성공:', registration);
                 
                 await navigator.serviceWorker.ready;
                 console.log('Service Worker 완전히 준비됨');
                 
+                return registration;
             } catch (error) {
                 console.error('Service Worker 등록 실패:', error);
+                throw error;
             }
+        } else {
+            console.log('Service Worker 지원되지 않음');
+            throw new Error('Service Worker가 지원되지 않습니다.');
         }
-    });
+    }
+    
+    // 즉시 실행
+    registerServiceWorker().catch(console.error);
     // 로그아웃 시 로컬스토리지 정리
     $wire.on('clear-local-storage', () => {
         try {
@@ -298,8 +304,11 @@
 
     // Livewire 이벤트로 FCM 초기화
     $wire.on('enable-fcm', async () => {
+        console.log('enable-fcm 이벤트 수신됨');
         try {
+            console.log('FCM 초기화 시작');
             const token = await initializeFCM();
+            console.log('FCM 초기화 완료, 토큰:', token);
             
             if (token) {
                 // 로컬 스토리지에 알림 상태 저장
@@ -307,6 +316,7 @@
                 localStorage.setItem('fcm_token', token);
                 
                 // Livewire에 성공 알림
+                console.log('fcmEnabled 호출');
                 $wire.call('fcmEnabled');
             } else {
                 throw new Error('토큰 생성에 실패했습니다.');
