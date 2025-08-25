@@ -36,7 +36,7 @@ const props = defineProps({
   },
   customLogo: {
     type: String,
-    default: "/test_removed.png",
+    default: "",
   },
   startingNumber: {
     type: Number,

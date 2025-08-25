@@ -45,7 +45,7 @@ const explanationPages = ref([]);
 
 const startingNumber = ref(1);
 
-const customLogo = ref("/test_removed.png");
+const customLogo = ref("");
 const grade = ref("");
 
 const calculateInitialMargin = (question) => {
@@ -584,7 +584,7 @@ const restorePrintLayout = (layoutData) => {
 
   subTitle.value = layoutData.subTitle ?? "";
 
-  customLogo.value = layoutData.customLogo ?? "/test_removed.png";
+  customLogo.value = layoutData.customLogo ?? "";
   grade.value = layoutData.grade ?? "";
 
   startingNumber.value = layoutData.startingNumber ?? 1;

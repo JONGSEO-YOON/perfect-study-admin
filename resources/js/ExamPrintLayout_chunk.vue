@@ -44,7 +44,7 @@ const explanationPages = ref([]);
 
 const startingNumber = ref(1);
 
-const customLogo = ref("/test_removed.png");
+const customLogo = ref("");
 const grade = ref("중1");
 
 // 청크 처리 관련 변수 추가

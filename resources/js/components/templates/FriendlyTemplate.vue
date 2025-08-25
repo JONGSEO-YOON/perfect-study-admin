@@ -36,7 +36,7 @@ const props = defineProps({
   },
   customLogo: {
     type: String,
-    default: "/test_removed.png",
+    default: "",
   },
   startingNumber: {
     type: Number,
@@ -123,7 +123,7 @@ const props = defineProps({
 
     <!-- 첫 페이지일 경우 헤더 표시 -->
     <template v-if="pageIndex === 0">
-      <img :src="customLogo" alt="" class="absolute max-w-40 max-h-12 right-20 top-20" />
+      <img v-if="customLogo != ''" :src="customLogo" alt="" class="absolute max-w-40 max-h-12 right-20 top-20" />
       <div class="border-b pb-2 mb-3" :style="{ borderColor: color }">
         <div class="p-2 rounded-lg mb-2 relative">
           <!-- 귀여운 곰돌이 아이콘 (헤더 왼쪽) -->
