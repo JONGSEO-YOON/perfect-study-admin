@@ -153,7 +153,7 @@
         @endif
         <!-- Footer Actions -->
         <div class="max-w-6xl mx-auto px-2 sm:px-4 lg:px-6 pb-6 mt-16 w-full space-y-3">
-            {{-- <button wire:click="enableNotifications" class="w-full py-3 text-center bg-violet-500 hover:bg-violet-600 text-white rounded-lg font-semibold">알림 켜기</button> --}}
+            <button wire:click="enableNotifications" class="w-full py-3 text-center bg-violet-500 hover:bg-violet-600 text-white rounded-lg font-semibold">알림 켜기</button>
             <button wire:click="logout" class="w-full py-3 text-center hover:bg-stone-100 border border-violet-500 rounded-lg text-violet-500 font-semibold">로그아웃</button>
         </div>
     </main>
@@ -188,7 +188,7 @@
     }
     
     // 즉시 실행
-    registerServiceWorker().catch(console.error);
+    // registerServiceWorker().catch(console.error);
     // 로그아웃 시 로컬스토리지 정리
     $wire.on('clear-local-storage', () => {
         try {
@@ -201,9 +201,11 @@
     // FCM 초기화 함수들
     async function initializeFCM() {
         try {
+            console.log('1. Firebase SDK import 시작');
             // Firebase SDK 동적 import
             const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
             const { getMessaging, getToken, isSupported } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js');
+            console.log('2. Firebase SDK import 완료');
             
             const firebaseConfig = {
                 apiKey: "AIzaSyBVxK6CCtCGABUWqCBt3DqAo_yF6bQ5m94",
@@ -214,61 +216,81 @@
                 appId: "1:847897044429:web:7b566a588c912882ba1084"
             };
             
+            console.log('3. Firebase App 초기화 시작');
             const firebaseApp = initializeApp(firebaseConfig);
+            console.log('4. Firebase App 초기화 완료');
             
             // FCM 지원 확인
+            console.log('5. FCM 지원 확인 시작');
             const supported = await isSupported();
+            console.log('6. FCM 지원 확인 결과:', supported);
             if (!supported) {
                 throw new Error('FCM이 지원되지 않는 브라우저입니다.');
             }
             
+            console.log('7. messaging 객체 생성 시작');
             const messaging = getMessaging(firebaseApp);
+            console.log('8. messaging 객체 생성 완료');
             
             // 알림 권한 요청
+            console.log('9. 알림 권한 요청 시작');
             const permission = await Notification.requestPermission();
+            console.log('10. 알림 권한 결과:', permission);
             if (permission !== 'granted') {
                 throw new Error('알림 권한이 허용되지 않았습니다.');
             }
             
-            // Service Worker 준비 확인 및 등록
-            await navigator.serviceWorker.ready;
-            
+            // Service Worker 등록 확인 및 등록
+            console.log('11. Service Worker 등록 확인 시작');
             let registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
+            console.log('12. 기존 Service Worker 등록:', registration);
             if (!registration) {
+                console.log('13. 새 Service Worker 등록 시작');
                 registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                await navigator.serviceWorker.ready;
+                console.log('14. 새 Service Worker 등록 완료');
             }
             
-            console.log('Service Worker 준비 완료:', registration);
+            console.log('15. Service Worker 준비 확인 시작');
+            await navigator.serviceWorker.ready;
+            console.log('16. Service Worker ready 완료');
+            
+            console.log('17. Service Worker 준비 완료:', registration);
             
             // Service Worker 활성화 대기 (최대 5초)
+            console.log('18. Service Worker 활성화 확인 시작');
             let attempts = 0;
             while ((!registration.active || registration.active.state !== 'activated') && attempts < 50) {
+                console.log(`19-${attempts}. Service Worker 활성화 대기 중... 상태:`, registration.active?.state);
                 await new Promise(resolve => setTimeout(resolve, 100));
                 registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
                 attempts++;
             }
             
             if (!registration.active || registration.active.state !== 'activated') {
+                console.error('20. Service Worker 활성화 시간 초과, 최종 상태:', registration.active?.state);
                 throw new Error('Service Worker 활성화 시간 초과');
             }
             
-            console.log('Service Worker 활성화 확인됨');
+            console.log('21. Service Worker 활성화 확인됨');
             
             // FCM 토큰 생성
+            console.log('22. FCM 토큰 생성 시작');
             const currentToken = await getToken(messaging, { 
                 vapidKey: 'BB4OAtniiO1lEmvxHzpLlpn9zQuCJ0Sc9uIEfanUmpPBWAkJEYYIc5bsWz5A0mylGxWw3vgpHBUxIwcKpLqwYTk'
             });
+            console.log('23. FCM 토큰 생성 완료');
             
             if (currentToken) {
-                console.log('FCM 토큰:', currentToken);
+                console.log('24. FCM 토큰:', currentToken);
                 
                 // 서버에 토큰 전송
+                console.log('25. 서버에 토큰 전송 시작');
                 await sendTokenToServer(currentToken);
+                console.log('26. 서버에 토큰 전송 완료');
                 
                 return currentToken;
             } else {
-                console.log('FCM 토큰을 생성할 수 없습니다.');
+                console.log('24. FCM 토큰을 생성할 수 없습니다.');
                 return null;
             }
         } catch (error) {
