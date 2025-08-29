@@ -7,7 +7,6 @@ use Guava\Calendar\ValueObjects\CalendarEvent;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use App\Models\AttendanceLog;
-use App\Models\WeeklyTestReport;
 
 #[Layout('layouts.public')]
 class AttendanceCalendar extends CalendarWidget
@@ -32,58 +31,37 @@ class AttendanceCalendar extends CalendarWidget
     public function getEvents(array $fetchInfo = []): Collection | array
     {
         $attendanceLogs = AttendanceLog::where('student_id', $this->studentId)
-            ->whereBetween('attendance_date', [$fetchInfo['startStr'], $fetchInfo['endStr']])
-            ->orderBy('attendance_date', 'asc')
+            ->whereBetween('created_at', [$fetchInfo['startStr'] . ' 00:00:00', $fetchInfo['endStr'] . ' 23:59:59'])
+            ->orderBy('created_at', 'asc')
             ->get();
 
         $events = [];
         foreach ($attendanceLogs as $attendanceLog) {
-            if ($attendanceLog->check_in_time) {
-                $isoString = $attendanceLog->attendance_date . 'T' . $attendanceLog->check_in_time . 'Z';
-                $events[] = CalendarEvent::make()
-                    ->title('(보충)등원')
-                    ->start($isoString)
-                    ->end($isoString)
-                    ->backgroundColor('#8b5cf6');
+            $title = $attendanceLog->type === 'in' ? '등원' : '하원';
+            $color = $attendanceLog->type === 'in' ? '#8b5cf6' : '#a78bfa';
+            
+            // 정규/보충 구분
+            if ($attendanceLog->classroom_id) {
+                $title = '(정규)' . $title;
+                $color = $attendanceLog->type === 'in' ? '#8b5cf6' : '#a78bfa';
+            } else {
+                $title = '(보충)' . $title;
+                $color = $attendanceLog->type === 'in' ? '#06b6d4' : '#22d3ee';
             }
-            if ($attendanceLog->check_out_time) {
-                $isoString = $attendanceLog->attendance_date . 'T' . $attendanceLog->check_out_time . 'Z';
-                $events[] = CalendarEvent::make()
-                    ->title('(보충)하원')
-                    ->start($isoString)
-                    ->end($isoString)
-                    ->backgroundColor('#a78bfa');
+            
+            // 지각 표시
+            if ($attendanceLog->is_late) {
+                $title .= ' (지각)';
+                $color = '#f59e0b';
             }
+
+            $isoString = $attendanceLog->created_at->toISOString();
+            $events[] = CalendarEvent::make()
+                ->title($title)
+                ->start($isoString)
+                ->end($isoString)
+                ->backgroundColor($color);
         }
-
-        $weeklyTestReports = WeeklyTestReport::where('student_id', $this->studentId)
-            ->where('type', 'attendance')
-            ->whereBetween('created_at', [$fetchInfo['startStr'], $fetchInfo['endStr']])
-            ->get();
-
-        foreach ($weeklyTestReports as $weeklyTestReport) {
-            $reportData = $weeklyTestReport->report;
-            foreach ($reportData as $report) {
-                if (isset($report['check_in_time']) && $report['check_in_time'] !== null) {
-                    $isoString = $report['date'] . 'T' . $report['check_in_time'] . 'Z';
-                    $events[] = CalendarEvent::make()
-                        ->title('(정규)등원')
-                        ->start($isoString)
-                        ->end($isoString)
-                        ->backgroundColor('#06b6d4');
-                }
-                if (isset($report['check_out_time']) && $report['check_out_time'] !== null) {
-                    $isoString = $report['date'] . 'T' . $report['check_out_time'] . 'Z';
-                    $events[] = CalendarEvent::make()
-                        ->title('(정규)하원')
-                        ->start($isoString)
-                        ->end($isoString)
-                        ->backgroundColor('#22d3ee');
-                }
-            }
-        }
-
-
 
         return $events;
     }

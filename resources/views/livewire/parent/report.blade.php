@@ -4,7 +4,18 @@
         <!-- Filter Section -->
         <div class="bg-fuchsia-50 rounded-lg shadow-sm p-3 sm:p-4 mb-4">
             <h2 class="text-lg sm:text-xl font-bold text-stone-900 mb-3">성적표 조회</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+                <div>
+                    <label for="classroom_id" class="block text-sm font-medium text-fuchsia-600">클래스 선택</label>
+                    <select name="classroom_id" id="classroom_id"
+                        wire:model.live="classroomId"
+                        class="mt-1 block w-full rounded-md border-transparent bg-fuchsia-500 text-white shadow-sm focus:border-fuchsia-300 focus:ring-fuchsia-300 sm:text-sm text-sm">
+                        <option value="">클래스를 선택하세요</option>
+                        @foreach($classroomOptions as $id => $name)
+                            <option value="{{ $id }}">{{ $name }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <div>
                     <label for="date_from" class="block text-sm font-medium text-fuchsia-600">시작 날짜</label>
                     <select name="date_from" id="date_from"

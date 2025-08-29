@@ -104,18 +104,20 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @if ($weekReport['attendance_report'])
-                                @foreach ($weekReport['attendance_report'] as $attendance)
+                            @if (isset($weekReport['attendance_logs']) && $weekReport['attendance_logs'] && $weekReport['attendance_logs']->isNotEmpty())
+                                @foreach ($weekReport['attendance_logs'] as $log)
                                     <tr class="hover:bg-gray-50 text-sm text-gray-900 text-center">
                                         <td class="px-6 py-3 border-b">
-                                            {{ Carbon\Carbon::parse($attendance['date'])->format('m월d일') }}
+                                            {{ $log->created_at->format('m월d일') }}
                                         </td>
                                         <td class="px-6 py-3 border-b">
-                                            <div class="w-[198px]">{{ $attendance['check_in_time'] ?? '' }}(등원) - {{ $attendance['check_out_time'] ?? '' }}(하원)</div>
+                                            <div class="w-[198px]">{{ $log->created_at->format('H:i') }}</div>
                                         </td>
-                                        <td class="px-6 py-3 border-b">{{ $attendance['attendance'] }}</td>
                                         <td class="px-6 py-3 border-b">
-                                            <div class="w-[150px]">{{ $attendance['memo2'] }}</div>
+                                            정규{{ $log->type === 'in' ? '등원' : '하원' }}{{ $log->is_late ? ' (지각)' : '' }}
+                                        </td>
+                                        <td class="px-6 py-3 border-b">
+                                            <div class="w-[150px]">{{ $log->memo ?? '' }}</div>
                                         </td>
                                         @if ($this->readonly)
                                             <td class="border-b">
@@ -123,9 +125,12 @@
                                             </td>
                                         @else
                                             <td class="px-6 py-3 border-b">
-                                                <div class="">
+                                                <div class="flex gap-1">
                                                     <x-filament::icon-button
-                                                        wire:click="mountAction('deleteAttendance', { date: '{{ $attendance['date'] }}' })"
+                                                        wire:click="mountAction('editAttendance', { log_id: '{{ $log->id }}' })"
+                                                        icon="heroicon-m-pencil-square" color="warning" />
+                                                    <x-filament::icon-button
+                                                        wire:click="mountAction('deleteAttendance', { date: '{{ $log->created_at->format('Y-m-d') }}' })"
                                                         icon="heroicon-m-trash" color="danger" />
                                                 </div>
                                             </td>

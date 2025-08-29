@@ -24,15 +24,8 @@ class Home extends Component
             ->orWhere('phone_mother', $parent_phone)
             ->first();
 
-        // AttendanceLog와 WeeklyTestReport 모델의 메서드 사용
-        $attendanceLogData = AttendanceLog::getTodayAttendanceForStudent($this->student->id);
-        $weeklyTestReportData = WeeklyTestReport::getTodayAttendanceReportForStudent($this->student->id);
-
-        // 두 데이터를 합치고 시간순으로 정렬
-        $this->attendances = collect(array_merge($attendanceLogData, $weeklyTestReportData))
-            ->sortBy('time')
-            ->values()
-            ->all();
+        // AttendanceLog 모델의 메서드 사용
+        $this->attendances = AttendanceLog::getTodayAttendanceForStudent($this->student->id);
 
         $this->notices = Notice::whereJsonContains('target_groups', '학부모')
             ->orWhereJsonContains('target_groups', '"학부모"')
@@ -47,14 +40,7 @@ class Home extends Component
     public function setStudent($id)
     {
         $this->student = Student::find($id);
-        $attendanceLogData = AttendanceLog::getTodayAttendanceForStudent($this->student->id);
-        $weeklyTestReportData = WeeklyTestReport::getTodayAttendanceReportForStudent($this->student->id);
-
-        // 두 데이터를 합치고 시간순으로 정렬
-        $this->attendances = collect(array_merge($attendanceLogData, $weeklyTestReportData))
-            ->sortBy('time')
-            ->values()
-            ->all();
+        $this->attendances = AttendanceLog::getTodayAttendanceForStudent($this->student->id);
 
         $this->notices = Notice::whereJsonContains('target_groups', '학부모')
             ->orWhereJsonContains('target_groups', '"학부모"')

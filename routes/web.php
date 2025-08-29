@@ -77,3 +77,6 @@ Route::get('/student/report-card/print', StudentReportCardPrint::class)
 
 Route::get('/admin/test-sheet/print', TestSheetPrint::class)
     ->name('test-sheet.print');
+
+
+Route::view('/payment', 'payment');

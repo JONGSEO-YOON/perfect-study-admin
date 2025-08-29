@@ -101,20 +101,24 @@
             <h4 class="text-sm font-medium text-stone-900 mb-2 sm:mb-3">범례</h4>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-xs sm:text-sm">
                 <div class="flex items-center">
-                    <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mr-1.5 sm:mr-2" style="background-color: #06b6d4;"></div>
+                    <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mr-1.5 sm:mr-2" style="background-color: #8b5cf6;"></div>
                     <span class="text-stone-700">(정규)등원</span>
                 </div>
                 <div class="flex items-center">
-                    <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mr-1.5 sm:mr-2" style="background-color: #22d3ee;"></div>
+                    <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mr-1.5 sm:mr-2" style="background-color: #a78bfa;"></div>
                     <span class="text-stone-700">(정규)하원</span>
                 </div>
                 <div class="flex items-center">
-                    <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mr-1.5 sm:mr-2" style="background-color: #8b5cf6;"></div>
+                    <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mr-1.5 sm:mr-2" style="background-color: #06b6d4;"></div>
                     <span class="text-stone-700">(보충)등원</span>
                 </div>
                 <div class="flex items-center">
-                    <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mr-1.5 sm:mr-2" style="background-color: #a78bfa;"></div>
+                    <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mr-1.5 sm:mr-2" style="background-color: #22d3ee;"></div>
                     <span class="text-stone-700">(보충)하원</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mr-1.5 sm:mr-2" style="background-color: #f59e0b;"></div>
+                    <span class="text-stone-700">지각</span>
                 </div>
             </div>
         </div>

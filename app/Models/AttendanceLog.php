@@ -9,16 +9,15 @@ class AttendanceLog extends Model
 {
     protected $fillable = [
         'student_id',
-        'attendance_date',
-        'check_in_time',
-        'check_out_time',
+        'classroom_id',
+        'type',
+        'is_late',
+        'memo',
     ];
 
-    // protected $casts = [
-    //     'attendance_date' => 'date',
-    //     'check_in_time' => 'datetime',
-    //     'check_out_time' => 'datetime',
-    // ];
+    protected $casts = [
+        'is_late' => 'boolean',
+    ];
 
     /**
      * 학생과의 관계
@@ -29,34 +28,44 @@ class AttendanceLog extends Model
     }
 
     /**
-     * 출석했는지 확인
+     * 교실과의 관계
      */
-    public function isPresent(): bool
+    public function classroom(): BelongsTo
     {
-        return !is_null($this->check_in_time);
+        return $this->belongsTo(Classroom::class);
     }
 
     /**
-     * 하원했는지 확인
+     * 등원인지 확인
      */
-    public function isCheckedOut(): bool
+    public function isCheckIn(): bool
     {
-        return !is_null($this->check_out_time);
+        return $this->type === 'in';
     }
 
     /**
-     * 24시간 형식의 시간을 오전/오후 형식으로 변환
+     * 하원인지 확인
      */
-    public static function formatTimeToKorean($time)
+    public function isCheckOut(): bool
     {
-        if (empty($time)) {
-            return '';
-        }
+        return $this->type === 'out';
+    }
 
-        // 시간 부분만 추출 (초 제거)
-        $timeParts = explode(':', $time);
-        $hour = (int) $timeParts[0];
-        $minute = $timeParts[1] ?? '00';
+    /**
+     * created_at을 한국어 형식으로 변환
+     */
+    public function getFormattedTimeAttribute(): string
+    {
+        return $this->created_at->format('H:i');
+    }
+
+    /**
+     * created_at을 한국어 오전/오후 형식으로 변환
+     */
+    public function getKoreanTimeAttribute(): string
+    {
+        $hour = $this->created_at->hour;
+        $minute = $this->created_at->format('i');
 
         if ($hour < 12) {
             $period = '오전';
@@ -77,25 +86,32 @@ class AttendanceLog extends Model
         $attendances = [];
 
         $attendanceLogs = static::where('student_id', $studentId)
-            ->whereDate('attendance_date', now())
-            ->orderBy('attendance_date', 'asc')
+            ->whereDate('created_at', now())
+            ->orderBy('created_at', 'asc')
             ->get();
 
         foreach ($attendanceLogs as $attendanceLog) {
-            if ($attendanceLog->check_in_time) {
-                $attendances[] = [
-                    'title' => '(보충)등원',
-                    'time' => static::formatTimeToKorean($attendanceLog->check_in_time),
-                    'color' => '#8b5cf6',
-                ];
+            $title = $attendanceLog->type === 'in' ? '등원' : '하원';
+            $color = $attendanceLog->type === 'in' ? '#06b6d4' : '#22d3ee';
+            
+            // 정규/보충 구분
+            if ($attendanceLog->classroom_id) {
+                $title = '(정규)' . $title;
+                $color = $attendanceLog->type === 'in' ? '#8b5cf6' : '#a78bfa';
+            } else {
+                $title = '(보충)' . $title;
             }
-            if ($attendanceLog->check_out_time) {
-                $attendances[] = [
-                    'title' => '(보충)하원',
-                    'time' => static::formatTimeToKorean($attendanceLog->check_out_time),
-                    'color' => '#a78bfa',
-                ];
+            
+            if ($attendanceLog->is_late) {
+                $title .= ' (지각)';
+                $color = '#f59e0b';
             }
+
+            $attendances[] = [
+                'title' => $title,
+                'time' => $attendanceLog->korean_time,
+                'color' => $color,
+            ];
         }
 
         return $attendances;
@@ -109,27 +125,33 @@ class AttendanceLog extends Model
         $attendances = [];
 
         $attendanceLogs = static::where('student_id', $studentId)
-            ->whereBetween('attendance_date', [$startDate, $endDate])
-            ->orderBy('attendance_date', 'asc')
+            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->orderBy('created_at', 'asc')
             ->get();
 
         foreach ($attendanceLogs as $attendanceLog) {
-            if ($attendanceLog->check_in_time) {
-                $attendances[] = [
-                    'date' => $attendanceLog->attendance_date,
-                    'title' => '(보충)등원',
-                    'time' => static::formatTimeToKorean($attendanceLog->check_in_time),
-                    'color' => '#8b5cf6',
-                ];
+            $title = $attendanceLog->type === 'in' ? '등원' : '하원';
+            $color = $attendanceLog->type === 'in' ? '#06b6d4' : '#22d3ee';
+            
+            // 정규/보충 구분
+            if ($attendanceLog->classroom_id) {
+                $title = '(정규)' . $title;
+                $color = $attendanceLog->type === 'in' ? '#8b5cf6' : '#a78bfa';
+            } else {
+                $title = '(보충)' . $title;
             }
-            if ($attendanceLog->check_out_time) {
-                $attendances[] = [
-                    'date' => $attendanceLog->attendance_date,
-                    'title' => '(보충)하원',
-                    'time' => static::formatTimeToKorean($attendanceLog->check_out_time),
-                    'color' => '#a78bfa',
-                ];
+            
+            if ($attendanceLog->is_late) {
+                $title .= ' (지각)';
+                $color = '#f59e0b';
             }
+
+            $attendances[] = [
+                'date' => $attendanceLog->created_at->format('Y-m-d'),
+                'title' => $title,
+                'time' => $attendanceLog->korean_time,
+                'color' => $color,
+            ];
         }
 
         return $attendances;
@@ -142,80 +164,67 @@ class AttendanceLog extends Model
     {
         $attendances = [];
 
-        // AttendanceLog 데이터 조회
         $attendanceLogs = static::where('student_id', $studentId)
-            ->whereBetween('attendance_date', [$startDate, $endDate])
-            ->orderBy('attendance_date', 'asc')
+            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->orderBy('created_at', 'asc')
             ->get();
 
         foreach ($attendanceLogs as $attendanceLog) {
-            $date = \Carbon\Carbon::parse($attendanceLog->attendance_date)->format('n월 j일');
-            $dayOfWeek = \Carbon\Carbon::parse($attendanceLog->attendance_date)->locale('ko')->dayName;
+            $dateKey = $attendanceLog->created_at->format('Y-m-d');
+            $date = $attendanceLog->created_at->format('n월 j일');
+            $dayOfWeek = $attendanceLog->created_at->locale('ko')->dayName;
 
-            if (!isset($attendances[$attendanceLog->attendance_date])) {
-                $attendances[$attendanceLog->attendance_date] = [
+            if (!isset($attendances[$dateKey])) {
+                $attendances[$dateKey] = [
                     'date' => $date,
                     'day_of_week' => $dayOfWeek,
                     'records' => []
                 ];
             }
 
-            if ($attendanceLog->check_in_time) {
-                $attendances[$attendanceLog->attendance_date]['records'][] = [
-                    'title' => '(보충)등원',
-                    'time' => static::formatTimeToKorean($attendanceLog->check_in_time),
-                    'color' => '#8b5cf6',
-                ];
+            $title = $attendanceLog->type === 'in' ? '등원' : '하원';
+            $color = $attendanceLog->type === 'in' ? '#06b6d4' : '#22d3ee';
+            
+            // 정규/보충 구분
+            if ($attendanceLog->classroom_id) {
+                $title = '(정규)' . $title;
+                $color = $attendanceLog->type === 'in' ? '#8b5cf6' : '#a78bfa';
+            } else {
+                $title = '(보충)' . $title;
             }
-            if ($attendanceLog->check_out_time) {
-                $attendances[$attendanceLog->attendance_date]['records'][] = [
-                    'title' => '(보충)하원',
-                    'time' => static::formatTimeToKorean($attendanceLog->check_out_time),
-                    'color' => '#a78bfa',
-                ];
+            
+            if ($attendanceLog->is_late) {
+                $title .= ' (지각)';
+                $color = '#f59e0b';
             }
-        }
 
-        // WeeklyTestReport 데이터 조회
-        $weeklyTestReports = WeeklyTestReport::where('student_id', $studentId)
-            ->where('type', 'attendance')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->get();
-
-        foreach ($weeklyTestReports as $weeklyTestReport) {
-            $reportData = $weeklyTestReport->report;
-            foreach ($reportData as $report) {
-                $reportDate = $report['date'];
-                $date = \Carbon\Carbon::parse($reportDate)->format('n월 j일');
-                $dayOfWeek = \Carbon\Carbon::parse($reportDate)->locale('ko')->dayName;
-
-                if (!isset($attendances[$reportDate])) {
-                    $attendances[$reportDate] = [
-                        'date' => $date,
-                        'day_of_week' => $dayOfWeek,
-                        'records' => []
-                    ];
-                }
-
-                if (isset($report['check_in_time']) && $report['check_in_time'] !== null) {
-                    $attendances[$reportDate]['records'][] = [
-                        'title' => '(정규)등원',
-                        'time' => WeeklyTestReport::formatTimeToKorean($report['check_in_time']),
-                        'color' => '#06b6d4',
-                    ];
-                }
-                if (isset($report['check_out_time']) && $report['check_out_time'] !== null) {
-                    $attendances[$reportDate]['records'][] = [
-                        'title' => '(정규)하원',
-                        'time' => WeeklyTestReport::formatTimeToKorean($report['check_out_time']),
-                        'color' => '#22d3ee',
-                    ];
-                }
-            }
+            $attendances[$dateKey]['records'][] = [
+                'title' => $title,
+                'time' => $attendanceLog->korean_time,
+                'color' => $color,
+            ];
         }
 
         // 날짜 역순으로 정렬
         krsort($attendances);
         return $attendances;
+    }
+
+    /**
+     * 주차별 정규 출결 데이터 조회 (성적표용)
+     */
+    public static function getRegularAttendanceByWeek($studentId, $classroomId, $year, $week)
+    {
+        $startOfWeek = now()->setISODate($year, $week)->startOfWeek();
+        $endOfWeek = now()->setISODate($year, $week)->endOfWeek();
+
+        return static::where('student_id', $studentId)
+            ->where('classroom_id', $classroomId)
+            ->whereBetween('created_at', [
+                $startOfWeek->format('Y-m-d H:i:s'),
+                $endOfWeek->format('Y-m-d H:i:s')
+            ])
+            ->orderBy('created_at', 'asc')
+            ->get();
     }
 }

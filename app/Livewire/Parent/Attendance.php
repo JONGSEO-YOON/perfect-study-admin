@@ -6,8 +6,6 @@ use Livewire\Component;
 use Livewire\Attributes\On;
 use App\Models\Student;
 use App\Models\AttendanceLog;
-use App\Models\WeeklyTestReport;
-use Carbon\Carbon;
 use Livewire\Attributes\Layout;
 
 class Attendance extends Component

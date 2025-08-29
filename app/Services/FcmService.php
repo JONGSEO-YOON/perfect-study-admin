@@ -50,7 +50,6 @@ class FcmService
     {
         try {
             $accessToken = $this->getAccessToken();
-
             $message = [
                 'message' => [
                     'token' => $token,
@@ -74,21 +73,32 @@ class FcmService
                     ]
                 ]
             ];
+            Log::info('FCM 메시지 data: ' . json_encode($data));
 
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $accessToken,
-                'Content-Type' => 'application/json'
-            ])->post("https://fcm.googleapis.com/v1/projects/{$this->projectId}/messages:send", $message);
+            $headers = [
+                'Authorization: Bearer ' . $accessToken,
+                'Content-Type: application/json'
+            ];
 
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, "https://fcm.googleapis.com/v1/projects/{$this->projectId}/messages:send");
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($message));
+            $res = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
 
-            // Log::info('FCM Response Status: ' . $response->status());
-            // Log::info('FCM Response Body: ' . $response->body());
-            if ($response->successful()) {
+            Log::info('FCM Response Status: ' . $httpCode);
+            Log::info('FCM Response Body: ' . $res);
 
-                Log::info('FCM 메시지 전송 성공: ' . $response->body());
+            if ($httpCode >= 200 && $httpCode < 300) {
+                Log::info('FCM 메시지 전송 성공: ' . $res);
                 return true;
             } else {
-                Log::error('FCM 메시지 전송 실패: ' . $response->body());
+                Log::error('FCM 메시지 전송 실패: ' . $res);
                 return false;
             }
         } catch (Exception $e) {

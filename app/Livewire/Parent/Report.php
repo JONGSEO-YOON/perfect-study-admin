@@ -18,6 +18,7 @@ class Report extends Component
     public $weekOptions;
     public $weeklyReports;
     public $comments;
+    public $classroomOptions = [];
 
     public function mount()
     {
@@ -30,7 +31,11 @@ class Report extends Component
         $endOfWeek = $now->endOfWeek(7)->format('Y-m-d');
         $this->dateFrom = "{$startOfWeek}/{$endOfWeek}";
         $this->dateUntil = "{$startOfWeek}/{$endOfWeek}";
+        
+        // 학생이 등록된 모든 클래스 옵션 생성
+        $this->classroomOptions = $this->getClassroomOptions();
         $this->classroomId = $this->student->classrooms->first()?->id ?? null;
+        
         $this->weekOptions = $this->getWeekOptions();
         $this->weeklyReports = $this->getWeeklyReports();
         $this->initializeComments();
@@ -46,7 +51,12 @@ class Report extends Component
 
     public function updatedDateUntil()
     {
+        $this->weeklyReports = $this->getWeeklyReports();
+        $this->initializeComments();
+    }
 
+    public function updatedClassroomId()
+    {
         $this->weeklyReports = $this->getWeeklyReports();
         $this->initializeComments();
     }
@@ -72,6 +82,20 @@ class Report extends Component
             }
         }
 
+        return $options;
+    }
+
+    public function getClassroomOptions()
+    {
+        if (!$this->student) {
+            return [];
+        }
+        
+        $options = [];
+        foreach ($this->student->classrooms as $classroom) {
+            $options[$classroom->id] = $classroom->name;
+        }
+        
         return $options;
     }
 

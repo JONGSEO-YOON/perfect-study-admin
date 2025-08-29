@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\WeeklyTestReport;
+use App\Models\AttendanceLog;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -53,12 +54,63 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
     if (!$this->classroomId) {
       return collect();
     }
-    return WeeklyTestReport::getFormattedWeeklyReport(
-      $this->student,
-      $this->dateFrom,
-      $this->dateUntil,
-      $this->classroomId
-    );
+    
+    // 날짜 범위를 주차 범위로 변환
+    // dateFrom이 "2025-08-25/2025-08-31" 형식일 경우 첫 번째 날짜만 사용
+    $dateFromPart = strpos($this->dateFrom, '/') !== false ? 
+        explode('/', $this->dateFrom)[0] : $this->dateFrom;
+    $dateUntilPart = strpos($this->dateUntil, '/') !== false ? 
+        explode('/', $this->dateUntil)[1] : $this->dateUntil;
+        
+    $startDate = Carbon::parse($dateFromPart);
+    $endDate = Carbon::parse($dateUntilPart);
+    
+    $weeklyReports = collect();
+    
+    // 주차별로 반복
+    $current = $startDate->copy()->startOfWeek();
+    $maxIterations = 10; // 무한루프 방지
+    $iterations = 0;
+    
+    while ($current->lte($endDate) && $iterations < $maxIterations) {
+      $iterations++;
+      $year = $current->year;
+      $week = $current->isoWeek();
+      
+      // AttendanceLog에서 해당 주차 데이터 조회
+      $attendanceData = AttendanceLog::getRegularAttendanceByWeek(
+        $this->student->id,
+        $this->classroomId,
+        $year,
+        $week
+      );
+      
+      // 코멘트 데이터 조회
+      $commentReport = $this->getWeeklyCommentReport($year, $week);
+      $commentData = $commentReport->report ?? null;
+      $commentContent = $commentData['comment'] ?? null;
+      $commentStatus = $commentData['status'] ?? null;
+      
+      // 빈 주차라도 기본 구조 생성
+      $weekStartDate = $current->format('Y-m-d');
+      $weekEndDate = $current->copy()->endOfWeek()->format('Y-m-d');
+      
+      $weeklyReports->push([
+        'year' => $year,
+        'week' => $week,
+        'week_range' => $weekStartDate . '/' . $weekEndDate,
+        'week_label' => $year . '년 ' . $week . '주차 (' . $current->format('m/d') . ' ~ ' . $current->copy()->endOfWeek()->format('m/d') . ')',
+        'test_report' => null, // 테스트 리포트는 별도 처리
+        'attendance_logs' => $attendanceData, // 새로운 AttendanceLog 컬렉션
+        'homework_report' => null, // 숙제 리포트는 별도 처리
+        'comment_report' => $commentContent, // 실제 코멘트 내용
+        'comment_status' => $commentStatus // 실제 코멘트 상태
+      ]);
+      
+      $current->addWeek();
+    }
+    
+    return $weeklyReports;
   }
 
   protected function initializeComments()
@@ -104,62 +156,37 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
             ->default(Carbon::now()->format('Y-m-d'))
             ->required()
             ->columnSpanFull(),
-          TimePicker::make('check_in_time')
-            ->label('등원 시간')
+          TimePicker::make('time')
+            ->label('시간')
             ->default(Carbon::now()->format('H:i:s'))
             ->required(),
-          TimePicker::make('check_out_time')
-            ->label('하원 시간')
-            ->required(),
-          // Select::make('attendance')
-          //   ->label('출석')
-          //   ->columnStart(1)
-          //   ->default('정규등원 (출석)')
-          //   ->options([
-          //     '정규등원 (출석)' => '정규등원 (출석)',
-          //     '정규등원 (지각)' => '정규등원 (지각)',
-          //     '정규등원 (결석)' => '정규등원 (결석)',
-          //     '보충등원 (출석)' => '보충등원 (출석)',
-          //     '보충등원 (지각)' => '보충등원 (지각)',
-          //     '보충등원 (결석)' => '보충등원 (결석)',
-          //   ])
-          //   ->required(),
-          // Textarea::make('memo1')
-          //   ->label('지각, 결석 사유')
-          //   ->columnSpanFull(),
-          Textarea::make('memo1')
+          \Filament\Forms\Components\Select::make('type')
+            ->label('타입')
+            ->options([
+              'in' => '등원',
+              'out' => '하원'
+            ])
+            ->required()
+            ->default('in'),
+          \Filament\Forms\Components\Toggle::make('is_late')
+            ->label('지각 여부')
+            ->default(false),
+          Textarea::make('memo')
             ->label('비고')
             ->columnSpanFull()
         ])
       ])
       ->action(function ($data) {
-
-        $report = $this->getWeeklyAttendanceReport($data['date']);
-        $reportData = $report->report ?? [];
-
-        $attendanceData = [
-          'date' => $data['date'],
-          'attendance' => '정규',
-          'check_in_time' => $data['check_in_time'],
-          'check_out_time' => $data['check_out_time'],
-          'memo1' => $data['memo1'],
-          'memo2' => null
-        ];
-
-        $exists = false;
-        foreach ($reportData as $key => $attendance) {
-          if ($attendance['date'] === $data['date']) {
-            $reportData[$key] = $attendanceData;
-            $exists = true;
-            break;
-          }
-        }
-
-        if (!$exists) {
-          $reportData[] = $attendanceData;
-        }
-
-        $this->saveAttendanceReport($report, $reportData);
+        // 출석 기록 생성
+        AttendanceLog::create([
+          'student_id' => $this->student->id,
+          'classroom_id' => $this->classroomId,
+          'type' => $data['type'],
+          'is_late' => $data['is_late'],
+          'memo' => $data['memo'],
+          'created_at' => $data['date'] . ' ' . $data['time'],
+          'updated_at' => now()
+        ]);
 
         Notification::make()
           ->title('출석이 추가되었습니다.')
@@ -167,6 +194,75 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
           ->send();
 
         $this->weeklyReports = $this->getWeeklyReports();
+      });
+  }
+
+  public function editAttendanceAction(): Action
+  {
+    return Action::make('editAttendance')
+      ->modalHeading('출석 수정')
+      ->modalWidth('md')
+      ->modalSubmitActionLabel('수정')
+      ->form([
+        Grid::make(2)->schema([
+          DatePicker::make('date')
+            ->label('날짜')
+            ->required()
+            ->columnSpanFull(),
+          TimePicker::make('time')
+            ->label('시간')
+            ->required(),
+          \Filament\Forms\Components\Select::make('type')
+            ->label('타입')
+            ->options([
+              'in' => '등원',
+              'out' => '하원'
+            ])
+            ->required(),
+          \Filament\Forms\Components\Toggle::make('is_late')
+            ->label('지각 여부')
+            ->default(false),
+          Textarea::make('memo')
+            ->label('비고')
+            ->columnSpanFull()
+        ])
+      ])
+      ->fillForm(function ($arguments) {
+        $logId = $arguments['log_id'];
+        $log = AttendanceLog::find($logId);
+        
+        if (!$log) {
+          return [];
+        }
+        
+        return [
+          'date' => $log->created_at->format('Y-m-d'),
+          'time' => $log->created_at->format('H:i:s'),
+          'type' => $log->type,
+          'is_late' => $log->is_late,
+          'memo' => $log->memo
+        ];
+      })
+      ->action(function ($data, $arguments) {
+        $logId = $arguments['log_id'];
+        $log = AttendanceLog::find($logId);
+        
+        if ($log) {
+          $log->update([
+            'type' => $data['type'],
+            'is_late' => $data['is_late'],
+            'memo' => $data['memo'],
+            'created_at' => $data['date'] . ' ' . $data['time'],
+            'updated_at' => now()
+          ]);
+
+          Notification::make()
+            ->title('출석이 수정되었습니다.')
+            ->success()
+            ->send();
+
+          $this->weeklyReports = $this->getWeeklyReports();
+        }
       });
   }
 
@@ -178,14 +274,12 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
       ->action(function ($arguments) {
         $this->arguments = $arguments;
         $date = $arguments['date'];
-        $report = $this->getWeeklyAttendanceReport($date);
-
-        $reportData = array_filter(
-          $report->report ?? [],
-          fn($attendance) => $attendance['date'] !== $date
-        );
-
-        $this->saveAttendanceReport($report, $reportData);
+        
+        // 해당 날짜의 모든 출석 기록 삭제
+        AttendanceLog::where('student_id', $this->student->id)
+          ->where('classroom_id', $this->classroomId)
+          ->whereDate('created_at', $date)
+          ->delete();
 
         Notification::make()
           ->title('출석이 삭제되었습니다.')
@@ -196,29 +290,14 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
       });
   }
 
-  protected function getWeeklyAttendanceReport(string $date): WeeklyTestReport
+  protected function getAttendanceLogsForDate(string $date)
   {
-    $carbon = Carbon::parse($date);
-    return WeeklyTestReport::firstOrNew([
-      'student_id' => $this->student->id,
-      'classroom_id' => $this->classroomId,
-      'year' => $carbon->year,
-      'week' => $carbon->isoWeek(),
-      'type' => 'attendance'
-    ]);
+    return AttendanceLog::where('student_id', $this->student->id)
+      ->where('classroom_id', $this->classroomId)
+      ->whereDate('created_at', $date)
+      ->get();
   }
 
-  protected function saveAttendanceReport(WeeklyTestReport $report, array $reportData): void
-  {
-    if (empty($reportData)) {
-      $report->delete();
-      return;
-    }
-
-    usort($reportData, fn($a, $b) => strcmp($a['date'], $b['date']));
-    $report->report = array_values($reportData);
-    $report->save();
-  }
 
   public function saveComment($year, $week)
   {

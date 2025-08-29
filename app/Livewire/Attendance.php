@@ -6,7 +6,6 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use App\Models\User;
 use App\Models\AttendanceLog;
-use App\Models\WeeklyTestReport;
 use App\Services\FcmService;
 use Illuminate\Support\Facades\Log;
 
@@ -22,7 +21,7 @@ class Attendance extends Component
         return view('livewire.attendance');
     }
 
-    public function checkAttendance()
+    public function checkAttendance($type = 'in')
     {
         // 출석체크 로직 구현
         $phoneNumbers = preg_replace('/[^0-9]/', '', $this->phone);
@@ -34,82 +33,33 @@ class Attendance extends Component
             && $user !== null
             && $user->isStudent()
         ) {
-            // 여기에 실제 출석체크 로직을 구현하세요
-            // 예: 데이터베이스에 출석 기록 저장
+            // 정규 수업 교실 ID 찾기
             $classroom_id = null;
-            $attendance_type = '정규';
             $currentTime = now();
             $currentDay = strtolower($currentTime->format('D')); // mon, tue, wed, thu, fri, sat, sun
 
             foreach ($user->userable->classrooms as $classroom) {
                 $timetable = $classroom->timetable;
-
-                // 오늘 해당 요일에 스케줄이 있는지만 확인
+                // 오늘 해당 요일에 스케줄이 있는지 확인
                 if (isset($timetable[$currentDay])) {
                     $classroom_id = $classroom->id;
                     break;
                 }
             }
 
-            if ($classroom_id) {
-                $report = WeeklyTestReport::firstOrNew([
-                    'student_id' => $user->userable->id,
-                    'classroom_id' => $classroom_id,
-                    'year' => now()->year,
-                    'week' => now()->isoWeek(),
-                    'type' => 'attendance'
-                ]);
-                $reportData = $report->report ?? [];
+            // 출석 로그 저장
+            AttendanceLog::create([
+                'student_id' => $user->userable->id,
+                'classroom_id' => $classroom_id, // 정규 수업이 있을 때만 classroom_id 저장
+                'type' => $type,
+                'is_late' => false,
+            ]);
 
-                $exists = false;
-                foreach ($reportData as $key => $attendance) {
-                    if ($attendance['date'] === now()->format('Y-m-d')) {
+            $key_word = $type === 'in' ? '등원' : '하원';
+            $attendance_type = $classroom_id ? '정규' : '보충';
 
-                        $reportData[$key]['check_out_time'] = now()->format('H:i:s');
-                        $exists = true;
-                        break;
-                    }
-                }
-
-                if (!$exists) {
-                    $reportData[] = [
-                        'date' => now()->format('Y-m-d'),
-                        'attendance' => '정규',
-                        'check_in_time' => now()->format('H:i:s'),
-                        'check_out_time' => null,
-                        'memo1' => null,
-                        'memo2' => null
-                    ];
-                }
-
-                usort($reportData, fn($a, $b) => strcmp($a['date'], $b['date']));
-                $report->report = array_values($reportData);
-                $report->save();
-                $key_word = $exists ? '하원' : '출석';
-            } else {
-                $attendance_type = '보충';
-                $attendanceLog = AttendanceLog::where('student_id', $user->userable->id)
-                    ->where('attendance_date', now()->format('Y-m-d'))
-                    ->latest()
-                    ->first();
-                if ($attendanceLog && $attendanceLog->check_out_time === null) {
-
-                    $attendanceLog->check_out_time = now()->format('H:i:s');
-                    $attendanceLog->save();
-                    $key_word = '하원';
-                } else {
-                    AttendanceLog::create([
-                        'student_id' => $user->userable->id,
-                        'attendance_date' => now()->format('Y-m-d'),
-                        'check_in_time' => now()->format('H:i:s')
-                    ]);
-                    $key_word = '출석';
-                }
-            }
-
-
-            $this->message = $user->name . '님의 ' . $key_word . '(' . $attendance_type . ')이 확인되었습니다.';
-            $this->messageType = 'success';
+            $this->message = '(' . $user->name . ')님의(' . $attendance_type  . $key_word . ')이 확인되었습니다.';
+            $this->messageType = $type === 'in' ? 'success-in' : 'success-out';
             $this->phone = '010-';
 
             // 부모에게 푸시 알림 전송
@@ -157,39 +107,43 @@ class Attendance extends Component
             $body = "{$user->name} 학생이 {$currentTime}에 {$keyWord}하였습니다. ({$attendanceType})";
 
             foreach ($uniqueParentPhones as $parentPhone) {
-                // $fcmService->sendToParent(
-                //     $parentPhone,
-                //     $title,
-                //     $body,
-                //     [
-                //         'type' => 'attendance',
-                //         'student_name' => $user->name,
-                //         'student_id' => (string) $student->id,
-                //         'action' => $keyWord,
-                //         'attendance_type' => $attendanceType,
-                //         'time' => $currentTime,
-                //         'date' => now()->format('Y-m-d'),
-                //         'timestamp' => now()->toISOString()
-                //     ]
-                // );
-                $payload = json_encode([
-                    'parent_phone' => $parentPhone,
-                    'title' => $title,
-                    'body' => $body,
-                    'data' => [
-                        'type' => 'attendance'
+                $fcmService->sendToParent(
+                    $parentPhone,
+                    $title,
+                    $body,
+                    [
+                        'type' => 'attendance',
+                        'title' => $title,
+                        'body' => $body,
+                        // 'student_name' => $user->name,
+                        // 'student_id' => (string) $student->id,
+                        // 'action' => $keyWord,
+                        // 'attendance_type' => $attendanceType,
+                        // 'time' => $currentTime,
+                        // 'date' => now()->format('Y-m-d'),
+                        // 'timestamp' => now()->toISOString()
                     ]
-                ]);
+                );
+                // $payload = json_encode([
+                //     'parent_phone' => $parentPhone,
+                //     'title' => $title,
+                //     'body' => $body,
+                //     'data' => [
+                //         'type' => 'attendance',
+                //         'title' => $title,
+                //         'body' => $body,
+                //     ]
+                // ]);
 
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, 'http://localhost/api/send-push-notification');
-                curl_setopt($ch, CURLOPT_POST, 1);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-                curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-                $result = curl_exec($ch);
-                curl_close($ch);
+                // $ch = curl_init();
+                // curl_setopt($ch, CURLOPT_URL, 'http://localhost/api/send-push-notification');
+                // curl_setopt($ch, CURLOPT_POST, 1);
+                // curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+                // curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+                // curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                // curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+                // $result = curl_exec($ch);
+                // curl_close($ch);
             }
         } catch (\Exception $e) {
             // 알림 전송 실패해도 출석 처리는 계속 진행

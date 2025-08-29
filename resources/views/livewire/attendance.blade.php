@@ -64,7 +64,8 @@
                 <div
                     class="col-span-3 mb-6 text-center text-base font-medium"
                     :class="{
-                    'text-green-600': $wire.messageType === 'success',
+                    'text-green-600': $wire.messageType === 'success-in',
+                    'text-orange-600': $wire.messageType === 'success-out',
                     'text-red-600': $wire.messageType === 'error',
                     'text-violet-600': $wire.messageType === 'info'
                 }"
@@ -157,13 +158,24 @@
                 >
                     ←
                 </button>
+                <div class="col-span-3 flex gap-2">
+                      <button
+                    type="button"
+                    class="col-span-1 w-full rounded-2xl bg-gradient-to-r from-green-500 to-emerald-500 py-4 text-lg font-bold text-white shadow-md transition-all hover:from-green-600 hover:to-emerald-600 active:from-green-700 active:to-emerald-700"
+                    wire:click="checkAttendance('in')"
+                >
+                    등원
+                </button>
+                <div class="col-span-1"></div>
                 <button
                     type="button"
-                    class="col-span-3 w-full max-w-sm rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 py-4 text-xl font-bold text-white shadow-md transition-all hover:from-violet-600 hover:to-fuchsia-600 active:from-violet-700 active:to-fuchsia-700"
-                    wire:click="checkAttendance"
+                    class="col-span-1 w-full rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 py-4 text-lg font-bold text-white shadow-md transition-all hover:from-orange-600 hover:to-red-600 active:from-orange-700 active:to-red-700"
+                    wire:click="checkAttendance('out')"
                 >
-                    확인
+                    하원
                 </button>
+                </div>
+              
             </div>
         </div>
 
