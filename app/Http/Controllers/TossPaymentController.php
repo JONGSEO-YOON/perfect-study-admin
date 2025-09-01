@@ -20,15 +20,15 @@ class TossPaymentController extends Controller
   /**
    * 토스페이먼츠 시크릿 키
    */
-  protected $secretKey = 'test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6';
+  protected $secretKey;
 
   /**
    * 생성자
    */
-  // public function __construct()
-  // {
-  //   $this->secretKey = config('services.toss.secret_key');
-  // }
+  public function __construct()
+  {
+    $this->secretKey = config('services.toss.secret_key');
+  }
 
   /**
    * 결제 성공 처리
@@ -41,7 +41,15 @@ class TossPaymentController extends Controller
       'amount' => 'required|numeric',
     ]);
 
-    $payment = Payment::where('order_id', $validated['orderId'])->first();
+    $payment = Payment::where([['order_id', $validated['orderId']], ['payment_status', '!=', 'paid']])->first();
+
+    if (!$payment) {
+      return redirect('/payment/' . $payment->id . '/result?failed_message=결제 정보를 찾을 수 없습니다.');
+    }
+
+    if ($payment->amount != $validated['amount']) {
+      return redirect('/payment/' . $payment->id . '/result?failed_message=결제 금액이 일치하지 않습니다.');
+    }
 
     try {
       // 토스 API를 통해 결제 승인 요청
@@ -71,7 +79,7 @@ class TossPaymentController extends Controller
         'order_id' => $validated['orderId'],
         'error' => $e->getMessage()
       ]);
-      return redirect()->to(url('/admin?failed_message=' . urlencode($e->getMessage())));
+      return redirect('/payment/' . $payment->id . '/result?failed_message=' . urlencode($e->getMessage()));
     }
   }
 

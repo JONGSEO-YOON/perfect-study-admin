@@ -88,10 +88,10 @@
         const button = document.getElementById("payment-button");
         // const coupon = document.getElementById("coupon-box");
         // ------  결제위젯 초기화 ------
-        const clientKey = "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm";
+        const clientKey = $wire.TOSS_CLIENT_KEY;
         const tossPayments = TossPayments(clientKey);
         // 회원 결제
-        const customerKey = "M9N_vguOnI108sfR17wMH";
+        const customerKey = $wire.TOSS_CUSTOMER_KEY;
         const widgets = tossPayments.widgets({
           customerKey,
         });

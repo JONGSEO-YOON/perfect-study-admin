@@ -39,6 +39,9 @@ class AppServiceProvider extends ServiceProvider
                     ->label('문제 관리')
                     ->icon('heroicon-m-clipboard-document-list'),
                 NavigationGroup::make()
+                    ->label('결제')
+                    ->icon('heroicon-m-credit-card'),
+                NavigationGroup::make()
                     ->label('자료실')
                     ->icon('heroicon-m-archive-box'),
                 NavigationGroup::make()

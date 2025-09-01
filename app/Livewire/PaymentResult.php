@@ -9,6 +9,7 @@ class PaymentResult extends Component
 {
     public $paymentId;
     public $payment;
+    public $failed_message;
 
     public function mount($paymentId)
     {
@@ -18,6 +19,8 @@ class PaymentResult extends Component
         if (!$this->payment) {
             abort(404, '결제 정보를 찾을 수 없습니다.');
         }
+
+        $this->failed_message = request('failed_message');
     }
 
     public function render()

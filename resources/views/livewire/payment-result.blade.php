@@ -29,7 +29,7 @@
                     결제에 실패했습니다
                 </h2>
                 <p class="mt-2 text-sm text-gray-600">
-                    결제 정보를 확인해주세요.
+                    {{ $failed_message ?? '결제 정보를 확인해주세요.' }}
                 </p>
             @endif
         </div>

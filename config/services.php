@@ -39,4 +39,10 @@ return [
         'key' => env('JUSO_API_KEY'),
     ],
 
+    'toss' => [
+        'client_key' => env('TOSS_CLIENT_KEY'),
+        'customer_key' => env('TOSS_CUSTOMER_KEY'),
+        'secret_key' => env('TOSS_SECRET_KEY'),
+    ],
+
 ];
