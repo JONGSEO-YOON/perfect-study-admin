@@ -356,13 +356,34 @@ class QuestionResource extends Resource
                         ->get()->pluck('name', 'id')
                 )
                 ->visible(fn(Get $get) => !$get('is_sub_question'))
-                ->placeholder('교재를 선택하세요.'),
+                ->placeholder('교재를 선택하세요.')
+                ->afterStateUpdated(function ($state, Set $set) {
+                    if ($state) {
+                        $maxSeq = \App\Models\Question::where('material_id', $state)->max('seq') ?? 0;
+                        $set('seq', $maxSeq + 1);
+                    }
+                }),
             TextInput::make('seq')
                 ->label('문제번호')
                 ->required()
                 ->numeric()
                 ->visible(fn(Get $get) => $get('material_id'))
-                ->placeholder('교재를 선택하세요.'),
+                ->placeholder('교재를 선택하세요.')
+                ->default(function (Get $get) {
+                    if ($materialId = $get('material_id')) {
+                        $maxSeq = \App\Models\Question::where('material_id', $materialId)->max('seq') ?? 0;
+                        return $maxSeq + 1;
+                    }
+                    return null;
+                })
+                ->afterStateHydrated(function ($component, $state, Get $get) {
+                    // 새 레코드이고 seq가 비어있고 material_id가 있는 경우에만 자동 설정
+                    if (!$state && !$component->getRecord()?->exists && $get('material_id')) {
+                        $materialId = $get('material_id');
+                        $maxSeq = \App\Models\Question::where('material_id', $materialId)->max('seq') ?? 0;
+                        $component->state($maxSeq + 1);
+                    }
+                }),
 
             Toggle::make('is_public')
                 ->columnSpanFull()
@@ -696,6 +717,18 @@ class QuestionResource extends Resource
                     Tables\Actions\DeleteAction::make()
                         ->visible(fn($record) => $record->is_editable)
                         ->modalHeading('문제 삭제')
+                        ->after(function ($record) {
+                            // 교재가 있는 문제인 경우 seq 재정리
+                            if ($record->material_id) {
+                                $questions = \App\Models\Question::where('material_id', $record->material_id)
+                                    ->orderBy('seq')
+                                    ->get();
+
+                                foreach ($questions as $index => $question) {
+                                    $question->update(['seq' => $index + 1]);
+                                }
+                            }
+                        })
 
                 ]),
                 // Tables\Actions\EditAction::make()
