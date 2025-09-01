@@ -194,7 +194,7 @@ class PaymentResource extends Resource
                     ->label('결제링크')
                     ->icon('heroicon-o-link')
                     ->color('primary')
-                    ->visible(fn($record) => $record->payment_status === 'pending')
+                    ->visible(fn($record) => $record->payment_status != 'paid')
                     ->modalContent(function ($record) {
                         $paymentUrl = route('payment', ['paymentId' => $record->id]);
                         return view('filament.copy-payment-link', [
