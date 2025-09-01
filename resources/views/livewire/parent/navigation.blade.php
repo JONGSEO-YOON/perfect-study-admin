@@ -11,6 +11,9 @@
             <a href="{{ route('parent.report') }}"  class="py-2 px-4 font-medium text-sm" wire:navigate wire:current="border-b-2 border-violet-500 text-violet-600">
                 성적표
             </a>
+             <a href="{{ route('parent.payment') }}"  class="py-2 px-4 font-medium text-sm" wire:navigate wire:current="border-b-2 border-violet-500 text-violet-600">
+                결제
+            </a>
         </div>
     </div>
 </nav>

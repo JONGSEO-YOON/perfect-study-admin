@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Payment extends Model
 {
@@ -27,7 +26,6 @@ class Payment extends Model
     protected function casts(): array
     {
         return [
-            'amount' => 'decimal:2',
             'paid_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];
@@ -43,8 +41,29 @@ class Payment extends Model
         return $this->belongsTo(Student::class);
     }
 
-    public function tossPayments(): HasMany
+    /**
+     * 결제 성공 처리
+     *
+     * @param string $paymentKey
+     * @param string $log
+     * @return bool
+     */
+    public function markAsSuccess(string $paymentKey, string $log = null, $method = null): bool
     {
-        return $this->hasMany(TossPayment::class);
+        return $this->update([
+            'payment_status' => 'paid',
+            'payment_method' => $method,
+            'payment_key' => $paymentKey,
+            'payment_log' => $log,
+            'approved_at' => now(),
+        ]);
+    }
+
+    public function markAsFailed(string $log = null): bool
+    {
+        return $this->update([
+            'payment_status' => 'failed',
+            'payment_log' => $log,
+        ]);
     }
 }

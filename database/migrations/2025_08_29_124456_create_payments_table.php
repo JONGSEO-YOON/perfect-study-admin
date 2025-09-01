@@ -15,12 +15,15 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id');
             $table->foreignId('student_id');
-            $table->decimal('amount', 10, 2);
-            $table->string('payment_status')->default('pending'); // pending, paid, cancelled, completed 등
+            $table->string('order_id')->unique()->comment('토스 결제 주문번호');
+            $table->integer('amount');
+            $table->string('payment_status')->default('pending'); // pending, paid, cancelled 등
             $table->string('payment_method')->nullable();
             $table->string('billing_name');
             $table->text('billing_memo')->nullable();
-            $table->timestamp('paid_at')->nullable();
+            $table->string('payment_key')->nullable()->comment('토스 결제 승인 후 받는 결제 키');
+            $table->text('payment_log')->nullable()->comment('결제 로그 (영수증용)');
+            $table->timestamp('approved_at')->nullable()->comment('결제 승인 시간');
             $table->timestamp('cancelled_at')->nullable();
             $table->text('cancel_reason')->nullable();
             $table->timestamps();

@@ -1,0 +1,62 @@
+{
+  "request": {
+    "paymentType": "NORMAL",
+    "orderId": "ps-2820250829150637",
+    "paymentKey": "tgen_20250829153605YB9n9",
+    "amount": "15000"
+  },
+  "response": {
+    "mId": "tgen_docs",
+    "lastTransactionKey": "txrd_a01k3t8n8z5j1r830d5d9r13xkb",
+    "paymentKey": "tgen_20250829153605YB9n9",
+    "orderId": "ps-2820250829150637",
+    "orderName": "\uacb0\uc81c \ud14c\uc2a4\ud2b8",
+    "taxExemptionAmount": 0,
+    "status": "DONE",
+    "requestedAt": "2025-08-29T15:36:05+09:00",
+    "approvedAt": "2025-08-29T15:36:23+09:00",
+    "useEscrow": false,
+    "cultureExpense": false,
+    "card": {
+      "issuerCode": "61",
+      "acquirerCode": "61",
+      "number": "40457700****070*",
+      "installmentPlanMonths": 0,
+      "isInterestFree": false,
+      "interestPayer": null,
+      "approveNo": "00000000",
+      "useCardPoint": false,
+      "cardType": "\uc2e0\uc6a9",
+      "ownerType": "\uac1c\uc778",
+      "acquireStatus": "READY",
+      "amount": 15000
+    },
+    "virtualAccount": null,
+    "transfer": null,
+    "mobilePhone": null,
+    "giftCertificate": null,
+    "cashReceipt": null,
+    "cashReceipts": null,
+    "discount": null,
+    "cancels": null,
+    "secret": "ps_DnyRpQWGrNq9vEyEzRYlVKwv1M9E",
+    "type": "NORMAL",
+    "easyPay": null,
+    "country": "KR",
+    "failure": null,
+    "isPartialCancelable": true,
+    "receipt": {
+      "url": "https://dashboard-sandbox.tosspayments.com/receipt/redirection?transactionId=tgen_20250829153605YB9n9&ref=PX"
+    },
+    "checkout": { "url": "https://api.tosspayments.com/v1/payments/tgen_20250829153605YB9n9/checkout" },
+    "currency": "KRW",
+    "totalAmount": 15000,
+    "balanceAmount": 15000,
+    "suppliedAmount": 13636,
+    "vat": 1364,
+    "taxFreeAmount": 0,
+    "method": "\uce74\ub4dc",
+    "version": "2022-11-16",
+    "metadata": null
+  }
+}
