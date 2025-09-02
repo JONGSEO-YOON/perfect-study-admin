@@ -61,7 +61,58 @@
                 {{ $this->addQuestion }}
                 {{ $this->confirmQuestion }}
             </div>
-            <div class="flex flex-row gap-x-2">
+            <div class="flex flex-row gap-x-4">
+                <div class="flex">
+                    <div
+                        class="flex flex-col bg-gray-100 p-4 rounded-lg gap-y-3 h-[calc(100vh)] overflow-auto min-w-[600px]">
+                        <h1 class="text-base font-bold text-gray-800">선택된 문제 목록</h1>
+                        @foreach ($questions as $number => $question)
+                            <div class="bg-white shadow flex flex-col rounded-lg">
+                                <div
+                                    class="text-2xl bg-primary-400 text-white font-bold px-4 py-2.5 rounded-t-lg flex items-center">
+                                    {{ ($query['material_range_start'] ?? 1) + $number }}
+                                    <h2 class="flex items-center ml-4 text-base">
+                                        {!! $question->questionType?->name !!}
+                                    </h2>
+                                    <h2 class="flex items-center ml-4 text-sm">
+                                        레벨: {{ $question->level }}
+                                    </h2>
+                                </div>
+                                @if ($question->question_display_type === 'image')
+                                    <img class="w-full " src="/storage/{{ $question->image_path }}" />
+                                @else
+                                    <div class="min-h-[150px] p-4 text-xl">{!! $question->content !!}</div>
+                                @endif
+                                <div class="flex flex-row text-sm">
+                                    <button type="button"
+                                        wire:click="mountAction('addSimilarQuestion', { question: {{ $question }} })"
+                                        class="flex flex-1 items-center justify-center bg-primary-400 text-white py-2.5 font-bold rounded-bl-lg gap-x-2.5 hover:bg-primary-500 transition-all ">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                                            class="size-5">
+                                            <path d="M8 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Z" />
+                                            <path fill-rule="evenodd"
+                                                d="M4.5 2A1.5 1.5 0 0 0 3 3.5v13A1.5 1.5 0 0 0 4.5 18h11a1.5 1.5 0 0 0 1.5-1.5V7.621a1.5 1.5 0 0 0-.44-1.06l-4.12-4.122A1.5 1.5 0 0 0 11.378 2H4.5Zm5 5a3 3 0 1 0 1.524 5.585l1.196 1.195a.75.75 0 1 0 1.06-1.06l-1.195-1.196A3 3 0 0 0 9.5 7Z"
+                                                clip-rule="evenodd" />
+                                        </svg>
+
+                                        유사 문제 조회
+                                    </button>
+                                    <button wire:click="removeQuestion({{ $question->id }})"
+                                        class="flex flex-1 items-center justify-center bg-danger-400 text-white py-2.5 font-bold rounded-br-lg gap-x-2.5 hover:bg-danger-500 transition-all">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                                            class="size-4">
+                                            <path fill-rule="evenodd"
+                                                d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"
+                                                clip-rule="evenodd" />
+                                        </svg>
+
+                                        삭제
+                                    </button>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
                 <div class="flex flex-col flex-1 min-w-[375px]">
                     <div class="w-full bg-white border rounded-lg p-4 flex flex-col items-center justify-center mb-1">
                         <h1 class="font-medium text-gray-600">총 문제</h1>
@@ -144,57 +195,6 @@
                                 @endforeach
                             </div>
                         </div>
-                    </div>
-                </div>
-                <div class="flex flex-1">
-                    <div
-                        class="flex flex-col bg-gray-100 p-4 rounded-lg gap-y-3 h-[calc(100vh)] overflow-auto min-w-[600px]">
-                        <h1 class="text-base font-bold text-gray-800">선택된 문제 목록</h1>
-                        @foreach ($questions as $number => $question)
-                            <div class="bg-white shadow flex flex-col rounded-lg">
-                                <div
-                                    class="text-2xl bg-primary-400 text-white font-bold px-4 py-2.5 rounded-t-lg flex items-center">
-                                    {{ ($query['material_range_start'] ?? 1) + $number }}
-                                    <h2 class="flex items-center ml-4 text-base">
-                                        {!! $question->questionType?->name !!}
-                                    </h2>
-                                    <h2 class="flex items-center ml-4 text-sm">
-                                        레벨: {{ $question->level }}
-                                    </h2>
-                                </div>
-                                @if ($question->question_display_type === 'image')
-                                    <img class="w-full " src="/storage/{{ $question->image_path }}" />
-                                @else
-                                    <div class="min-h-[150px] p-4 text-xl">{!! $question->content !!}</div>
-                                @endif
-                                <div class="flex flex-row text-sm">
-                                    <button type="button"
-                                        wire:click="mountAction('addSimilarQuestion', { question: {{ $question }} })"
-                                        class="flex flex-1 items-center justify-center bg-primary-400 text-white py-2.5 font-bold rounded-bl-lg gap-x-2.5 hover:bg-primary-500 transition-all ">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-                                            class="size-5">
-                                            <path d="M8 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Z" />
-                                            <path fill-rule="evenodd"
-                                                d="M4.5 2A1.5 1.5 0 0 0 3 3.5v13A1.5 1.5 0 0 0 4.5 18h11a1.5 1.5 0 0 0 1.5-1.5V7.621a1.5 1.5 0 0 0-.44-1.06l-4.12-4.122A1.5 1.5 0 0 0 11.378 2H4.5Zm5 5a3 3 0 1 0 1.524 5.585l1.196 1.195a.75.75 0 1 0 1.06-1.06l-1.195-1.196A3 3 0 0 0 9.5 7Z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-
-                                        유사 문제 조회
-                                    </button>
-                                    <button wire:click="removeQuestion({{ $question->id }})"
-                                        class="flex flex-1 items-center justify-center bg-danger-400 text-white py-2.5 font-bold rounded-br-lg gap-x-2.5 hover:bg-danger-500 transition-all">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-                                            class="size-4">
-                                            <path fill-rule="evenodd"
-                                                d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-
-                                        삭제
-                                    </button>
-                                </div>
-                            </div>
-                        @endforeach
                     </div>
                 </div>
             </div>
