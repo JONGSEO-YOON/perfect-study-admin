@@ -41,6 +41,7 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
   public function mount()
   {
     $this->weeklyReports = $this->getWeeklyReports();
+    // dd($this->weeklyReports);
     $this->initializeComments();
   }
 
@@ -54,29 +55,29 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
     if (!$this->classroomId) {
       return collect();
     }
-    
+
     // 날짜 범위를 주차 범위로 변환
     // dateFrom이 "2025-08-25/2025-08-31" 형식일 경우 첫 번째 날짜만 사용
-    $dateFromPart = strpos($this->dateFrom, '/') !== false ? 
-        explode('/', $this->dateFrom)[0] : $this->dateFrom;
-    $dateUntilPart = strpos($this->dateUntil, '/') !== false ? 
-        explode('/', $this->dateUntil)[1] : $this->dateUntil;
-        
+    $dateFromPart = strpos($this->dateFrom, '/') !== false ?
+      explode('/', $this->dateFrom)[0] : $this->dateFrom;
+    $dateUntilPart = strpos($this->dateUntil, '/') !== false ?
+      explode('/', $this->dateUntil)[1] : $this->dateUntil;
+
     $startDate = Carbon::parse($dateFromPart);
     $endDate = Carbon::parse($dateUntilPart);
-    
+
     $weeklyReports = collect();
-    
+
     // 주차별로 반복
     $current = $startDate->copy()->startOfWeek();
     $maxIterations = 10; // 무한루프 방지
     $iterations = 0;
-    
+
     while ($current->lte($endDate) && $iterations < $maxIterations) {
       $iterations++;
       $year = $current->year;
       $week = $current->isoWeek();
-      
+
       // AttendanceLog에서 해당 주차 데이터 조회
       $attendanceData = AttendanceLog::getRegularAttendanceByWeek(
         $this->student->id,
@@ -84,32 +85,47 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
         $year,
         $week
       );
+
+      // 테스트 및 숙제 리포트 데이터 조회
+      $testReport = WeeklyTestReport::where('student_id', $this->student->id)
+        ->where('classroom_id', $this->classroomId)
+        ->where('year', $year)
+        ->where('week', $week)
+        ->where('type', 'test')
+        ->first();
       
+      $homeworkReport = WeeklyTestReport::where('student_id', $this->student->id)
+        ->where('classroom_id', $this->classroomId)
+        ->where('year', $year)
+        ->where('week', $week)
+        ->where('type', 'homework')
+        ->first();
+
       // 코멘트 데이터 조회
       $commentReport = $this->getWeeklyCommentReport($year, $week);
       $commentData = $commentReport->report ?? null;
       $commentContent = $commentData['comment'] ?? null;
       $commentStatus = $commentData['status'] ?? null;
-      
+
       // 빈 주차라도 기본 구조 생성
       $weekStartDate = $current->format('Y-m-d');
       $weekEndDate = $current->copy()->endOfWeek()->format('Y-m-d');
-      
+
       $weeklyReports->push([
         'year' => $year,
         'week' => $week,
         'week_range' => $weekStartDate . '/' . $weekEndDate,
         'week_label' => $year . '년 ' . $week . '주차 (' . $current->format('m/d') . ' ~ ' . $current->copy()->endOfWeek()->format('m/d') . ')',
-        'test_report' => null, // 테스트 리포트는 별도 처리
+        'test_report' => $this->formatReport($testReport),
         'attendance_logs' => $attendanceData, // 새로운 AttendanceLog 컬렉션
-        'homework_report' => null, // 숙제 리포트는 별도 처리
+        'homework_report' => $this->formatReport($homeworkReport),
         'comment_report' => $commentContent, // 실제 코멘트 내용
         'comment_status' => $commentStatus // 실제 코멘트 상태
       ]);
-      
+
       $current->addWeek();
     }
-    
+
     return $weeklyReports;
   }
 
@@ -131,6 +147,28 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
       'week' => $week,
       'type' => 'comment'
     ]);
+  }
+
+  protected function formatReport($report): ?array
+  {
+    if (!$report || !$report->report) {
+      return null;
+    }
+
+    return collect($report->report)
+      ->sortBy('test_sheet_id')
+      ->map(function ($test) {
+        return [
+          'date' => $test['date'],
+          'test_sheet_id' => $test['test_sheet_id'] ?? 0,
+          'name' => $test[isset($test['test_name']) ? 'test_name' : 'homework_name'],
+          'scopes' => $test['scopes'],
+          'total' => $test['total'],
+          'by_types' => collect($test['by_types'])->sortBy('name')->values()->all()
+        ];
+      })
+      ->values()
+      ->all();
   }
 
   #[On('reportFormChange')]
@@ -230,11 +268,11 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
       ->fillForm(function ($arguments) {
         $logId = $arguments['log_id'];
         $log = AttendanceLog::find($logId);
-        
+
         if (!$log) {
           return [];
         }
-        
+
         return [
           'date' => $log->created_at->format('Y-m-d'),
           'time' => $log->created_at->format('H:i:s'),
@@ -246,7 +284,7 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
       ->action(function ($data, $arguments) {
         $logId = $arguments['log_id'];
         $log = AttendanceLog::find($logId);
-        
+
         if ($log) {
           $log->update([
             'type' => $data['type'],
@@ -274,7 +312,7 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
       ->action(function ($arguments) {
         $this->arguments = $arguments;
         $date = $arguments['date'];
-        
+
         // 해당 날짜의 모든 출석 기록 삭제
         AttendanceLog::where('student_id', $this->student->id)
           ->where('classroom_id', $this->classroomId)
@@ -303,7 +341,7 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
   {
     $key = "{$year}-{$week}";
     $comment = $this->comments[$key] ?? '';
-    
+
     $report = $this->getWeeklyCommentReport($year, $week);
 
     if (empty($comment)) {
@@ -329,7 +367,7 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
   {
     $key = "{$year}-{$week}";
     $comment = $this->comments[$key] ?? '';
-    
+
     if (empty($comment)) {
       Notification::make()
         ->title('전달할 코멘트가 없습니다.')
