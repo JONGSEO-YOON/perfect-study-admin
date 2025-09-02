@@ -45,6 +45,41 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
     $this->initializeComments();
   }
 
+  public function updatedDateFrom()
+  {
+    $this->validateDateRange();
+    $this->weeklyReports = $this->getWeeklyReports();
+  }
+
+  public function updatedDateUntil()
+  {
+    $this->validateDateRange();
+    $this->weeklyReports = $this->getWeeklyReports();
+  }
+
+  private function validateDateRange()
+  {
+    if ($this->dateFrom && $this->dateUntil) {
+      $dateFromPart = strpos($this->dateFrom, '/') !== false ?
+        explode('/', $this->dateFrom)[0] : $this->dateFrom;
+      $dateUntilPart = strpos($this->dateUntil, '/') !== false ?
+        explode('/', $this->dateUntil)[1] : $this->dateUntil;
+        
+      $startDate = Carbon::parse($dateFromPart);
+      $endDate = Carbon::parse($dateUntilPart);
+      
+      $diffInWeeks = $startDate->diffInWeeks($endDate);
+      
+      if ($diffInWeeks > 52) {
+        Notification::make()
+          ->title('날짜 범위 초과')
+          ->body('검색 가능한 범위는 최대 52주(1년)입니다. 더 짧은 기간을 선택해주세요.')
+          ->warning()
+          ->send();
+      }
+    }
+  }
+
   public function render()
   {
     return view('livewire.report-card-tab3');
@@ -70,11 +105,8 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
 
     // 주차별로 반복
     $current = $startDate->copy()->startOfWeek();
-    $maxIterations = 10; // 무한루프 방지
-    $iterations = 0;
 
-    while ($current->lte($endDate) && $iterations < $maxIterations) {
-      $iterations++;
+    while ($current->lte($endDate)) {
       $year = $current->year;
       $week = $current->isoWeek();
 
@@ -216,15 +248,19 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
       ])
       ->action(function ($data) {
         // 출석 기록 생성
-        AttendanceLog::create([
+        $attendanceLog = new AttendanceLog([
           'student_id' => $this->student->id,
           'classroom_id' => $this->classroomId,
           'type' => $data['type'],
           'is_late' => $data['is_late'],
-          'memo' => $data['memo'],
-          'created_at' => $data['date'] . ' ' . $data['time'],
-          'updated_at' => now()
+          'memo' => $data['memo']
         ]);
+        
+        // 타임스탬프 자동 업데이트 비활성화 후 수동 설정
+        $attendanceLog->timestamps = false;
+        $attendanceLog->created_at = Carbon::parse($data['date'] . ' ' . $data['time']);
+        $attendanceLog->updated_at = now();
+        $attendanceLog->save();
 
         Notification::make()
           ->title('출석이 추가되었습니다.')
@@ -286,13 +322,14 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
         $log = AttendanceLog::find($logId);
 
         if ($log) {
-          $log->update([
-            'type' => $data['type'],
-            'is_late' => $data['is_late'],
-            'memo' => $data['memo'],
-            'created_at' => $data['date'] . ' ' . $data['time'],
-            'updated_at' => now()
-          ]);
+          // 타임스탬프 자동 업데이트 비활성화
+          $log->timestamps = false;
+          $log->type = $data['type'];
+          $log->is_late = $data['is_late'];
+          $log->memo = $data['memo'];
+          $log->created_at = Carbon::parse($data['date'] . ' ' . $data['time']);
+          $log->updated_at = now();
+          $log->save();
 
           Notification::make()
             ->title('출석이 수정되었습니다.')
@@ -311,12 +348,12 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
       ->modalHeading('출석 삭제')
       ->action(function ($arguments) {
         $this->arguments = $arguments;
-        $date = $arguments['date'];
+        $log_id = $arguments['log_id'];
 
-        // 해당 날짜의 모든 출석 기록 삭제
-        AttendanceLog::where('student_id', $this->student->id)
+        // 특정 출석 기록만 삭제
+        AttendanceLog::where('id', $log_id)
+          ->where('student_id', $this->student->id)
           ->where('classroom_id', $this->classroomId)
-          ->whereDate('created_at', $date)
           ->delete();
 
         Notification::make()

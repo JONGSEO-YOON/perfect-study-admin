@@ -130,7 +130,7 @@
                                                         wire:click="mountAction('editAttendance', { log_id: '{{ $log->id }}' })"
                                                         icon="heroicon-m-pencil-square" color="warning" />
                                                     <x-filament::icon-button
-                                                        wire:click="mountAction('deleteAttendance', { date: '{{ $log->created_at->format('Y-m-d') }}' })"
+                                                        wire:click="mountAction('deleteAttendance', { log_id: '{{ $log->id }}' })"
                                                         icon="heroicon-m-trash" color="danger" />
                                                 </div>
                                             </td>
