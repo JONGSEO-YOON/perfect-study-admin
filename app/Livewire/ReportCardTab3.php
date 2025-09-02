@@ -47,13 +47,13 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
 
   public function updatedDateFrom()
   {
-    $this->validateDateRange();
+    // $this->validateDateRange();
     $this->weeklyReports = $this->getWeeklyReports();
   }
 
   public function updatedDateUntil()
   {
-    $this->validateDateRange();
+    // $this->validateDateRange();
     $this->weeklyReports = $this->getWeeklyReports();
   }
 
@@ -64,12 +64,12 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
         explode('/', $this->dateFrom)[0] : $this->dateFrom;
       $dateUntilPart = strpos($this->dateUntil, '/') !== false ?
         explode('/', $this->dateUntil)[1] : $this->dateUntil;
-        
+
       $startDate = Carbon::parse($dateFromPart);
       $endDate = Carbon::parse($dateUntilPart);
-      
+
       $diffInWeeks = $startDate->diffInWeeks($endDate);
-      
+
       if ($diffInWeeks > 52) {
         Notification::make()
           ->title('날짜 범위 초과')
@@ -125,7 +125,7 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
         ->where('week', $week)
         ->where('type', 'test')
         ->first();
-      
+
       $homeworkReport = WeeklyTestReport::where('student_id', $this->student->id)
         ->where('classroom_id', $this->classroomId)
         ->where('year', $year)
@@ -255,7 +255,7 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
           'is_late' => $data['is_late'],
           'memo' => $data['memo']
         ]);
-        
+
         // 타임스탬프 자동 업데이트 비활성화 후 수동 설정
         $attendanceLog->timestamps = false;
         $attendanceLog->created_at = Carbon::parse($data['date'] . ' ' . $data['time']);
