@@ -24,9 +24,17 @@ class ConvertBase64ToFiles extends Command
 
         $this->info('Converting base64 images to files...');
 
-        // 먼저 Base64 이미지가 포함된 질문들의 총 개수만 확인
-        $totalQuestions = Question::where('content', 'LIKE', '%data:image/%base64,%')->count();
+        // Base64 이미지가 포함된 질문들의 총 개수 확인 (content + explanation)
+        $contentCount = Question::where('content', 'LIKE', '%data:image/%base64,%')->count();
+        $explanationCount = Question::where('explanation', 'LIKE', '%data:image/%base64,%')->count();
+        $totalQuestions = Question::where(function($query) {
+            $query->where('content', 'LIKE', '%data:image/%base64,%')
+                  ->orWhere('explanation', 'LIKE', '%data:image/%base64,%');
+        })->count();
+        
         $this->info("Found {$totalQuestions} questions with base64 images");
+        $this->info("- Content column: {$contentCount}");
+        $this->info("- Explanation column: {$explanationCount}");
 
         if ($totalQuestions === 0) {
             $this->info('No base64 images found in questions.');
@@ -35,22 +43,34 @@ class ConvertBase64ToFiles extends Command
 
         $convertedCount = 0;
         $errorCount = 0;
-        $chunkSize = 10; // 더 작은 청크 크기로 메모리 절약
+        $chunkSize = 100; // 청크 크기 늘려서 DB 부하 줄이기
         
         $bar = $this->output->createProgressBar($totalQuestions);
         $bar->start();
 
-        // 청크 단위로 처리하여 메모리 사용량 줄이기
-        Question::where('content', 'LIKE', '%data:image/%base64,%')
-            ->select('id', 'content')
+        // 청크 단위로 처리하여 메모리 사용량 줄이기 (content 또는 explanation에 base64 이미지가 있는 경우)
+        Question::where(function($query) {
+                $query->where('content', 'LIKE', '%data:image/%base64,%')
+                      ->orWhere('explanation', 'LIKE', '%data:image/%base64,%');
+            })
+            ->select('id', 'content', 'explanation')
             ->chunk($chunkSize, function ($questions) use (&$convertedCount, &$errorCount, $bar, $dryRun) {
                 foreach ($questions as $question) {
                     try {
-                        $newContent = $this->processQuestionImages($question, $dryRun);
+                        $newContent = $this->processQuestionContent($question->content, $question, $dryRun);
+                        $newExplanation = $this->processQuestionContent($question->explanation, $question, $dryRun);
                         
-                        if ($newContent !== $question->content && !$dryRun) {
+                        $updateData = [];
+                        if ($newContent !== $question->content) {
+                            $updateData['content'] = $newContent;
+                        }
+                        if ($newExplanation !== $question->explanation) {
+                            $updateData['explanation'] = $newExplanation;
+                        }
+                        
+                        if (!empty($updateData) && !$dryRun) {
                             // DB 업데이트를 위해 새로운 쿼리 실행 (메모리 효율적)
-                            Question::where('id', $question->id)->update(['content' => $newContent]);
+                            Question::where('id', $question->id)->update($updateData);
                         }
                         
                         $convertedCount++;
@@ -82,9 +102,11 @@ class ConvertBase64ToFiles extends Command
         return Command::SUCCESS;
     }
 
-    private function processQuestionImages(Question $question, bool $dryRun): string
+    private function processQuestionContent(?string $content, Question $question, bool $dryRun): ?string
     {
-        $content = $question->content;
+        if (empty($content)) {
+            return $content;
+        }
         
         // base64 이미지 패턴 찾기
         $pattern = '/(<img[^>]*src=")data:image\/([^;]+);base64,([^"]+)("[^>]*>)/';
@@ -123,8 +145,8 @@ class ConvertBase64ToFiles extends Command
                     unset($imageData);
                 }
                 
-                // 새로운 이미지 태그 생성
-                $newSrc = Storage::url($filename);
+                // 새로운 이미지 태그 생성 (APP_URL 포함)
+                $newSrc = config('app.url') . Storage::url($filename);
                 $newImgTag = $imgTagPrefix . $newSrc . $imgTagSuffix;
                 
                 // 메모리 정리
