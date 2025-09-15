@@ -16,6 +16,8 @@ class AttendanceCalendar extends CalendarWidget
     public $studentId;
 
     protected static string $view = 'livewire.attendance-calendar';
+    protected ?string $locale = 'ko';
+    protected bool $useFilamentTimezone = true;
 
     public function mount()
     {
@@ -39,7 +41,7 @@ class AttendanceCalendar extends CalendarWidget
         foreach ($attendanceLogs as $attendanceLog) {
             $title = $attendanceLog->type === 'in' ? '등원' : '하원';
             $color = $attendanceLog->type === 'in' ? '#8b5cf6' : '#a78bfa';
-            
+
             // 정규/보충 구분
             if ($attendanceLog->classroom_id) {
                 $title = '(정규)' . $title;
@@ -48,18 +50,18 @@ class AttendanceCalendar extends CalendarWidget
                 $title = '(보충)' . $title;
                 $color = $attendanceLog->type === 'in' ? '#06b6d4' : '#22d3ee';
             }
-            
+
             // 지각 표시
             if ($attendanceLog->is_late) {
                 $title .= ' (지각)';
                 $color = '#f59e0b';
             }
 
-            $isoString = $attendanceLog->created_at->toISOString();
+            $localTime = $attendanceLog->created_at->addHours(9);
             $events[] = CalendarEvent::make()
                 ->title($title)
-                ->start($isoString)
-                ->end($isoString)
+                ->start($localTime)
+                ->end($localTime)
                 ->backgroundColor($color);
         }
 

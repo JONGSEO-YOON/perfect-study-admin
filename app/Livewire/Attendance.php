@@ -47,16 +47,20 @@ class Attendance extends Component
                 }
             }
 
+            // 보충 수업 여부 결정
+            $is_supplementary = $classroom_id === null;
+
             // 출석 로그 저장
             AttendanceLog::create([
                 'student_id' => $user->userable->id,
                 'classroom_id' => $classroom_id, // 정규 수업이 있을 때만 classroom_id 저장
                 'type' => $type,
                 'is_late' => false,
+                'is_supplementary' => $is_supplementary,
             ]);
 
             $key_word = $type === 'in' ? '등원' : '하원';
-            $attendance_type = $classroom_id ? '정규' : '보충';
+            $attendance_type = $is_supplementary ? '보충' : '정규';
 
             $this->message = '(' . $user->name . ')님의(' . $attendance_type  . $key_word . ')이 확인되었습니다.';
             $this->messageType = $type === 'in' ? 'success-in' : 'success-out';

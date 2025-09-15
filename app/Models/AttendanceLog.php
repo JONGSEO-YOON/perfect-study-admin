@@ -13,10 +13,12 @@ class AttendanceLog extends Model
         'type',
         'is_late',
         'memo',
+        'is_supplementary',
     ];
 
     protected $casts = [
         'is_late' => 'boolean',
+        'is_supplementary' => 'boolean',
     ];
 
     /**

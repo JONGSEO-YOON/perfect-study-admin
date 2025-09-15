@@ -44,6 +44,27 @@ class Student extends Model
             ->withTimestamps();
     }
 
+    public function attendanceLogs()
+    {
+        return $this->hasMany(AttendanceLog::class);
+    }
+
+    public function latestCheckIn()
+    {
+        return $this->hasOne(AttendanceLog::class)
+            ->where('type', 'in')
+            ->whereDate('created_at', now()->format('Y-m-d'))
+            ->latest();
+    }
+
+    public function latestCheckOut()
+    {
+        return $this->hasOne(AttendanceLog::class)
+            ->where('type', 'out')
+            ->whereDate('created_at', now()->format('Y-m-d'))
+            ->latest();
+    }
+
     public function canEdit($user)
     {
         if (
