@@ -60,27 +60,54 @@ class DailyAttendanceResource extends Resource
             ->columns([
                 TextColumn::make('id')
                     ->label('No')
-                    ->rowIndex(),
+                    ->rowIndex()
+                    ->width('60px'),
 
                 TextColumn::make('user.name')
                     ->label('학생명')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->width('120px'),
+                TextColumn::make('gradeSystem.display_name')
+                    ->label('학년')
+                    ->sortable()
+                    ->width('80px'),
+                TextColumn::make('classrooms.name')
+                    ->label('수업 반')
+                    ->badge()
+                    ->separator(',')
+                    ->width('120px'),
+                TextColumn::make('late_status')
+                    ->label('지각')
+                    ->width('60px')
+                    ->state(function ($record) {
+                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                        $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
 
-                // TextColumn::make('classrooms.name')
-                //     ->label('수업 반')
-                //     ->badge()
-                //     ->separator(','),
+                        // 디버깅: 해당 날짜의 모든 출결 기록 확인
+                        $allLogs = $record->attendanceLogs()
+                            ->whereDate('created_at', $selectedDate)
+                            ->get();
+
+                        $lateCount = $allLogs->where('is_late', 1)->count();
+
+                        if ($lateCount > 0) {
+                            return '지각';
+                        }
+
+                        // 디버깅 정보 표시
+                        return $allLogs->count() > 0 ? "기록{$allLogs->count()}" : '-';
+                    }),
                 TextColumn::make('supplementary_status')
                     ->label('보충 여부')
                     ->badge()
+                    ->width('100px')
                     ->state(function ($record) {
                         $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
                         $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
 
                         // 해당 날짜의 출석 기록 조회
-                        $attendanceRecord = $record->attendanceLogs()
-                            ->whereDate('created_at', $selectedDate)
+                        $attendanceRecord = $record->attendanceLogsForDate($selectedDate)
                             ->latest()
                             ->first();
 
@@ -90,23 +117,25 @@ class DailyAttendanceResource extends Resource
 
                         return $attendanceRecord->is_supplementary ? 'supplementary' : 'regular';
                     })
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn(string $state): string => match ($state) {
                         'supplementary' => 'warning',
                         'regular' => 'success',
                         'none' => 'gray',
                     })
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                    ->formatStateUsing(fn(string $state): string => match ($state) {
                         'supplementary' => '보충',
                         'regular' => '정규',
-                        'none' => '출석없음',
+                        'none' => '-',
                     }),
                 TextColumn::make('latestCheckIn.created_at')
                     ->label('등원 시간')
+                    ->width('100px')
                     ->formatStateUsing(function ($state) {
                         return $state ? $state->format('H:i') : '-';
                     }),
                 TextColumn::make('latestCheckOut.created_at')
                     ->label('하원 시간')
+                    ->width('100px')
                     ->formatStateUsing(function ($state) {
                         return $state ? $state->format('H:i') : '-';
                     }),
@@ -116,10 +145,9 @@ class DailyAttendanceResource extends Resource
                 //     ->searchable()
                 //     ->sortable(),
 
-                // TextColumn::make('gradeSystem.display_name')
-                //     ->label('학년')
-                //     ->sortable(),
+
             ])
+            ->defaultPaginationPageOption(25)
             ->filters([
                 Filter::make('date')
                     ->form([
@@ -288,6 +316,116 @@ class DailyAttendanceResource extends Resource
                         ]),
                     ]))
                     ->modalWidth('7xl'),
+                Tables\Actions\Action::make('edit_attendance')
+                    ->label('출결 수정')
+                    ->icon('heroicon-m-pencil')
+                    ->color('primary')
+                    ->form([
+                        Select::make('attendance_log_id')
+                            ->label('출결 기록')
+                            ->options(function ($record) {
+                                $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                                $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
+
+                                return $record->attendanceLogs()
+                                    ->whereDate('created_at', $selectedDate)
+                                    ->get()
+                                    ->mapWithKeys(function ($log) {
+                                        return [$log->id => $log->type . ' - ' . $log->created_at->format('H:i')];
+                                    });
+                            })
+                            ->required(),
+                        ToggleButtons::make('type')
+                            ->label('타입')
+                            ->inline()
+                            ->options([
+                                'in' => '등원',
+                                'out' => '하원'
+                            ])
+                            ->colors([
+                                'in' => 'success',
+                                'out' => 'danger'
+                            ])
+                            ->required(),
+                        Toggle::make('is_late')
+                            ->label('지각 여부'),
+                        Toggle::make('is_supplementary')
+                            ->label('보충 수업 여부'),
+                        Textarea::make('memo')
+                            ->label('메모')
+                            ->rows(3),
+                        DateTimePicker::make('created_at')
+                            ->label('시간')
+                            ->required()
+                            ->displayFormat('Y-m-d H:i')
+                            ->native(false)
+                    ])
+                    ->fillForm(function ($record) {
+                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                        $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
+
+                        $firstLog = $record->attendanceLogs()
+                            ->whereDate('created_at', $selectedDate)
+                            ->first();
+
+                        if ($firstLog) {
+                            return [
+                                'attendance_log_id' => $firstLog->id,
+                                'type' => $firstLog->type,
+                                'is_late' => $firstLog->is_late,
+                                'is_supplementary' => $firstLog->is_supplementary,
+                                'memo' => $firstLog->memo,
+                                'created_at' => $firstLog->created_at,
+                            ];
+                        }
+
+                        return [];
+                    })
+                    ->action(function ($data, $record) {
+                        if (isset($data['attendance_log_id'])) {
+                            $log = AttendanceLog::find($data['attendance_log_id']);
+                            if ($log) {
+                                $log->update([
+                                    'type' => $data['type'],
+                                    'is_late' => $data['is_late'] ?? false,
+                                    'is_supplementary' => $data['is_supplementary'] ?? false,
+                                    'memo' => $data['memo'],
+                                    'created_at' => $data['created_at'],
+                                ]);
+                            }
+                        }
+                    })
+                    ->visible(function ($record) {
+                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                        $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
+
+                        return $record->attendanceLogs()
+                            ->whereDate('created_at', $selectedDate)
+                            ->exists();
+                    }),
+                Tables\Actions\Action::make('delete_attendance')
+                    ->label('출결 삭제')
+                    ->icon('heroicon-m-trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('출결 기록 삭제')
+                    ->modalDescription(fn($record) => $record->user->name . '의 오늘 출결 기록을 삭제하시겠습니까?')
+                    ->action(function ($record) {
+                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                        $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
+
+                        $record->attendanceLogs()
+                            ->whereDate('created_at', $selectedDate)
+                            ->delete();
+                    })
+                    ->visible(function ($record) {
+                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                        $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
+
+                        return $record->attendanceLogs()
+                            ->whereDate('created_at', $selectedDate)
+                            ->exists();
+                    }),
             ])
             ->emptyStateHeading('선택된 날짜에 수업이 있는 학생이 없습니다.')
             ->emptyStateDescription('선택된 날짜에 수업이 예정된 학생이 없습니다.');

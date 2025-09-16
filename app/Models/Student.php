@@ -65,6 +65,12 @@ class Student extends Model
             ->latest();
     }
 
+    public function attendanceLogsForDate($date)
+    {
+        return $this->hasMany(AttendanceLog::class)
+            ->whereDate('created_at', $date);
+    }
+
     public function canEdit($user)
     {
         if (
