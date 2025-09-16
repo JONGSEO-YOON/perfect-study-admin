@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('attendance_logs', function (Blueprint $table) {
-            $table->dropColumn(['check_in_time', 'check_out_time']);
+            $table->dropColumn('type');
         });
     }
 
@@ -22,8 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('attendance_logs', function (Blueprint $table) {
-            $table->dateTime('check_in_time')->nullable()->after('memo');
-            $table->dateTime('check_out_time')->nullable()->after('check_in_time');
+            $table->enum('type', ['in', 'out'])->after('classroom_id');
         });
     }
 };

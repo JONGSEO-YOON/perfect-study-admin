@@ -52,7 +52,7 @@ class Student extends Model
     public function latestCheckIn()
     {
         return $this->hasOne(AttendanceLog::class)
-            ->where('type', 'in')
+            ->whereNotNull('check_in_time')
             ->whereDate('created_at', now()->format('Y-m-d'))
             ->latest();
     }
@@ -60,7 +60,7 @@ class Student extends Model
     public function latestCheckOut()
     {
         return $this->hasOne(AttendanceLog::class)
-            ->where('type', 'out')
+            ->whereNotNull('check_out_time')
             ->whereDate('created_at', now()->format('Y-m-d'))
             ->latest();
     }

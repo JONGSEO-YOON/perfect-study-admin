@@ -110,10 +110,9 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
       $year = $current->year;
       $week = $current->isoWeek();
 
-      // AttendanceLog에서 해당 주차 데이터 조회
+      // AttendanceLog에서 해당 주차 데이터 조회 (정규 및 보충 모두 포함)
       $attendanceData = AttendanceLog::getRegularAttendanceByWeek(
         $this->student->id,
-        $this->classroomId,
         $year,
         $week
       );
@@ -215,7 +214,7 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
 
   public function addAttendance(): Action
   {
-    return Action::make('delete')
+    return Action::make('addAttendance')
       ->modalHeading('출석 추가')
       ->modalWidth('md')
       ->modalSubmitActionLabel('추가')
@@ -226,39 +225,63 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
             ->default(Carbon::now()->format('Y-m-d'))
             ->required()
             ->columnSpanFull(),
-          TimePicker::make('time')
-            ->label('시간')
-            ->default(Carbon::now()->format('H:i:s'))
-            ->required(),
-          \Filament\Forms\Components\Select::make('type')
-            ->label('타입')
-            ->options([
-              'in' => '등원',
-              'out' => '하원'
-            ])
-            ->required()
-            ->default('in'),
+          TimePicker::make('check_in_time')
+            ->label('등원 시간')
+            ->seconds(false)
+            ->displayFormat('H:i'),
+          TimePicker::make('check_out_time')
+            ->label('하원 시간')
+            ->seconds(false)
+            ->displayFormat('H:i'),
           \Filament\Forms\Components\Toggle::make('is_late')
             ->label('지각 여부')
             ->default(false),
+          \Filament\Forms\Components\Toggle::make('is_supplementary')
+            ->label('보충 수업 여부')
+            ->default(false),
+          \Filament\Forms\Components\Toggle::make('is_absent')
+            ->label('결석 여부')
+            ->default(false)
+            ->reactive()
+            ->afterStateUpdated(function ($state, callable $set) {
+              if ($state) {
+                $set('is_late', false);
+                $set('is_supplementary', false);
+                $set('check_in_time', null);
+                $set('check_out_time', null);
+              }
+            }),
           Textarea::make('memo')
             ->label('비고')
             ->columnSpanFull()
         ])
       ])
       ->action(function ($data) {
-        // 출석 기록 생성
-        $attendanceLog = new AttendanceLog([
+        $selectedDate = Carbon::parse($data['date']);
+
+        $attendanceData = [
           'student_id' => $this->student->id,
-          'classroom_id' => $this->classroomId,
-          'type' => $data['type'],
-          'is_late' => $data['is_late'],
-          'memo' => $data['memo']
-        ]);
+          'is_late' => $data['is_late'] ?? false,
+          'is_absent' => $data['is_absent'] ?? false,
+          'is_supplementary' => $data['is_supplementary'] ?? false,
+          'memo' => $data['memo'],
+          'check_in_time' => $data['check_in_time'] ? $selectedDate->copy()->setTimeFromTimeString($data['check_in_time']) : null,
+          'check_out_time' => $data['check_out_time'] ? $selectedDate->copy()->setTimeFromTimeString($data['check_out_time']) : null,
+        ];
 
         // 타임스탬프 자동 업데이트 비활성화 후 수동 설정
+        $attendanceLog = new AttendanceLog($attendanceData);
         $attendanceLog->timestamps = false;
-        $attendanceLog->created_at = Carbon::parse($data['date'] . ' ' . $data['time']);
+
+        // created_at을 등원시간 또는 하원시간으로 설정, 둘 다 없으면 선택한 날짜로 설정
+        if ($attendanceLog->check_in_time) {
+          $attendanceLog->created_at = $attendanceLog->check_in_time;
+        } elseif ($attendanceLog->check_out_time) {
+          $attendanceLog->created_at = $attendanceLog->check_out_time;
+        } else {
+          $attendanceLog->created_at = $selectedDate;
+        }
+
         $attendanceLog->updated_at = now();
         $attendanceLog->save();
 
@@ -283,19 +306,32 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
             ->label('날짜')
             ->required()
             ->columnSpanFull(),
-          TimePicker::make('time')
-            ->label('시간')
-            ->required(),
-          \Filament\Forms\Components\Select::make('type')
-            ->label('타입')
-            ->options([
-              'in' => '등원',
-              'out' => '하원'
-            ])
-            ->required(),
+          TimePicker::make('check_in_time')
+            ->label('등원 시간')
+            ->seconds(false)
+            ->displayFormat('H:i'),
+          TimePicker::make('check_out_time')
+            ->label('하원 시간')
+            ->seconds(false)
+            ->displayFormat('H:i'),
           \Filament\Forms\Components\Toggle::make('is_late')
             ->label('지각 여부')
             ->default(false),
+          \Filament\Forms\Components\Toggle::make('is_supplementary')
+            ->label('보충 수업 여부')
+            ->default(false),
+          \Filament\Forms\Components\Toggle::make('is_absent')
+            ->label('결석 여부')
+            ->default(false)
+            ->reactive()
+            ->afterStateUpdated(function ($state, callable $set) {
+              if ($state) {
+                $set('is_late', false);
+                $set('is_supplementary', false);
+                $set('check_in_time', null);
+                $set('check_out_time', null);
+              }
+            }),
           Textarea::make('memo')
             ->label('비고')
             ->columnSpanFull()
@@ -311,9 +347,11 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
 
         return [
           'date' => $log->created_at->format('Y-m-d'),
-          'time' => $log->created_at->format('H:i:s'),
-          'type' => $log->type,
+          'check_in_time' => $log->check_in_time ? $log->check_in_time->format('H:i') : null,
+          'check_out_time' => $log->check_out_time ? $log->check_out_time->format('H:i') : null,
           'is_late' => $log->is_late,
+          'is_absent' => $log->is_absent,
+          'is_supplementary' => $log->is_supplementary,
           'memo' => $log->memo
         ];
       })
@@ -322,12 +360,26 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
         $log = AttendanceLog::find($logId);
 
         if ($log) {
+          $selectedDate = Carbon::parse($data['date']);
+
           // 타임스탬프 자동 업데이트 비활성화
           $log->timestamps = false;
-          $log->type = $data['type'];
           $log->is_late = $data['is_late'];
+          $log->is_absent = $data['is_absent'];
+          $log->is_supplementary = $data['is_supplementary'];
           $log->memo = $data['memo'];
-          $log->created_at = Carbon::parse($data['date'] . ' ' . $data['time']);
+          $log->check_in_time = $data['check_in_time'] ? $selectedDate->copy()->setTimeFromTimeString($data['check_in_time']) : null;
+          $log->check_out_time = $data['check_out_time'] ? $selectedDate->copy()->setTimeFromTimeString($data['check_out_time']) : null;
+
+          // created_at을 등원시간 또는 하원시간으로 설정, 둘 다 없으면 선택한 날짜로 설정
+          if ($log->check_in_time) {
+            $log->created_at = $log->check_in_time;
+          } elseif ($log->check_out_time) {
+            $log->created_at = $log->check_out_time;
+          } else {
+            $log->created_at = $selectedDate;
+          }
+
           $log->updated_at = now();
           $log->save();
 
@@ -353,7 +405,6 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
         // 특정 출석 기록만 삭제
         AttendanceLog::where('id', $log_id)
           ->where('student_id', $this->student->id)
-          ->where('classroom_id', $this->classroomId)
           ->delete();
 
         Notification::make()
@@ -368,7 +419,6 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
   protected function getAttendanceLogsForDate(string $date)
   {
     return AttendanceLog::where('student_id', $this->student->id)
-      ->where('classroom_id', $this->classroomId)
       ->whereDate('created_at', $date)
       ->get();
   }

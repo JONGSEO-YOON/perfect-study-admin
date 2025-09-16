@@ -91,14 +91,17 @@
                     <table class="min-w-fit bg-white border-r border-t">
                         <thead>
                             <tr class="bg-gray-100 text-center">
-                                <th colspan="5" class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">
+                                <th colspan="8" class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">
                                     {{ $weekReport['week_label'] }} 출결
                                 </th>
                             </tr>
                             <tr class="bg-gray-100 text-center">
                                 <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">날짜</th>
-                                <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">시간</th>
-                                <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">타입</th>
+                                <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">등원 시간</th>
+                                <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">하원 시간</th>
+                                <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">구분</th>
+                                <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">결석</th>
+                                <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">지각</th>
                                 <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b">비고</th>
                                 <th class="px-6 py-3 text-sm font-semibold text-gray-700 border-b"></th>
                             </tr>
@@ -111,13 +114,40 @@
                                             {{ $log->created_at->format('m월d일') }}
                                         </td>
                                         <td class="px-6 py-3 border-b">
-                                            <div class="w-[198px]">{{ $log->created_at->format('H:i') }}</div>
+                                            @if($log->check_in_time)
+                                                {{ $log->check_in_time->format('H:i') }}
+                                            @else
+                                                -
+                                            @endif
                                         </td>
                                         <td class="px-6 py-3 border-b">
-                                            정규{{ $log->type === 'in' ? '등원' : '하원' }}{{ $log->is_late ? ' (지각)' : '' }}
+                                            @if($log->check_out_time)
+                                                {{ $log->check_out_time->format('H:i') }}
+                                            @else
+                                                -
+                                            @endif
                                         </td>
                                         <td class="px-6 py-3 border-b">
-                                            <div class="w-[150px]">{{ $log->memo ?? '' }}</div>
+                                            @if(!$log->is_absent)
+                                                @if($log->is_supplementary)
+                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">보충</span>
+                                                @else
+                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">정규</span>
+                                                @endif
+                                            @endif
+                                        </td>
+                                        <td class="px-6 py-3 border-b">
+                                            @if($log->is_absent)
+                                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">결석</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-6 py-3 border-b">
+                                            @if($log->is_late)
+                                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">지각</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-6 py-3 border-b">
+                                            {{ $log->memo ?? '' }}
                                         </td>
                                         @if ($this->readonly)
                                             <td class="border-b">
@@ -139,7 +169,7 @@
                                 @endforeach
                             @else
                                 <tr>
-                                    <td colspan="5" class="px-6 py-4 text-sm text-center text-gray-500 border-b">
+                                    <td colspan="8" class="px-6 py-4 text-sm text-center text-gray-500 border-b">
                                         해당 주차에 출결 기록이 없습니다.
                                     </td>
                                 </tr>

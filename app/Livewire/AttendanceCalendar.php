@@ -33,36 +33,63 @@ class AttendanceCalendar extends CalendarWidget
     public function getEvents(array $fetchInfo = []): Collection | array
     {
         $attendanceLogs = AttendanceLog::where('student_id', $this->studentId)
-            ->whereBetween('created_at', [$fetchInfo['startStr'] . ' 00:00:00', $fetchInfo['endStr'] . ' 23:59:59'])
+            ->where(function($query) use ($fetchInfo) {
+                $query->whereBetween('check_in_time', [$fetchInfo['startStr'] . ' 00:00:00', $fetchInfo['endStr'] . ' 23:59:59'])
+                      ->orWhereBetween('check_out_time', [$fetchInfo['startStr'] . ' 00:00:00', $fetchInfo['endStr'] . ' 23:59:59']);
+            })
             ->orderBy('created_at', 'asc')
             ->get();
 
         $events = [];
         foreach ($attendanceLogs as $attendanceLog) {
-            $title = $attendanceLog->type === 'in' ? '등원' : '하원';
-            $color = $attendanceLog->type === 'in' ? '#8b5cf6' : '#a78bfa';
+            // 등원/하원 시간에 따라 이벤트 생성
+            if ($attendanceLog->check_in_time) {
+                $title = '등원';
+                $color = '#8b5cf6';
 
-            // 정규/보충 구분
-            if ($attendanceLog->classroom_id) {
-                $title = '(정규)' . $title;
-                $color = $attendanceLog->type === 'in' ? '#8b5cf6' : '#a78bfa';
-            } else {
-                $title = '(보충)' . $title;
-                $color = $attendanceLog->type === 'in' ? '#06b6d4' : '#22d3ee';
+                // 정규/보충 구분
+                if ($attendanceLog->classroom_id) {
+                    $title = '(정규)' . $title;
+                    $color = '#8b5cf6';
+                } else {
+                    $title = '(보충)' . $title;
+                    $color = '#06b6d4';
+                }
+
+                // 지각 표시
+                if ($attendanceLog->is_late) {
+                    $title .= ' (지각)';
+                    $color = '#f59e0b';
+                }
+
+                $localTime = $attendanceLog->check_in_time->addHours(9);
+                $events[] = CalendarEvent::make()
+                    ->title($title)
+                    ->start($localTime)
+                    ->end($localTime)
+                    ->backgroundColor($color);
             }
 
-            // 지각 표시
-            if ($attendanceLog->is_late) {
-                $title .= ' (지각)';
-                $color = '#f59e0b';
-            }
+            if ($attendanceLog->check_out_time) {
+                $title = '하원';
+                $color = '#a78bfa';
 
-            $localTime = $attendanceLog->created_at->addHours(9);
-            $events[] = CalendarEvent::make()
-                ->title($title)
-                ->start($localTime)
-                ->end($localTime)
-                ->backgroundColor($color);
+                // 정규/보충 구분
+                if ($attendanceLog->classroom_id) {
+                    $title = '(정규)' . $title;
+                    $color = '#a78bfa';
+                } else {
+                    $title = '(보충)' . $title;
+                    $color = '#22d3ee';
+                }
+
+                $localTime = $attendanceLog->check_out_time->addHours(9);
+                $events[] = CalendarEvent::make()
+                    ->title($title)
+                    ->start($localTime)
+                    ->end($localTime)
+                    ->backgroundColor($color);
+            }
         }
 
         return $events;

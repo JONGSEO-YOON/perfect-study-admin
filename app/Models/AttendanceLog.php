@@ -10,15 +10,20 @@ class AttendanceLog extends Model
     protected $fillable = [
         'student_id',
         'classroom_id',
-        'type',
         'is_late',
+        'is_absent',
         'memo',
         'is_supplementary',
+        'check_in_time',
+        'check_out_time',
     ];
 
     protected $casts = [
         'is_late' => 'boolean',
+        'is_absent' => 'boolean',
         'is_supplementary' => 'boolean',
+        'check_in_time' => 'datetime',
+        'check_out_time' => 'datetime',
     ];
 
     /**
@@ -42,7 +47,7 @@ class AttendanceLog extends Model
      */
     public function isCheckIn(): bool
     {
-        return $this->type === 'in';
+        return !is_null($this->check_in_time);
     }
 
     /**
@@ -50,7 +55,7 @@ class AttendanceLog extends Model
      */
     public function isCheckOut(): bool
     {
-        return $this->type === 'out';
+        return !is_null($this->check_out_time);
     }
 
     /**
@@ -93,27 +98,59 @@ class AttendanceLog extends Model
             ->get();
 
         foreach ($attendanceLogs as $attendanceLog) {
-            $title = $attendanceLog->type === 'in' ? '등원' : '하원';
-            $color = $attendanceLog->type === 'in' ? '#06b6d4' : '#22d3ee';
-            
-            // 정규/보충 구분
-            if ($attendanceLog->classroom_id) {
-                $title = '(정규)' . $title;
-                $color = $attendanceLog->type === 'in' ? '#8b5cf6' : '#a78bfa';
-            } else {
-                $title = '(보충)' . $title;
-            }
-            
-            if ($attendanceLog->is_late) {
-                $title .= ' (지각)';
-                $color = '#f59e0b';
+            // 결석인 경우 결석 기록 추가
+            if ($attendanceLog->is_absent) {
+                $attendances[] = [
+                    'title' => '결석',
+                    'time' => '',
+                    'color' => '#ef4444',
+                ];
+                continue;
             }
 
-            $attendances[] = [
-                'title' => $title,
-                'time' => $attendanceLog->korean_time,
-                'color' => $color,
-            ];
+            // 등원/하원 시간에 따라 이벤트 생성
+            if ($attendanceLog->check_in_time) {
+                $title = '등원';
+                $color = '#06b6d4';
+
+                // 정규/보충 구분
+                if ($attendanceLog->is_supplementary) {
+                    $title = '(보충)' . $title;
+                } else {
+                    $title = '(정규)' . $title;
+                    $color = '#8b5cf6';
+                }
+
+                if ($attendanceLog->is_late) {
+                    $title .= ' (지각)';
+                    $color = '#f59e0b';
+                }
+
+                $attendances[] = [
+                    'title' => $title,
+                    'time' => $attendanceLog->check_in_time->format('H:i'),
+                    'color' => $color,
+                ];
+            }
+
+            if ($attendanceLog->check_out_time) {
+                $title = '하원';
+                $color = '#22d3ee';
+
+                // 정규/보충 구분
+                if ($attendanceLog->is_supplementary) {
+                    $title = '(보충)' . $title;
+                } else {
+                    $title = '(정규)' . $title;
+                    $color = '#a78bfa';
+                }
+
+                $attendances[] = [
+                    'title' => $title,
+                    'time' => $attendanceLog->check_out_time->format('H:i'),
+                    'color' => $color,
+                ];
+            }
         }
 
         return $attendances;
@@ -132,28 +169,62 @@ class AttendanceLog extends Model
             ->get();
 
         foreach ($attendanceLogs as $attendanceLog) {
-            $title = $attendanceLog->type === 'in' ? '등원' : '하원';
-            $color = $attendanceLog->type === 'in' ? '#06b6d4' : '#22d3ee';
-            
-            // 정규/보충 구분
-            if ($attendanceLog->classroom_id) {
-                $title = '(정규)' . $title;
-                $color = $attendanceLog->type === 'in' ? '#8b5cf6' : '#a78bfa';
-            } else {
-                $title = '(보충)' . $title;
-            }
-            
-            if ($attendanceLog->is_late) {
-                $title .= ' (지각)';
-                $color = '#f59e0b';
+            // 결석인 경우 결석 기록 추가
+            if ($attendanceLog->is_absent) {
+                $attendances[] = [
+                    'date' => $attendanceLog->created_at->format('Y-m-d'),
+                    'title' => '결석',
+                    'time' => '',
+                    'color' => '#ef4444',
+                ];
+                continue;
             }
 
-            $attendances[] = [
-                'date' => $attendanceLog->created_at->format('Y-m-d'),
-                'title' => $title,
-                'time' => $attendanceLog->korean_time,
-                'color' => $color,
-            ];
+            // 등원/하원 시간에 따라 이벤트 생성
+            if ($attendanceLog->check_in_time) {
+                $title = '등원';
+                $color = '#06b6d4';
+
+                // 정규/보충 구분
+                if ($attendanceLog->is_supplementary) {
+                    $title = '(보충)' . $title;
+                } else {
+                    $title = '(정규)' . $title;
+                    $color = '#8b5cf6';
+                }
+
+                if ($attendanceLog->is_late) {
+                    $title .= ' (지각)';
+                    $color = '#f59e0b';
+                }
+
+                $attendances[] = [
+                    'date' => $attendanceLog->created_at->format('Y-m-d'),
+                    'title' => $title,
+                    'time' => $attendanceLog->check_in_time->format('H:i'),
+                    'color' => $color,
+                ];
+            }
+
+            if ($attendanceLog->check_out_time) {
+                $title = '하원';
+                $color = '#22d3ee';
+
+                // 정규/보충 구분
+                if ($attendanceLog->is_supplementary) {
+                    $title = '(보충)' . $title;
+                } else {
+                    $title = '(정규)' . $title;
+                    $color = '#a78bfa';
+                }
+
+                $attendances[] = [
+                    'date' => $attendanceLog->created_at->format('Y-m-d'),
+                    'title' => $title,
+                    'time' => $attendanceLog->check_out_time->format('H:i'),
+                    'color' => $color,
+                ];
+            }
         }
 
         return $attendances;
@@ -184,27 +255,59 @@ class AttendanceLog extends Model
                 ];
             }
 
-            $title = $attendanceLog->type === 'in' ? '등원' : '하원';
-            $color = $attendanceLog->type === 'in' ? '#06b6d4' : '#22d3ee';
-            
-            // 정규/보충 구분
-            if ($attendanceLog->classroom_id) {
-                $title = '(정규)' . $title;
-                $color = $attendanceLog->type === 'in' ? '#8b5cf6' : '#a78bfa';
-            } else {
-                $title = '(보충)' . $title;
-            }
-            
-            if ($attendanceLog->is_late) {
-                $title .= ' (지각)';
-                $color = '#f59e0b';
+            // 결석인 경우 결석 기록 추가
+            if ($attendanceLog->is_absent) {
+                $attendances[$dateKey]['records'][] = [
+                    'title' => '결석',
+                    'time' => '',
+                    'color' => '#ef4444',
+                ];
+                continue;
             }
 
-            $attendances[$dateKey]['records'][] = [
-                'title' => $title,
-                'time' => $attendanceLog->korean_time,
-                'color' => $color,
-            ];
+            // 등원/하원 시간에 따라 이벤트 생성
+            if ($attendanceLog->check_in_time) {
+                $title = '등원';
+                $color = '#06b6d4';
+
+                // 정규/보충 구분
+                if ($attendanceLog->is_supplementary) {
+                    $title = '(보충)' . $title;
+                } else {
+                    $title = '(정규)' . $title;
+                    $color = '#8b5cf6';
+                }
+
+                if ($attendanceLog->is_late) {
+                    $title .= ' (지각)';
+                    $color = '#f59e0b';
+                }
+
+                $attendances[$dateKey]['records'][] = [
+                    'title' => $title,
+                    'time' => $attendanceLog->check_in_time->format('H:i'),
+                    'color' => $color,
+                ];
+            }
+
+            if ($attendanceLog->check_out_time) {
+                $title = '하원';
+                $color = '#22d3ee';
+
+                // 정규/보충 구분
+                if ($attendanceLog->is_supplementary) {
+                    $title = '(보충)' . $title;
+                } else {
+                    $title = '(정규)' . $title;
+                    $color = '#a78bfa';
+                }
+
+                $attendances[$dateKey]['records'][] = [
+                    'title' => $title,
+                    'time' => $attendanceLog->check_out_time->format('H:i'),
+                    'color' => $color,
+                ];
+            }
         }
 
         // 날짜 역순으로 정렬
@@ -213,15 +316,14 @@ class AttendanceLog extends Model
     }
 
     /**
-     * 주차별 정규 출결 데이터 조회 (성적표용)
+     * 주차별 출결 데이터 조회 (성적표용) - 정규 및 보충 모두 포함
      */
-    public static function getRegularAttendanceByWeek($studentId, $classroomId, $year, $week)
+    public static function getRegularAttendanceByWeek($studentId, $year, $week)
     {
         $startOfWeek = now()->setISODate($year, $week)->startOfWeek();
         $endOfWeek = now()->setISODate($year, $week)->endOfWeek();
 
         return static::where('student_id', $studentId)
-            ->where('classroom_id', $classroomId)
             ->whereBetween('created_at', [
                 $startOfWeek->format('Y-m-d H:i:s'),
                 $endOfWeek->format('Y-m-d H:i:s')

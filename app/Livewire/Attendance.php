@@ -33,31 +33,59 @@ class Attendance extends Component
             && $user !== null
             && $user->isStudent()
         ) {
-            // 정규 수업 교실 ID 찾기
-            $classroom_id = null;
+            // 정규 수업 여부 확인
             $currentTime = now();
             $currentDay = strtolower($currentTime->format('D')); // mon, tue, wed, thu, fri, sat, sun
 
+            $hasRegularClass = false;
             foreach ($user->userable->classrooms as $classroom) {
                 $timetable = $classroom->timetable;
                 // 오늘 해당 요일에 스케줄이 있는지 확인
                 if (isset($timetable[$currentDay])) {
-                    $classroom_id = $classroom->id;
+                    $hasRegularClass = true;
                     break;
                 }
             }
 
-            // 보충 수업 여부 결정
-            $is_supplementary = $classroom_id === null;
+            // 보충 수업 여부 결정 (정규 수업이 없으면 보충)
+            $is_supplementary = !$hasRegularClass;
 
-            // 출석 로그 저장
-            AttendanceLog::create([
-                'student_id' => $user->userable->id,
-                'classroom_id' => $classroom_id, // 정규 수업이 있을 때만 classroom_id 저장
-                'type' => $type,
-                'is_late' => false,
-                'is_supplementary' => $is_supplementary,
-            ]);
+            // 오늘 출석 기록 확인 (학생 ID로 조회)
+            $today = now()->format('Y-m-d');
+            $existingLog = AttendanceLog::where('student_id', $user->userable->id)
+                ->whereDate('created_at', $today)
+                ->first();
+
+            if ($existingLog) {
+                // 기존 기록 업데이트
+                $updateData = [];
+
+                if ($type === 'in') {
+                    $updateData['check_in_time'] = now();
+                } else {
+                    $updateData['check_out_time'] = now();
+                }
+
+
+                $existingLog->update($updateData);
+                $attendanceLog = $existingLog;
+            } else {
+                // 새 기록 생성
+                $attendanceData = [
+                    'student_id' => $user->userable->id,
+                    'is_late' => false,
+                    'is_supplementary' => $is_supplementary,
+                ];
+
+                // 타입에 따라 check_in_time 또는 check_out_time 설정
+                if ($type === 'in') {
+                    $attendanceData['check_in_time'] = now();
+                } else {
+                    $attendanceData['check_out_time'] = now();
+                }
+
+                $attendanceLog = AttendanceLog::create($attendanceData);
+            }
 
             $key_word = $type === 'in' ? '등원' : '하원';
             $attendance_type = $is_supplementary ? '보충' : '정규';
