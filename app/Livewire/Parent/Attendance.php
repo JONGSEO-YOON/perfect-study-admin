@@ -28,9 +28,9 @@ class Attendance extends Component
             ->orWhere('phone_mother', $parent_phone)
             ->first();
 
-        // 기본 날짜 설정: 오늘로부터 한 달 이전까지
-        $this->endDate = now()->format('Y-m-d');
-        $this->startDate = now()->subMonth()->format('Y-m-d');
+        // 기본 날짜 설정: 오늘부터 한 달 이후까지
+        $this->startDate = now()->format('Y-m-d');
+        $this->endDate = now()->addMonth()->format('Y-m-d');
 
         $this->loadAttendances();
     }
