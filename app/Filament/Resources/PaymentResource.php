@@ -11,7 +11,9 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Enums\FiltersLayout;
+use Filament\Forms\Components\DatePicker;
 
 class PaymentResource extends Resource
 {
@@ -199,7 +201,7 @@ class PaymentResource extends Resource
                     ->label('생성일')
                     ->dateTime('Y-m-d H:i:s')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
                 TextColumn::make('updated_at')
                     ->label('수정일')
                     ->dateTime('Y-m-d H:i:s')
@@ -227,6 +229,30 @@ class PaymentResource extends Resource
                         'cancelled' => '취소',
                         // 'completed' => '완료',
                     ]),
+                Filter::make('created_from')
+                    ->form([
+                        DatePicker::make('created_from')
+                            ->label('시작날짜'),
+                    ])
+                    ->query(function ($query, array $data) {
+                        return $query->when(
+                            $data['created_from'],
+                            fn ($query, $date) => $query->whereDate('created_at', '>=', $date),
+                        );
+                    })
+                    ->label('시작날짜'),
+                Filter::make('created_until')
+                    ->form([
+                        DatePicker::make('created_until')
+                            ->label('종료날짜'),
+                    ])
+                    ->query(function ($query, array $data) {
+                        return $query->when(
+                            $data['created_until'],
+                            fn ($query, $date) => $query->whereDate('created_at', '<=', $date),
+                        );
+                    })
+                    ->label('종료날짜'),
             ])
             ->actions([
                 Tables\Actions\Action::make('copy_payment_link')
