@@ -140,4 +140,41 @@ class TossPaymentController extends Controller
       throw new \Exception('결제 승인 중 오류가 발생했습니다: ' . $e->getMessage());
     }
   }
+
+  /**
+   * 결제 취소
+   *
+   * @param string $paymentKey
+   * @param string $cancelReason
+   * @return array
+   * @throws \Exception
+   */
+  public function cancelPayment(string $paymentKey, string $cancelReason = '고객 요청'): array
+  {
+    try {
+      // 시크릿 키 인코딩
+      $encodedKey = base64_encode($this->secretKey . ':');
+
+      // API 호출
+      $response = Http::withHeaders([
+        'Authorization' => 'Basic ' . $encodedKey,
+        'Content-Type' => 'application/json'
+      ])->post($this->tossApiUrl . '/payments/' . $paymentKey . '/cancel', [
+        'cancelReason' => $cancelReason
+      ]);
+
+      // 응답 확인
+      if ($response->successful()) {
+        return $response->json();
+      }
+
+      // 에러 응답 처리
+      $errorResponse = $response->json();
+      Log::error('Toss payment cancellation failed', $errorResponse);
+      throw new \Exception($errorResponse['message'] ?? '결제 취소 실패');
+    } catch (\Exception $e) {
+      Log::error('Toss cancel API error', ['error' => $e->getMessage()]);
+      throw new \Exception('결제 취소 중 오류가 발생했습니다: ' . $e->getMessage());
+    }
+  }
 }

@@ -11,6 +11,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Enums\FiltersLayout;
 
 class PaymentResource extends Resource
 {
@@ -39,14 +40,37 @@ class PaymentResource extends Resource
                         ->relationship(
                             'student',
                             'id',
-                            fn($query) => $query->with('user')
+                            function ($query) {
+                                $query->with('user');
+
+                                // 일반강사인 경우 자기 교실의 학생들만 필터링
+                                if (auth()->user()->role === 'general') {
+                                    $teacher = auth()->user()->userable;
+                                    $classroomIds = $teacher->classrooms->pluck('id');
+                                    $query->whereHas('classrooms', function ($query) use ($classroomIds) {
+                                        $query->whereIn('classroom_id', $classroomIds);
+                                    });
+                                }
+
+                                return $query;
+                            }
                         )
                         ->getOptionLabelFromRecordUsing(fn($record) => $record->user->name ?? '')
                         ->getSearchResultsUsing(function (string $search) {
-                            return \App\Models\Student::whereHas('user', function ($query) use ($search) {
+                            $query = \App\Models\Student::whereHas('user', function ($query) use ($search) {
                                 $query->where('name', 'like', "%{$search}%");
-                            })
-                                ->with('user')
+                            });
+
+                            // 일반강사인 경우 자기 교실의 학생들만 필터링
+                            if (auth()->user()->role === 'general') {
+                                $teacher = auth()->user()->userable;
+                                $classroomIds = $teacher->classrooms->pluck('id');
+                                $query->whereHas('classrooms', function ($query) use ($classroomIds) {
+                                    $query->whereIn('classroom_id', $classroomIds);
+                                });
+                            }
+
+                            return $query->with('user')
                                 ->limit(50)
                                 ->get()
                                 ->mapWithKeys(fn($record) => [$record->id => $record->user->name ?? '']);
@@ -111,6 +135,17 @@ class PaymentResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(function ($query) {
+                // 일반강사인 경우 자기 교실의 학생들의 결제만 조회
+                if (auth()->user()->role === 'general') {
+                    $teacher = auth()->user()->userable;
+                    $classroomIds = $teacher->classrooms->pluck('id');
+                    $query->whereHas('student.classrooms', function ($query) use ($classroomIds) {
+                        $query->whereIn('classroom_id', $classroomIds);
+                    });
+                }
+                return $query;
+            })
             ->columns([
                 TextColumn::make('id')
                     ->label('ID')
@@ -159,7 +194,7 @@ class PaymentResource extends Resource
                     ->label('취소일시')
                     ->dateTime('Y-m-d H:i:s')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->placeholder('-'),
                 TextColumn::make('created_at')
                     ->label('생성일')
                     ->dateTime('Y-m-d H:i:s')
@@ -171,22 +206,26 @@ class PaymentResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->filtersLayout(FiltersLayout::AboveContent)
             ->filters([
+                SelectFilter::make('classroom')
+                    ->label('교실')
+                    ->relationship('student.classrooms', 'name', function ($query) {
+                        // 일반강사인 경우 자기 교실만 필터에 표시
+                        if (auth()->user()->role === 'general') {
+                            $teacher = auth()->user()->userable;
+                            $classroomIds = $teacher->classrooms->pluck('id');
+                            $query->whereIn('classrooms.id', $classroomIds);
+                        }
+                        return $query;
+                    }),
                 SelectFilter::make('payment_status')
                     ->label('결제 상태')
                     ->options([
                         'pending' => '대기중',
                         'paid' => '결제완료',
                         'cancelled' => '취소',
-                        'completed' => '완료',
-                    ]),
-                SelectFilter::make('payment_method')
-                    ->label('결제 방법')
-                    ->options([
-                        'card' => '카드',
-                        'transfer' => '계좌이체',
-                        'virtual_account' => '가상계좌',
-                        'mobile' => '휴대폰',
+                        // 'completed' => '완료',
                     ]),
             ])
             ->actions([
@@ -194,7 +233,7 @@ class PaymentResource extends Resource
                     ->label('결제링크')
                     ->icon('heroicon-o-link')
                     ->color('primary')
-                    ->visible(fn($record) => $record->payment_status != 'paid')
+                    ->visible(fn($record) => !in_array($record->payment_status, ['paid', 'cancelled']))
                     ->modalContent(function ($record) {
                         $paymentUrl = route('payment', ['paymentId' => $record->id]);
                         return view('filament.copy-payment-link', [
@@ -207,6 +246,37 @@ class PaymentResource extends Resource
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make()
                     ->visible(fn($record) => $record->payment_status === 'pending'),
+                Tables\Actions\Action::make('cancel_payment')
+                    ->label('결제취소')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->visible(fn($record) => $record->payment_status === 'paid')
+                    ->requiresConfirmation()
+                    ->modalHeading('결제 취소')
+                    ->modalDescription('정말로 이 결제를 취소하시겠습니까? 취소된 결제는 되돌릴 수 없습니다.')
+                    ->modalSubmitActionLabel('취소')
+                    ->action(function ($record) {
+                        try {
+                            $tossController = new \App\Http\Controllers\TossPaymentController();
+                            $response = $tossController->cancelPayment($record->payment_key, '관리자 요청');
+
+                            $record->markAsCancelled(
+                                '관리자 요청',
+                                json_encode(['response' => $response])
+                            );
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('결제가 성공적으로 취소되었습니다.')
+                                ->success()
+                                ->send();
+                        } catch (\Exception $e) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('결제 취소 실패')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
                 Tables\Actions\DeleteAction::make()
                     ->visible(fn($record) => $record->payment_status === 'pending'),
 

@@ -66,4 +66,21 @@ class Payment extends Model
             'payment_log' => $log,
         ]);
     }
+
+    /**
+     * 결제 취소 처리
+     *
+     * @param string $cancelReason
+     * @param string $log
+     * @return bool
+     */
+    public function markAsCancelled(string $cancelReason = null, string $log = null): bool
+    {
+        return $this->update([
+            'payment_status' => 'cancelled',
+            'cancelled_at' => now(),
+            'cancel_reason' => $cancelReason,
+            'payment_log' => $log,
+        ]);
+    }
 }
