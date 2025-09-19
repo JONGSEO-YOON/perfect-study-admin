@@ -332,6 +332,70 @@ const calculateChoicesHeight = (question) => {
   return 0;
 };
 
+const calculateExplanationImageHeight = (imageSrc) => {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => {
+      const aspectRatio = image.width / image.height;
+      const columnWidthPx = COLUMN_WIDTH * 3.779527559;
+      const height = columnWidthPx / aspectRatio;
+      resolve(height);
+    };
+    image.onerror = () => {
+      resolve(0);
+    };
+    image.src = imageSrc;
+  });
+};
+
+// 간단하고 안전한 이미지 잘림 방지 함수
+const findSafeBreakPoint = (canvas, startY, columnHeight) => {
+  const targetY = startY + columnHeight;
+  const searchRange = 30; // 검색 범위를 줄여서 안전하게
+
+  // 캔버스 경계 체크
+  if (targetY >= canvas.height) {
+    return canvas.height - startY;
+  }
+
+  try {
+    const ctx = canvas.getContext('2d');
+    let bestY = targetY;
+    let maxWhiteSpace = 0;
+
+    // 목표 지점 위아래로 검색
+    for (let y = Math.max(startY + columnHeight - searchRange, startY + 50);
+         y <= Math.min(targetY + searchRange, canvas.height - 10);
+         y += 3) {
+
+      // 해당 라인이 대부분 흰색인지 확인 (여백인지)
+      const imageData = ctx.getImageData(0, y, Math.min(canvas.width, 300), 1);
+      const data = imageData.data;
+
+      let whitePixels = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        // 밝은 픽셀(여백) 카운트
+        if (r > 240 && g > 240 && b > 240) {
+          whitePixels++;
+        }
+      }
+
+      const whiteRatio = whitePixels / (data.length / 4);
+      if (whiteRatio > maxWhiteSpace && whiteRatio > 0.8) {
+        maxWhiteSpace = whiteRatio;
+        bestY = y;
+      }
+    }
+
+    return bestY - startY;
+  } catch (error) {
+    return columnHeight;
+  }
+};
+
 const getQuestionNumber = (pageIndex, isLeft, imgIndex) => {
   let number = startingNumber.value;
   for (let i = 0; i < pageIndex; i++) {
@@ -443,20 +507,110 @@ const handlePageClick = (pageIndex) => {
 };
 
 const calculateExplanationPages = async () => {
+  try {
+    await nextTick();
+    if (!explanationContainer.value) {
+      return;
+    }
+
+    document.querySelector(".temp-explanation-container").style.width = `304.77px`;
+
+    const elements = explanationContainer.value.getElementsByTagName("math");
+    await window.MathJax.typesetPromise([explanationContainer.value]);
+    const canvas = await html2canvas(explanationContainer.value, {
+    scale: 1,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: "#ffffff",
+    logging: false,
+    removeContainer: true,
+    foreignObjectRendering: false,
+  });
+
+  const columnWidth = explanationContainer.value.offsetWidth;
+  const columnHeight = 885.36;
+  const pages = [];
+
+  let currentY = 0;
+  let remainingHeight = canvas.height;
+
+  while (remainingHeight > 0) {
+    const pageIndex = pages.length;
+    const leftSplitPoint = manualSplitPoints.value.find(
+      (point) => point.pageIndex === pageIndex && point.side === "left"
+    );
+    const rightSplitPoint = manualSplitPoints.value.find(
+      (point) => point.pageIndex === pageIndex && point.side === "right"
+    );
+
+    // 수동 분할점이 있는 경우 기존 로직 사용
+    if (leftSplitPoint || rightSplitPoint) {
+      // 왼쪽 컬럼 처리
+      const leftHeight = leftSplitPoint
+        ? (leftSplitPoint.yPercent / 100) * Math.min(columnHeight, remainingHeight)
+        : Math.min(columnHeight, remainingHeight);
+
+      const leftColumn = createColumnImage(canvas, columnWidth, leftHeight, currentY);
+      currentY += leftHeight;
+      remainingHeight = canvas.height - currentY;
+
+      // 오른쪽 컬럼 처리
+      let rightColumn = null;
+      if (remainingHeight > 0) {
+        const rightHeight = rightSplitPoint
+          ? (rightSplitPoint.yPercent / 100) * Math.min(columnHeight, remainingHeight)
+          : Math.min(columnHeight, remainingHeight);
+
+        rightColumn = createColumnImage(canvas, columnWidth, rightHeight, currentY);
+        currentY += rightHeight;
+        remainingHeight = canvas.height - currentY;
+      }
+
+      pages.push({
+        left: leftColumn,
+        right: rightColumn,
+      });
+    } else {
+      // 안전한 분할 로직 사용 - 이미지 잘림 방지
+      const requestedLeftHeight = Math.min(columnHeight, remainingHeight);
+      const safeLeftHeight = findSafeBreakPoint(canvas, currentY, requestedLeftHeight);
+
+      const leftColumn = createColumnImage(canvas, columnWidth, safeLeftHeight, currentY);
+      currentY += safeLeftHeight;
+      remainingHeight = canvas.height - currentY;
+
+      let rightColumn = null;
+      if (remainingHeight > 0) {
+        const requestedRightHeight = Math.min(columnHeight, remainingHeight);
+        const safeRightHeight = findSafeBreakPoint(canvas, currentY, requestedRightHeight);
+
+        rightColumn = createColumnImage(canvas, columnWidth, safeRightHeight, currentY);
+        currentY += safeRightHeight;
+        remainingHeight = canvas.height - currentY;
+      }
+
+      pages.push({
+        left: leftColumn,
+        right: rightColumn,
+      });
+    }
+  }
+
+    explanationPages.value = pages;
+  } catch (error) {
+    // 오류 발생 시 기본 로직으로 폴백
+    await calculateExplanationPagesBasic();
+  }
+};
+
+const calculateExplanationPagesBasic = async () => {
   await nextTick();
   if (!explanationContainer.value) return;
 
   document.querySelector(".temp-explanation-container").style.width = `304.77px`;
 
-  // document.querySelector(".temp-explanation-container").style.width = `${
-  //     COLUMN_WIDTH * 3.779527559
-  // }px`;
-
   const elements = explanationContainer.value.getElementsByTagName("math");
-  console.log(elements);
   await window.MathJax.typesetPromise([explanationContainer.value]);
-
-  // await new Promise((resolve) => setTimeout(resolve, 1000));
 
   const canvas = await html2canvas(explanationContainer.value, {
     scale: 1,
@@ -467,13 +621,9 @@ const calculateExplanationPages = async () => {
     removeContainer: true,
     foreignObjectRendering: false,
   });
-  // const columnWidth = COLUMN_WIDTH * 3.779527559;
-  const columnWidth = explanationContainer.value.offsetWidth;
-  // const columnHeight = PAGE_CONTENT_HEIGHT * 3.779527559;
-  const columnHeight = 885.36;
 
-  // const columnWidth = COLUMN_WIDTH * 3.779527559;
-  // const columnHeight = PAGE_CONTENT_HEIGHT * 3.779527559;
+  const columnWidth = explanationContainer.value.offsetWidth;
+  const columnHeight = 885.36;
   const pages = [];
 
   let currentY = 0;
