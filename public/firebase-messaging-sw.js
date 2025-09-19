@@ -32,9 +32,10 @@ messaging.onBackgroundMessage((payload) => {
     body: payload.notification.body || "새로운 알림이 있습니다.",
     icon: "/icon-parent-192x192.png",
     badge: "/icon-parent-192x192.png",
-    tag: "perfect-study-" + Date.now(),
+    tag: "perfect-study-notification",
     data: payload.data,
     requireInteraction: true,
+    renotify: true,
     actions: [
       {
         action: "open",

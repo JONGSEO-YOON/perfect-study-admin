@@ -244,34 +244,21 @@
             console.log('11. Service Worker 등록 확인 시작');
             let registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
             console.log('12. 기존 Service Worker 등록:', registration);
+
             if (!registration) {
                 console.log('13. 새 Service Worker 등록 시작');
                 registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
                 console.log('14. 새 Service Worker 등록 완료');
+
+                // 새로 등록한 경우에만 준비 확인
+                console.log('15. Service Worker 준비 확인 시작');
+                await navigator.serviceWorker.ready;
+                console.log('16. Service Worker ready 완료');
+            } else {
+                console.log('15. 기존 Service Worker 사용');
             }
-            
-            console.log('15. Service Worker 준비 확인 시작');
-            await navigator.serviceWorker.ready;
-            console.log('16. Service Worker ready 완료');
-            
+
             console.log('17. Service Worker 준비 완료:', registration);
-            
-            // Service Worker 활성화 대기 (최대 5초)
-            console.log('18. Service Worker 활성화 확인 시작');
-            let attempts = 0;
-            while ((!registration.active || registration.active.state !== 'activated') && attempts < 50) {
-                console.log(`19-${attempts}. Service Worker 활성화 대기 중... 상태:`, registration.active?.state);
-                await new Promise(resolve => setTimeout(resolve, 100));
-                registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
-                attempts++;
-            }
-            
-            if (!registration.active || registration.active.state !== 'activated') {
-                console.error('20. Service Worker 활성화 시간 초과, 최종 상태:', registration.active?.state);
-                throw new Error('Service Worker 활성화 시간 초과');
-            }
-            
-            console.log('21. Service Worker 활성화 확인됨');
             
             // FCM 토큰 생성
             console.log('22. FCM 토큰 생성 시작');
