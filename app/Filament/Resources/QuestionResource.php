@@ -120,7 +120,33 @@ class QuestionResource extends Resource
                 ]);
             }
         }
+        // 교재 문제인 경우 seq 값 확인 후 처리
+        if ($question->material_id) {
+            // seq가 자동 생성된 값인지 확인 (기존 최대값 + 1인지)
+            $maxSeq = Question::where('material_id', $question->material_id)->where('id', '!=', $question->id)->max('seq') ?? 0;
+
+            // 자동 생성된 값이거나 null인 경우 전체 재정렬
+            if (!$question->seq || $question->seq == ($maxSeq + 1)) {
+                self::reorderQuestionSequences($question->material_id);
+            }
+        }
+
         return $question;
+    }
+
+    /**
+     * 교재의 문제 번호를 생성된 순서대로 재정렬
+     */
+    private static function reorderQuestionSequences($materialId)
+    {
+        $questions = Question::where('material_id', $materialId)
+            ->whereNull('parent_question_id')
+            ->orderBy('created_at')
+            ->get();
+
+        foreach ($questions as $index => $question) {
+            $question->update(['seq' => $index + 1]);
+        }
     }
 
     public static function getBreadcrumb(): string
@@ -358,32 +384,22 @@ class QuestionResource extends Resource
                 ->visible(fn(Get $get) => !$get('is_sub_question'))
                 ->placeholder('교재를 선택하세요.')
                 ->afterStateUpdated(function ($state, Set $set) {
-                    if ($state) {
-                        $maxSeq = \App\Models\Question::where('material_id', $state)->max('seq') ?? 0;
-                        $set('seq', $maxSeq + 1);
-                    }
+                    // 교재 선택 시 자동 번호 설정 제거 (사용자가 직접 입력하도록)
                 }),
             TextInput::make('seq')
                 ->label('문제번호')
-                ->required()
+                // ->required()
                 ->numeric()
                 ->visible(fn(Get $get) => $get('material_id'))
-                ->placeholder('교재를 선택하세요.')
-                ->default(function (Get $get) {
-                    if ($materialId = $get('material_id')) {
-                        $maxSeq = \App\Models\Question::where('material_id', $materialId)->max('seq') ?? 0;
-                        return $maxSeq + 1;
-                    }
-                    return null;
-                })
-                ->afterStateHydrated(function ($component, $state, Get $get) {
-                    // 새 레코드이고 seq가 비어있고 material_id가 있는 경우에만 자동 설정
-                    if (!$state && !$component->getRecord()?->exists && $get('material_id')) {
-                        $materialId = $get('material_id');
-                        $maxSeq = \App\Models\Question::where('material_id', $materialId)->max('seq') ?? 0;
-                        $component->state($maxSeq + 1);
-                    }
-                }),
+                ->placeholder('비어두면 자동 정렬됩니다'),
+            // ->afterStateHydrated(function ($component, $state, Get $get) {
+            //     // 새 레코드이고 seq가 비어있고 material_id가 있는 경우에만 자동 설정
+            //     if (!$state && !$component->getRecord()?->exists && $get('material_id')) {
+            //         $materialId = $get('material_id');
+            //         $maxSeq = \App\Models\Question::where('material_id', $materialId)->max('seq') ?? 0;
+            //         $component->state($maxSeq + 1);
+            //     }
+            // }),
 
             Toggle::make('is_public')
                 ->columnSpanFull()
