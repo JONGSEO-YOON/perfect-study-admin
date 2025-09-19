@@ -86,8 +86,27 @@ class MonthlyAttendance extends Page
     {
         return [
             Action::make('editAttendance')
-                ->label('출결 수정')
-                ->modalHeading(fn () => $this->modalStudentName . ' - ' . $this->modalDate . ' 출결 기록')
+                ->label('출결 등록')
+                ->modalHeading(fn() => $this->modalStudentName . ' - ' . $this->modalDate . ' 출결 기록')
+                ->extraModalFooterActions(function () {
+                    $actions = [];
+
+                    // 기존 기록이 있는 경우에만 삭제 버튼 추가
+                    if ($this->hasExistingRecord()) {
+                        $actions[] = Action::make('delete')
+                            ->label('삭제')
+                            ->color('danger')
+                            ->requiresConfirmation()
+                            ->modalHeading('출결 기록 삭제')
+                            ->modalDescription('정말로 이 출결 기록을 삭제하시겠습니까?')
+                            ->action(function () {
+                                $this->deleteAttendanceRecord();
+                                $this->js('location.reload()');
+                            });
+                    }
+
+                    return $actions;
+                })
                 ->form([
                     Select::make('student_id')
                         ->label('학생 선택')
@@ -105,7 +124,7 @@ class MonthlyAttendance extends Page
                                 $this->modalStudentId = $state;
                             }
                         })
-                        ->visible(fn () => !$this->showModal),
+                        ->visible(fn() => !$this->showModal),
                     Select::make('day')
                         ->label('날짜 선택')
                         ->options(function () {
@@ -125,12 +144,12 @@ class MonthlyAttendance extends Page
                                 $this->modalDate = $state;
                             }
                         })
-                        ->visible(fn () => !$this->showModal),
+                        ->visible(fn() => !$this->showModal),
                     TimePicker::make('check_in_time_only')
                         ->label('등원 시간')
                         ->seconds(false)
                         ->displayFormat('H:i')
-                        ->required(fn ($get) => !$get('is_absent')),
+                        ->required(fn($get) => !$get('is_absent')),
                     TimePicker::make('check_out_time_only')
                         ->label('하원 시간')
                         ->seconds(false)
@@ -138,11 +157,11 @@ class MonthlyAttendance extends Page
                     Toggle::make('is_late')
                         ->label('지각 여부')
                         ->default(false)
-                        ->visible(fn ($get) => !$get('is_absent')),
+                        ->visible(fn($get) => !$get('is_absent')),
                     Toggle::make('is_supplementary')
                         ->label('보충 수업 여부')
                         ->default(false)
-                        ->visible(fn ($get) => !$get('is_absent')),
+                        ->visible(fn($get) => !$get('is_absent')),
                     Toggle::make('is_absent')
                         ->label('결석 여부')
                         ->default(false)
@@ -320,6 +339,50 @@ class MonthlyAttendance extends Page
     private function getDaysInMonth()
     {
         return Carbon::create($this->selectedYear, $this->selectedMonth, 1)->daysInMonth;
+    }
+
+    public function hasExistingRecord(): bool
+    {
+        if (!$this->modalStudentId || !$this->modalDate) {
+            return false;
+        }
+
+        $selectedDate = Carbon::create($this->selectedYear, $this->selectedMonth, $this->modalDate)->format('Y-m-d');
+        return AttendanceLog::where('student_id', $this->modalStudentId)
+            ->whereDate('created_at', $selectedDate)
+            ->exists();
+    }
+
+    public function deleteAttendanceRecord(): void
+    {
+        if (!$this->modalStudentId || !$this->modalDate) {
+            return;
+        }
+
+        $selectedDate = Carbon::create($this->selectedYear, $this->selectedMonth, $this->modalDate)->format('Y-m-d');
+        $log = AttendanceLog::where('student_id', $this->modalStudentId)
+            ->whereDate('created_at', $selectedDate)
+            ->first();
+
+        if ($log) {
+            $log->delete();
+
+            Notification::make()
+                ->title('출결 기록이 삭제되었습니다.')
+                ->success()
+                ->send();
+
+            // 모달 상태 초기화
+            $this->resetModal();
+        }
+    }
+
+    private function resetModal(): void
+    {
+        $this->modalStudentId = null;
+        $this->modalDate = null;
+        $this->modalStudentName = null;
+        $this->showModal = false;
     }
 
     public static function getNavigationBadge(): ?string

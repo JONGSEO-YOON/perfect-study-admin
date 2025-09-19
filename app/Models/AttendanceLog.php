@@ -261,6 +261,7 @@ class AttendanceLog extends Model
                     'title' => '결석',
                     'time' => '',
                     'color' => '#ef4444',
+                    'memo' => $attendanceLog->memo,
                 ];
                 continue;
             }
@@ -287,6 +288,7 @@ class AttendanceLog extends Model
                     'title' => $title,
                     'time' => $attendanceLog->check_in_time->format('H:i'),
                     'color' => $color,
+                    'memo' => $attendanceLog->memo,
                 ];
             }
 
@@ -306,6 +308,7 @@ class AttendanceLog extends Model
                     'title' => $title,
                     'time' => $attendanceLog->check_out_time->format('H:i'),
                     'color' => $color,
+                    'memo' => $attendanceLog->memo,
                 ];
             }
         }

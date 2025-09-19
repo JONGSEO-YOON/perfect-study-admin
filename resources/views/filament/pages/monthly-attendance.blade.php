@@ -100,10 +100,10 @@
                                     $bgColor = 'text-gray-400';
                                 }
                             @endphp
-                            <td class="px-2 py-4 text-center text-sm">
+                            <td class="px-1 py-2 text-center text-sm">
                                 <button
                                     wire:click="openAttendanceModal({{ $student->id }}, {{ $day }}, '{{ $student->user->name }}')"
-                                    class="w-full h-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors duration-150"
+                                    class="w-full h-full flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors duration-150"
                                     title="클릭하여 출결 기록 편집"
                                 >
                                     @if($icon === '-')
@@ -127,11 +127,11 @@
             <div class="flex flex-wrap gap-4">
                 <div class="flex items-center">
                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-2">✓</span>
-                    <span class="text-sm text-gray-600 dark:text-gray-400">출석 (정규)</span>
+                    <span class="text-sm text-gray-600 dark:text-gray-400">등원 (정규)</span>
                 </div>
                 <div class="flex items-center">
                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 mr-2">+</span>
-                    <span class="text-sm text-gray-600 dark:text-gray-400">출석 (보충)</span>
+                    <span class="text-sm text-gray-600 dark:text-gray-400">등원 (보충)</span>
                 </div>
                 <div class="flex items-center">
                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 mr-2">x</span>

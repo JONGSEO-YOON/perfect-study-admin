@@ -7,6 +7,13 @@ use Guava\Calendar\ValueObjects\CalendarEvent;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use App\Models\AttendanceLog;
+use Carbon\Carbon;
+use Filament\Actions\Action;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\TimePicker;
+use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Log;
 
 #[Layout('layouts.public')]
 class AttendanceCalendar extends CalendarWidget
@@ -15,9 +22,12 @@ class AttendanceCalendar extends CalendarWidget
 
     public $studentId;
 
+    public $selectedDate;
+
     protected static string $view = 'livewire.attendance-calendar';
     protected ?string $locale = 'ko';
     protected bool $useFilamentTimezone = true;
+    protected bool $dateClickEnabled = true;
 
     public function mount()
     {
@@ -33,9 +43,9 @@ class AttendanceCalendar extends CalendarWidget
     public function getEvents(array $fetchInfo = []): Collection | array
     {
         $attendanceLogs = AttendanceLog::where('student_id', $this->studentId)
-            ->where(function($query) use ($fetchInfo) {
+            ->where(function ($query) use ($fetchInfo) {
                 $query->whereBetween('check_in_time', [$fetchInfo['startStr'] . ' 00:00:00', $fetchInfo['endStr'] . ' 23:59:59'])
-                      ->orWhereBetween('check_out_time', [$fetchInfo['startStr'] . ' 00:00:00', $fetchInfo['endStr'] . ' 23:59:59']);
+                    ->orWhereBetween('check_out_time', [$fetchInfo['startStr'] . ' 00:00:00', $fetchInfo['endStr'] . ' 23:59:59']);
             })
             ->orderBy('created_at', 'asc')
             ->get();
@@ -48,12 +58,12 @@ class AttendanceCalendar extends CalendarWidget
                 $color = '#8b5cf6';
 
                 // 정규/보충 구분
-                if ($attendanceLog->classroom_id) {
-                    $title = '(정규)' . $title;
-                    $color = '#8b5cf6';
-                } else {
+                if ($attendanceLog->is_supplementary) {
                     $title = '(보충)' . $title;
                     $color = '#06b6d4';
+                } else {
+                    $title = '(정규)' . $title;
+                    $color = '#8b5cf6';
                 }
 
                 // 지각 표시
@@ -75,12 +85,12 @@ class AttendanceCalendar extends CalendarWidget
                 $color = '#a78bfa';
 
                 // 정규/보충 구분
-                if ($attendanceLog->classroom_id) {
-                    $title = '(정규)' . $title;
-                    $color = '#a78bfa';
-                } else {
+                if ($attendanceLog->is_supplementary) {
                     $title = '(보충)' . $title;
                     $color = '#22d3ee';
+                } else {
+                    $title = '(정규)' . $title;
+                    $color = '#a78bfa';
                 }
 
                 $localTime = $attendanceLog->check_out_time->addHours(9);
@@ -93,5 +103,197 @@ class AttendanceCalendar extends CalendarWidget
         }
 
         return $events;
+    }
+
+    public function onDateClick(array $info = []): void
+    {
+        // dateStr이 로컬 타임존 기준으로 정확한 날짜를 제공합니다
+        $clickedDate = $info['dateStr'] ?? $info['date'] ?? $info['start'] ?? null;
+
+        // 날짜 형식을 Y-m-d로 정규화
+        if ($clickedDate) {
+            try {
+                $this->selectedDate = Carbon::parse($clickedDate)->format('Y-m-d');
+            } catch (\Exception $e) {
+                $this->selectedDate = $clickedDate;
+            }
+        } else {
+            $this->selectedDate = now()->format('Y-m-d');
+        }
+
+        // 직접 액션 호출
+        $this->createAttendanceForDate($this->selectedDate);
+    }
+
+    public function createAttendanceForDate($date)
+    {
+        $this->selectedDate = $date;
+        $this->mountAction('createAttendance');
+    }
+
+    public function getDateClickContextMenuActions(): array
+    {
+        return [];  // 컨텍스트 메뉴 비활성화하고 직접 onDateClick 사용
+    }
+
+    protected function createAttendanceAction(): Action
+    {
+        return Action::make('createAttendance')
+            ->label('출석 기록 생성')
+            ->icon('heroicon-o-plus')
+            ->modalHeading(function () {
+                $dateText = $this->selectedDate ? Carbon::parse($this->selectedDate)->format('Y년 m월 d일') : '오늘';
+                return $this->studentData['name'] . ' - ' . $dateText . ' 출석 기록';
+            })
+            ->modalWidth('md')
+            ->modalAutofocus(false)
+            ->fillForm(function () {
+                if (!$this->selectedDate) {
+                    return [];
+                }
+
+                $selectedDate = Carbon::parse($this->selectedDate)->format('Y-m-d');
+                $log = AttendanceLog::where('student_id', $this->studentId)
+                    ->whereDate('created_at', $selectedDate)
+                    ->first();
+
+                if ($log) {
+                    return [
+                        'is_late' => $log->is_late ?? false,
+                        'is_absent' => $log->is_absent ?? false,
+                        'is_supplementary' => $log->is_supplementary ?? false,
+                        'memo' => $log->memo,
+                        'check_in_time_only' => $log->check_in_time ? $log->check_in_time->format('H:i') : null,
+                        'check_out_time_only' => $log->check_out_time ? $log->check_out_time->format('H:i') : null,
+                    ];
+                }
+
+                return [];
+            })
+            ->form([
+                TimePicker::make('check_in_time_only')
+                    ->label('등원 시간')
+                    ->seconds(false)
+                    ->displayFormat('H:i')
+                    ->required(fn($get) => !$get('is_absent')),
+                TimePicker::make('check_out_time_only')
+                    ->label('하원 시간')
+                    ->seconds(false)
+                    ->displayFormat('H:i'),
+                Toggle::make('is_late')
+                    ->label('지각 여부')
+                    ->default(false)
+                    ->visible(fn($get) => !$get('is_absent')),
+                Toggle::make('is_supplementary')
+                    ->label('보충 수업 여부')
+                    ->default(false)
+                    ->visible(fn($get) => !$get('is_absent')),
+                Toggle::make('is_absent')
+                    ->label('결석 여부')
+                    ->default(false)
+                    ->reactive()
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        if ($state) {
+                            $set('is_late', false);
+                            $set('is_supplementary', false);
+                        }
+                    }),
+                Textarea::make('memo')
+                    ->label('메모')
+                    ->rows(3),
+            ])
+            ->action(function ($data) {
+                // 클릭한 날짜를 정확히 파싱 (타임존 고려)
+                $dateToUse = $this->selectedDate ?: now()->format('Y-m-d');
+                Log::info('Action selectedDate: ' . $this->selectedDate);
+                Log::info('Action dateToUse: ' . $dateToUse);
+
+                $selectedDate = Carbon::parse($dateToUse)
+                    ->setTimezone(config('app.timezone'))
+                    ->startOfDay();
+
+                // 해당 날짜에 이미 기록이 있는지 확인
+                $existingLog = AttendanceLog::where('student_id', $this->studentId)
+                    ->whereDate('created_at', $selectedDate->format('Y-m-d'))
+                    ->first();
+
+                // 클릭한 날짜에 시간을 추가하여 정확한 datetime 생성
+                $checkInTime = null;
+                $checkOutTime = null;
+
+                if ($data['check_in_time_only']) {
+                    $checkInTime = Carbon::createFromFormat(
+                        'Y-m-d H:i',
+                        $selectedDate->format('Y-m-d') . ' ' . $data['check_in_time_only']
+                    );
+                }
+
+                if ($data['check_out_time_only']) {
+                    $checkOutTime = Carbon::createFromFormat(
+                        'Y-m-d H:i',
+                        $selectedDate->format('Y-m-d') . ' ' . $data['check_out_time_only']
+                    );
+                }
+
+                $attendanceData = [
+                    'student_id' => $this->studentId,
+                    'is_late' => $data['is_late'] ?? false,
+                    'is_absent' => $data['is_absent'] ?? false,
+                    'is_supplementary' => $data['is_supplementary'] ?? false,
+                    'memo' => $data['memo'],
+                    'check_in_time' => $checkInTime,
+                    'check_out_time' => $checkOutTime,
+                ];
+
+                if ($existingLog) {
+                    // 기존 기록 수정
+                    $existingLog->timestamps = false;
+                    $existingLog->is_late = $attendanceData['is_late'];
+                    $existingLog->is_absent = $attendanceData['is_absent'];
+                    $existingLog->is_supplementary = $attendanceData['is_supplementary'];
+                    $existingLog->memo = $attendanceData['memo'];
+                    $existingLog->check_in_time = $attendanceData['check_in_time'];
+                    $existingLog->check_out_time = $attendanceData['check_out_time'];
+
+                    // created_at을 등원시간 또는 하원시간으로 설정, 둘 다 없으면 선택한 날짜로 설정
+                    if ($existingLog->check_in_time) {
+                        $existingLog->created_at = $existingLog->check_in_time;
+                    } elseif ($existingLog->check_out_time) {
+                        $existingLog->created_at = $existingLog->check_out_time;
+                    } else {
+                        $existingLog->created_at = $selectedDate;
+                    }
+
+                    $existingLog->updated_at = now();
+                    $existingLog->save();
+
+                    Notification::make()
+                        ->title('출석 기록이 수정되었습니다.')
+                        ->success()
+                        ->send();
+                } else {
+                    // 새 기록 생성
+                    $attendanceLog = new AttendanceLog($attendanceData);
+                    $attendanceLog->timestamps = false;
+
+                    // created_at을 등원시간 또는 하원시간으로 설정, 둘 다 없으면 클릭한 날짜로 설정
+                    if ($checkInTime) {
+                        $attendanceLog->created_at = $checkInTime;
+                    } elseif ($checkOutTime) {
+                        $attendanceLog->created_at = $checkOutTime;
+                    } else {
+                        $attendanceLog->created_at = $selectedDate;
+                    }
+
+                    $attendanceLog->updated_at = now();
+                    $attendanceLog->save();
+
+                    Notification::make()
+                        ->title('출석 기록이 생성되었습니다.')
+                        ->success()
+                        ->send();
+                }
+                $this->js('location.reload()');
+            });
     }
 }

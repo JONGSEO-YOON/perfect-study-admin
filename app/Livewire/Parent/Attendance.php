@@ -17,6 +17,10 @@ class Attendance extends Component
 
     public $attendances = [];
 
+    public $showMemoModal = false;
+    public $selectedMemo = '';
+    public $selectedDate = '';
+
     public function mount()
     {
         $parent_phone = session('parent_phone');
@@ -61,6 +65,20 @@ class Attendance extends Component
             $this->startDate,
             $this->endDate
         );
+    }
+
+    public function showMemo($memo, $date)
+    {
+        $this->selectedMemo = $memo;
+        $this->selectedDate = $date;
+        $this->showMemoModal = true;
+    }
+
+    public function closeMemoModal()
+    {
+        $this->showMemoModal = false;
+        $this->selectedMemo = '';
+        $this->selectedDate = '';
     }
 
     #[Layout('layouts.parent')]

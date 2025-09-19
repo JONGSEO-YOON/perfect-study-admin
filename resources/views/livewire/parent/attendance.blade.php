@@ -59,18 +59,29 @@
                                     <p class="text-xs sm:text-sm text-stone-600">{{ count($dayAttendance['records']) }}개의 출결 기록</p>
                                 </div>
                             </div>
+                            
                         </div>
                         
                         @if(count($dayAttendance['records']) > 0)
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                                 @foreach($dayAttendance['records'] as $record)
                                     <div class="bg-stone-50 rounded-lg p-2 sm:p-3 border-l-4" style="border-left-color: {{ $record['color'] }};">
-                                        <div class="flex items-center">
-                                            <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mr-2 sm:mr-3" style="background-color: {{ $record['color'] }};"></div>
-                                            <div>
-                                                <p class="text-xs sm:text-sm font-medium text-stone-900">{{ $record['title'] }}</p>
-                                                <p class="text-xs sm:text-sm text-stone-600">{{ $record['time'] }}</p>
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center">
+                                                <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mr-2 sm:mr-3" style="background-color: {{ $record['color'] }};"></div>
+                                                <div>
+                                                    <p class="text-xs sm:text-sm font-medium text-stone-900">{{ $record['title'] }}</p>
+                                                    <p class="text-xs sm:text-sm text-stone-600">{{ $record['time'] }}</p>
+                                                </div>
                                             </div>
+                                            @if(!empty($record['memo']))
+                                                <button wire:click="showMemo('{{ addslashes($record['memo']) }}', '{{ $dayAttendance['date'] }} - {{ $record['title'] }}')"
+                                                        class="inline-flex items-center px-1.5 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors ml-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+                                                    </svg>
+                                                </button>
+                                            @endif
                                         </div>
                                     </div>
                                 @endforeach
@@ -123,4 +134,31 @@
             </div>
         </div>
     </main>
+
+    <!-- Memo Modal -->
+    @if($showMemoModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50" wire:click="closeMemoModal">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" wire:click.stop>
+                <div class="p-4 sm:p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-stone-900">{{ $selectedDate }} 메모</h3>
+                        <button wire:click="closeMemoModal" class="text-stone-400 hover:text-stone-600 transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="bg-stone-50 rounded-lg p-3 sm:p-4">
+                        <p class="text-sm text-stone-700 whitespace-pre-wrap">{{ $selectedMemo }}</p>
+                    </div>
+                    <div class="mt-4 flex justify-end">
+                        <button wire:click="closeMemoModal"
+                                class="px-4 py-2 bg-violet-600 text-white rounded-md hover:bg-violet-700 transition-colors text-sm font-medium">
+                            닫기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>

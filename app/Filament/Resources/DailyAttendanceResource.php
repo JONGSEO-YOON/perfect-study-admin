@@ -82,8 +82,9 @@ class DailyAttendanceResource extends Resource
                 TextColumn::make('attendance_status')
                     ->label('구분')
                     ->width('80px')
-                    ->state(function ($record) {
-                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                    ->state(function ($record, $livewire) {
+                        $filters = $livewire->getTableFiltersForm()->getState();
+                        $selectedDate = $filters['date']['date'] ?? now()->format('Y-m-d');
                         $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
 
                         $attendanceLog = $record->attendanceLogs()
@@ -100,14 +101,14 @@ class DailyAttendanceResource extends Resource
                         }
 
                         if ($attendanceLog->check_in_time || $attendanceLog->check_out_time) {
-                            return '출석';
+                            return '등원';
                         }
 
                         return '';
                     })
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
-                        '출석' => 'success',
+                        '등원' => 'success',
                         '결석' => 'danger',
                         default => 'gray',
                     }),
@@ -116,12 +117,14 @@ class DailyAttendanceResource extends Resource
                     ->label('보충 여부')
                     ->badge()
                     ->width('100px')
-                    ->state(function ($record) {
-                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                    ->state(function ($record, $livewire) {
+                        $filters = $livewire->getTableFiltersForm()->getState();
+                        $selectedDate = $filters['date']['date'] ?? now()->format('Y-m-d');
                         $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
 
                         // 해당 날짜의 출석 기록 조회
-                        $attendanceRecord = $record->attendanceLogsForDate($selectedDate)
+                        $attendanceRecord = $record->attendanceLogs()
+                            ->whereDate('created_at', $selectedDate)
                             ->latest()
                             ->first();
 
@@ -149,44 +152,43 @@ class DailyAttendanceResource extends Resource
                 TextColumn::make('check_in_time')
                     ->label('등원 시간')
                     ->width('100px')
-                    ->state(function ($record) {
-                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                    ->state(function ($record, $livewire) {
+                        $filters = $livewire->getTableFiltersForm()->getState();
+                        $selectedDate = $filters['date']['date'] ?? now()->format('Y-m-d');
                         $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
 
-                        $checkInLog = $record->attendanceLogs()
+                        $attendanceLog = $record->attendanceLogs()
                             ->whereDate('created_at', $selectedDate)
-                            ->whereNotNull('check_in_time')
-                            ->latest()
                             ->first();
 
-                        if ($checkInLog && $checkInLog->check_in_time) {
-                            return \Carbon\Carbon::parse($checkInLog->check_in_time)->format('H:i');
+                        if ($attendanceLog && $attendanceLog->check_in_time) {
+                            return \Carbon\Carbon::parse($attendanceLog->check_in_time)->format('H:i');
                         }
-                        return '-';
+                        return '';
                     }),
                 TextColumn::make('check_out_time')
                     ->label('하원 시간')
                     ->width('100px')
-                    ->state(function ($record) {
-                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                    ->state(function ($record, $livewire) {
+                        $filters = $livewire->getTableFiltersForm()->getState();
+                        $selectedDate = $filters['date']['date'] ?? now()->format('Y-m-d');
                         $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
 
-                        $checkOutLog = $record->attendanceLogs()
+                        $attendanceLog = $record->attendanceLogs()
                             ->whereDate('created_at', $selectedDate)
-                            ->whereNotNull('check_out_time')
-                            ->latest()
                             ->first();
 
-                        if ($checkOutLog && $checkOutLog->check_out_time) {
-                            return \Carbon\Carbon::parse($checkOutLog->check_out_time)->format('H:i');
+                        if ($attendanceLog && $attendanceLog->check_out_time) {
+                            return \Carbon\Carbon::parse($attendanceLog->check_out_time)->format('H:i');
                         }
-                        return '-';
+                        return '';
                     }),
                 TextColumn::make('late_status')
                     ->label('지각')
                     ->width('60px')
-                    ->state(function ($record) {
-                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                    ->state(function ($record, $livewire) {
+                        $filters = $livewire->getTableFiltersForm()->getState();
+                        $selectedDate = $filters['date']['date'] ?? now()->format('Y-m-d');
                         $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
 
                         // 해당 날짜의 지각 기록이 있는지 확인
@@ -205,8 +207,9 @@ class DailyAttendanceResource extends Resource
                 TextColumn::make('memo')
                     ->label('메모')
                     ->width('150px')
-                    ->state(function ($record) {
-                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                    ->state(function ($record, $livewire) {
+                        $filters = $livewire->getTableFiltersForm()->getState();
+                        $selectedDate = $filters['date']['date'] ?? now()->format('Y-m-d');
                         $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
 
                         $attendanceLog = $record->attendanceLogs()
@@ -217,7 +220,7 @@ class DailyAttendanceResource extends Resource
                         if ($attendanceLog && $attendanceLog->memo) {
                             return $attendanceLog->memo;
                         }
-                        return '-';
+                        return '';
                     })
                     ->limit(50),
 
@@ -312,9 +315,10 @@ class DailyAttendanceResource extends Resource
                             ->searchable()
                             ->required()
                             ->reactive()
-                            ->afterStateUpdated(function ($state, callable $set) {
+                            ->afterStateUpdated(function ($state, callable $set, $livewire) {
                                 if ($state) {
-                                    $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                                    $filters = $livewire->getTableFiltersForm()->getState();
+                                    $selectedDate = $filters['date']['date'] ?? now()->format('Y-m-d');
                                     $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
 
                                     $existingLog = \App\Models\AttendanceLog::where('student_id', $state)
@@ -372,8 +376,9 @@ class DailyAttendanceResource extends Resource
 
                         \Filament\Forms\Components\Hidden::make('existing_log_id')
                     ])
-                    ->action(function ($data) {
-                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                    ->action(function ($data, $livewire) {
+                        $filters = $livewire->getTableFiltersForm()->getState();
+                        $selectedDate = $filters['date']['date'] ?? now()->format('Y-m-d');
                         $today = \Carbon\Carbon::parse($selectedDate);
 
                         $attendanceData = [
@@ -394,7 +399,20 @@ class DailyAttendanceResource extends Resource
                             }
                         } else {
                             // 새 기록 생성
-                            AttendanceLog::create($attendanceData);
+                            $attendanceLog = new AttendanceLog($attendanceData);
+                            $attendanceLog->timestamps = false;
+
+                            // created_at을 등원시간 또는 하원시간으로 설정, 둘 다 없으면 선택한 날짜로 설정
+                            if ($attendanceLog->check_in_time) {
+                                $attendanceLog->created_at = $attendanceLog->check_in_time;
+                            } elseif ($attendanceLog->check_out_time) {
+                                $attendanceLog->created_at = $attendanceLog->check_out_time;
+                            } else {
+                                $attendanceLog->created_at = $today;
+                            }
+
+                            $attendanceLog->updated_at = now();
+                            $attendanceLog->save();
                         }
                     }),
             ])
@@ -435,8 +453,9 @@ class DailyAttendanceResource extends Resource
                             ->label('메모')
                             ->rows(3),
                     ])
-                    ->action(function ($data, $record) {
-                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                    ->action(function ($data, $record, $livewire) {
+                        $filters = $livewire->getTableFiltersForm()->getState();
+                        $selectedDate = $filters['date']['date'] ?? now()->format('Y-m-d');
                         $today = \Carbon\Carbon::parse($selectedDate);
 
                         $attendanceData = [
@@ -449,10 +468,24 @@ class DailyAttendanceResource extends Resource
                             'check_out_time' => $data['check_out_time_only'] ? $today->copy()->setTimeFromTimeString($data['check_out_time_only']) : null,
                         ];
 
-                        AttendanceLog::create($attendanceData);
+                        $attendanceLog = new AttendanceLog($attendanceData);
+                        $attendanceLog->timestamps = false;
+
+                        // created_at을 등원시간 또는 하원시간으로 설정, 둘 다 없으면 선택한 날짜로 설정
+                        if ($attendanceLog->check_in_time) {
+                            $attendanceLog->created_at = $attendanceLog->check_in_time;
+                        } elseif ($attendanceLog->check_out_time) {
+                            $attendanceLog->created_at = $attendanceLog->check_out_time;
+                        } else {
+                            $attendanceLog->created_at = $today;
+                        }
+
+                        $attendanceLog->updated_at = now();
+                        $attendanceLog->save();
                     })
-                    ->visible(function ($record) {
-                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                    ->visible(function ($record, $livewire) {
+                        $filters = $livewire->getTableFiltersForm()->getState();
+                        $selectedDate = $filters['date']['date'] ?? now()->format('Y-m-d');
                         $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
 
                         return !$record->attendanceLogs()
@@ -492,8 +525,9 @@ class DailyAttendanceResource extends Resource
                             ->rows(3)
 
                     ])
-                    ->fillForm(function ($record) {
-                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                    ->fillForm(function ($record, $livewire) {
+                        $filters = $livewire->getTableFiltersForm()->getState();
+                        $selectedDate = $filters['date']['date'] ?? now()->format('Y-m-d');
                         $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
 
                         $firstLog = $record->attendanceLogs()
@@ -513,8 +547,9 @@ class DailyAttendanceResource extends Resource
 
                         return [];
                     })
-                    ->action(function ($data, $record) {
-                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                    ->action(function ($data, $record, $livewire) {
+                        $filters = $livewire->getTableFiltersForm()->getState();
+                        $selectedDate = $filters['date']['date'] ?? now()->format('Y-m-d');
                         $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
                         $today = \Carbon\Carbon::parse($selectedDate);
 
@@ -536,8 +571,9 @@ class DailyAttendanceResource extends Resource
                             $log->update($updateData);
                         }
                     })
-                    ->visible(function ($record) {
-                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                    ->visible(function ($record, $livewire) {
+                        $filters = $livewire->getTableFiltersForm()->getState();
+                        $selectedDate = $filters['date']['date'] ?? now()->format('Y-m-d');
                         $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
 
                         return $record->attendanceLogs()
@@ -551,16 +587,18 @@ class DailyAttendanceResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('출결 기록 삭제')
                     ->modalDescription(fn($record) => $record->user->name . '의 오늘 출결 기록을 삭제하시겠습니까?')
-                    ->action(function ($record) {
-                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                    ->action(function ($record, $livewire) {
+                        $filters = $livewire->getTableFiltersForm()->getState();
+                        $selectedDate = $filters['date']['date'] ?? now()->format('Y-m-d');
                         $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
 
                         $record->attendanceLogs()
                             ->whereDate('created_at', $selectedDate)
                             ->delete();
                     })
-                    ->visible(function ($record) {
-                        $selectedDate = request()->input('tableFilters.date.date', now()->format('Y-m-d'));
+                    ->visible(function ($record, $livewire) {
+                        $filters = $livewire->getTableFiltersForm()->getState();
+                        $selectedDate = $filters['date']['date'] ?? now()->format('Y-m-d');
                         $selectedDate = \Carbon\Carbon::parse($selectedDate)->format('Y-m-d');
 
                         return $record->attendanceLogs()
