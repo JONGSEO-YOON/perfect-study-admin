@@ -57,7 +57,7 @@ class FcmService
                         'title' => $title,
                         'body' => $body
                     ],
-                    'data' => array_map('strval', $data),
+                    // 'data' => array_map('strval', $data),
                     // 'webpush' => [
                     //     'headers' => [
                     //         'Urgency' => 'high'
