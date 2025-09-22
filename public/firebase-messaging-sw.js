@@ -27,26 +27,35 @@ messaging.onBackgroundMessage((payload) => {
   console.log("Notification:", payload.notification);
   console.log("Data:", payload.data);
 
-  const notificationTitle = payload.notification.title || "퍼펙트 스터디";
-  const notificationOptions = {
-    body: payload.notification.body || "새로운 알림이 있습니다.",
-    icon: "/icon-parent-192x192.png",
-    badge: "/icon-parent-192x192.png",
-    tag: "perfect-study-notification",
-    data: payload.data,
-    requireInteraction: true,
-    renotify: true,
-    actions: [
-      {
-        action: "open",
-        title: "확인",
-        icon: "/icon-parent-192x192.png",
-      },
-    ],
-  };
+  // 중복 알림 방지: 앱이 포그라운드에 있으면 알림을 표시하지 않음
+  return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+    // 활성 창이 있으면 백그라운드 알림을 표시하지 않음
+    if (clients.length > 0) {
+      console.log("앱이 포그라운드에 있어 백그라운드 알림 표시 안함");
+      return;
+    }
 
-  console.log("알림 표시 시도:", notificationTitle);
-  // self.registration.showNotification(notificationTitle, notificationOptions);
+    const notificationTitle = payload.notification.title || "퍼펙트 스터디";
+    const notificationOptions = {
+      body: payload.notification.body || "새로운 알림이 있습니다.",
+      icon: "/icon-parent-192x192.png",
+      badge: "/icon-parent-192x192.png",
+      tag: "perfect-study-notification",
+      data: payload.data,
+      requireInteraction: true,
+      renotify: true,
+      actions: [
+        {
+          action: "open",
+          title: "확인",
+          icon: "/icon-parent-192x192.png",
+        },
+      ],
+    };
+
+    console.log("백그라운드 알림 표시:", notificationTitle);
+    return self.registration.showNotification(notificationTitle, notificationOptions);
+  });
 });
 
 // 알림 클릭 이벤트 핸들러
