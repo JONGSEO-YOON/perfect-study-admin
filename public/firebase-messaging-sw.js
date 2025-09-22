@@ -64,7 +64,7 @@ self.addEventListener("notificationclick", (event) => {
   console.log("알림 데이터: ", event.notification.data);
 
   event.notification.close();
-
+  alert("click");
   if (event.action === "open" || !event.action) {
     // 알림 데이터에서 type 확인
     const notificationData = event.notification.data || {};
@@ -96,6 +96,8 @@ self.addEventListener("notificationclick", (event) => {
 
         // 새 창 열기 (해당 페이지로 바로 이동)
         if (clients.openWindow) {
+          alert(targetUrl);
+
           return clients.openWindow(targetUrl);
         }
       })
