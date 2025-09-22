@@ -259,6 +259,20 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
       ->action(function ($data) {
         $selectedDate = Carbon::parse($data['date']);
 
+        // 해당 날짜에 이미 출결 기록이 있는지 확인
+        $existingLog = AttendanceLog::where('student_id', $this->student->id)
+          ->whereDate('created_at', $selectedDate->format('Y-m-d'))
+          ->first();
+
+        if ($existingLog) {
+          Notification::make()
+            ->title('출결 기록 중복')
+            ->body('해당 날짜에 이미 출결 기록이 있습니다. 기존 기록을 수정하거나 삭제 후 다시 시도해주세요.')
+            ->warning()
+            ->send();
+          return;
+        }
+
         $attendanceData = [
           'student_id' => $this->student->id,
           'is_late' => $data['is_late'] ?? false,
