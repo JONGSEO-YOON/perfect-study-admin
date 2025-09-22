@@ -75,7 +75,7 @@
                                                 </div>
                                             </div>
                                             @if(!empty($record['memo']))
-                                                <button wire:click="showMemo('{{ addslashes($record['memo']) }}', '{{ $dayAttendance['date'] }} - {{ $record['title'] }}')"
+                                                <button wire:click="showMemo('{{ $loop->parent->index }}', '{{ $loop->index }}')"
                                                         class="inline-flex items-center px-1.5 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors ml-2">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
@@ -138,7 +138,7 @@
     <!-- Memo Modal -->
     @if($showMemoModal)
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50" wire:click="closeMemoModal">
-            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" wire:click.stop>
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
                 <div class="p-4 sm:p-6">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-semibold text-stone-900">{{ $selectedDate }} 메모</h3>

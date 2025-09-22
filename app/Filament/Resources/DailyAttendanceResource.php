@@ -133,9 +133,9 @@ class DailyAttendanceResource extends Resource
                         }
 
                         // 결석이 아니면 표시
-                        if ($attendanceRecord->is_absent) {
-                            return '';
-                        }
+                        // if ($attendanceRecord->is_absent) {
+                        //     return '';
+                        // }
 
                         return $attendanceRecord->is_supplementary ? 'supplementary' : 'regular';
                     })
@@ -358,8 +358,7 @@ class DailyAttendanceResource extends Resource
                             ->visible(fn($get) => !$get('is_absent')),
                         Toggle::make('is_supplementary')
                             ->label('보충 수업 여부')
-                            ->default(false)
-                            ->visible(fn($get) => !$get('is_absent')),
+                            ->default(false),
                         Toggle::make('is_absent')
                             ->label('결석 여부')
                             ->default(false)
@@ -367,7 +366,7 @@ class DailyAttendanceResource extends Resource
                             ->afterStateUpdated(function ($state, callable $set) {
                                 if ($state) {
                                     $set('is_late', false);
-                                    $set('is_supplementary', false);
+                                    // $set('is_supplementary', false);
                                 }
                             }),
                         Textarea::make('memo')
@@ -437,8 +436,7 @@ class DailyAttendanceResource extends Resource
                             ->visible(fn($get) => !$get('is_absent')),
                         Toggle::make('is_supplementary')
                             ->label('보충 수업 여부')
-                            ->default(false)
-                            ->visible(fn($get) => !$get('is_absent')),
+                            ->default(false),
                         Toggle::make('is_absent')
                             ->label('결석 여부')
                             ->default(false)
@@ -446,7 +444,7 @@ class DailyAttendanceResource extends Resource
                             ->afterStateUpdated(function ($state, callable $set) {
                                 if ($state) {
                                     $set('is_late', false);
-                                    $set('is_supplementary', false);
+                                    // $set('is_supplementary', false);
                                 }
                             }),
                         Textarea::make('memo')
@@ -509,15 +507,14 @@ class DailyAttendanceResource extends Resource
                             ->label('지각 여부')
                             ->visible(fn($get) => !$get('is_absent')),
                         Toggle::make('is_supplementary')
-                            ->label('보충 수업 여부')
-                            ->visible(fn($get) => !$get('is_absent')),
+                            ->label('보충 수업 여부'),
                         Toggle::make('is_absent')
                             ->label('결석 여부')
                             ->reactive()
                             ->afterStateUpdated(function ($state, callable $set) {
                                 if ($state) {
                                     $set('is_late', false);
-                                    $set('is_supplementary', false);
+                                    // $set('is_supplementary', false);
                                 }
                             }),
                         Textarea::make('memo')

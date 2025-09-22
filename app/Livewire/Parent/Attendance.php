@@ -67,11 +67,15 @@ class Attendance extends Component
         );
     }
 
-    public function showMemo($memo, $date)
+    public function showMemo($dayIndex, $recordIndex)
     {
-        $this->selectedMemo = $memo;
-        $this->selectedDate = $date;
-        $this->showMemoModal = true;
+        $attendanceKeys = array_keys($this->attendances);
+        if (isset($attendanceKeys[$dayIndex]) && isset($this->attendances[$attendanceKeys[$dayIndex]]['records'][$recordIndex])) {
+            $record = $this->attendances[$attendanceKeys[$dayIndex]]['records'][$recordIndex];
+            $this->selectedMemo = $record['memo'];
+            $this->selectedDate = $this->attendances[$attendanceKeys[$dayIndex]]['date'] . ' - ' . $record['title'];
+            $this->showMemoModal = true;
+        }
     }
 
     public function closeMemoModal()
