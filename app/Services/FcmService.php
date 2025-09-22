@@ -57,20 +57,20 @@ class FcmService
                     //     'title' => $title,
                     //     'body' => $body
                     // ],
-                    // 'data' => array_map('strval', $data),
-                    'webpush' => [
-                        'headers' => [
-                            'Urgency' => 'high'
-                        ],
-                        'notification' => [
-                            'title' => $title,
-                            'body' => $body,
-                            'icon' => '/icon-parent-192x192.png',
-                            'badge' => '/icon-parent-192x192.png',
-                            'tag' => 'perfect-study-notification',
-                            'requireInteraction' => true
-                        ]
-                    ]
+                    'data' => array_map('strval', $data),
+                    // 'webpush' => [
+                    //     'headers' => [
+                    //         'Urgency' => 'high'
+                    //     ],
+                    //     'notification' => [
+                    //         'title' => $title,
+                    //         'body' => $body,
+                    //         'icon' => '/icon-parent-192x192.png',
+                    //         'badge' => '/icon-parent-192x192.png',
+                    //         'tag' => 'perfect-study-notification',
+                    //         'requireInteraction' => true
+                    //     ]
+                    // ]
                 ]
             ];
             Log::info('FCM 메시지 data: ' . json_encode($data));
