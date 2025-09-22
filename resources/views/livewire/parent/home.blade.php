@@ -153,7 +153,8 @@
         @endif
         <!-- Footer Actions -->
         <div class="max-w-6xl mx-auto px-2 sm:px-4 lg:px-6 pb-6 mt-16 w-full space-y-3">
-            <button wire:click="enableNotifications" class="w-full py-3 text-center bg-violet-500 hover:bg-violet-600 text-white rounded-lg font-semibold">알림 켜기</button>
+            <button id="notificationButton" wire:click="enableNotifications" class="w-full py-3 text-center bg-violet-500 hover:bg-violet-600 text-white rounded-lg font-semibold" style="display: none;">알림 켜기</button>
+            <button id="installButton" class="w-full py-3 text-center bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-semibold" style="display: none;">홈 화면에 설치</button>
             <button wire:click="logout" class="w-full py-3 text-center hover:bg-stone-100 border border-violet-500 rounded-lg text-violet-500 font-semibold">로그아웃</button>
         </div>
     </main>
@@ -162,6 +163,75 @@
 @script
 <script>
     console.log('스크립트 블록 실행됨');
+
+    // PWA 모드 확인 함수
+    function isPWAMode() {
+        // standalone 모드 (홈화면에서 실행)
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            return true;
+        }
+
+        // iOS Safari PWA 확인
+        if (window.navigator.standalone === true) {
+            return true;
+        }
+
+        // Android Chrome PWA 확인
+        if (document.referrer.includes('android-app://')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    // PWA 모드 확인 후 버튼 표시/숨김
+    if (isPWAMode()) {
+        console.log('PWA 모드 감지 - 알림 버튼 표시');
+        document.getElementById('notificationButton').style.display = 'block';
+        document.getElementById('installButton').style.display = 'none';
+    } else {
+        console.log('브라우저 모드 - 설치 버튼 표시');
+        document.getElementById('notificationButton').style.display = 'none';
+        document.getElementById('installButton').style.display = 'block';
+    }
+
+    // iOS 확인 함수
+    function isIos() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent);
+    }
+
+    // PWA 설치 프롬프트
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', async (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+    });
+
+    // 설치 버튼 클릭 이벤트
+    document.getElementById('installButton').addEventListener('click', () => {
+        // iOS Safari의 경우
+        if (isIos() && !isPWAMode()) {
+            alert('Safari에서 하단 공유 버튼을 클릭한 후, [홈 화면에 추가] 버튼을 선택하세요');
+            return;
+        }
+
+        // PWA 설치 프롬프트
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('사용자가 설치를 수락했습니다.');
+                    document.getElementById('installButton').style.display = 'none';
+                } else {
+                    console.log('사용자가 설치를 거부했습니다.');
+                }
+                deferredPrompt = null;
+            });
+        } else {
+            // 이벤트가 준비되지 않은 경우, 사용자에게 수동 설치를 안내
+            alert('홈 화면 설치를 위해 브라우저 메뉴를 확인해 주세요.');
+        }
+    });
     
     // Service Worker 등록 함수
     async function registerServiceWorker() {
