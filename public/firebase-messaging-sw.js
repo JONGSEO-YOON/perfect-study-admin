@@ -76,18 +76,10 @@ self.addEventListener("notificationclick", (event) => {
     if (notificationType === "attendance") {
       targetUrl = "/parent/attendance"; // 출결 페이지
     } else if (notificationType === "payment") {
-      targetUrl = "/parent"; // 결제 알림은 홈으로
+      targetUrl = "/parent/payment"; // 결제 페이지
     }
 
     console.log("이동할 URL:", targetUrl);
-
-    // 테스트용 알림 - 타겟 URL을 알림으로 표시
-    self.registration.showNotification("테스트: 이동할 URL", {
-      body: `Type: ${notificationType || 'undefined'}\nURL: ${targetUrl}`,
-      icon: "/icon-parent-192x192.png",
-      tag: "test-notification",
-      requireInteraction: false
-    });
 
     // 알림 클릭 시 앱 열기
     event.waitUntil(
