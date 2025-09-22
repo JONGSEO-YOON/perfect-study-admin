@@ -46,7 +46,7 @@ messaging.onBackgroundMessage((payload) => {
   };
 
   console.log("알림 표시 시도:", notificationTitle);
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  // self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
 // 알림 클릭 이벤트 핸들러

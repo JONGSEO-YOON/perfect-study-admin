@@ -53,10 +53,10 @@ class FcmService
             $message = [
                 'message' => [
                     'token' => $token,
-                    // 'notification' => [
-                    //     'title' => $title,
-                    //     'body' => $body
-                    // ],
+                    'notification' => [
+                        'title' => $title,
+                        'body' => $body
+                    ],
                     'data' => array_map('strval', $data),
                     // 'webpush' => [
                     //     'headers' => [
