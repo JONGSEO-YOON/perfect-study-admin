@@ -64,22 +64,30 @@ self.addEventListener("notificationclick", (event) => {
   console.log("알림 데이터: ", event.notification.data);
 
   event.notification.close();
-  alert("click");
+
   if (event.action === "open" || !event.action) {
     // 알림 데이터에서 type 확인
     const notificationData = event.notification.data || {};
     const notificationType = notificationData.type;
 
     let targetUrl = "/parent"; // 기본 페이지
-    alert(notificationType);
+
     // type에 따라 다른 페이지로 이동
     if (notificationType === "attendance") {
       targetUrl = "/parent/attendance"; // 출결 페이지
     } else if (notificationType === "payment") {
-      targetUrl = "/parent/payment"; // 결제 알림은 홈으로 (결제 관련 페이지가 없으면)
+      targetUrl = "/parent"; // 결제 알림은 홈으로
     }
 
     console.log("이동할 URL:", targetUrl);
+
+    // 테스트용 알림 - 타겟 URL을 알림으로 표시
+    self.registration.showNotification("테스트: 이동할 URL", {
+      body: `Type: ${notificationType || 'undefined'}\nURL: ${targetUrl}`,
+      icon: "/icon-parent-192x192.png",
+      tag: "test-notification",
+      requireInteraction: false
+    });
 
     // 알림 클릭 시 앱 열기
     event.waitUntil(
@@ -89,15 +97,18 @@ self.addEventListener("notificationclick", (event) => {
           const client = clientList[i];
           if (client.url.includes("/parent") && "focus" in client) {
             // 포커스하고 해당 페이지로 이동
-            client.postMessage({ action: "navigate", url: targetUrl });
+            client.postMessage({
+              action: "navigate",
+              url: targetUrl,
+              type: notificationType,
+              debug: true
+            });
             return client.focus();
           }
         }
 
         // 새 창 열기 (해당 페이지로 바로 이동)
         if (clients.openWindow) {
-          alert(targetUrl);
-
           return clients.openWindow(targetUrl);
         }
       })
