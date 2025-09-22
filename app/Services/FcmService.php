@@ -62,14 +62,14 @@ class FcmService
                         'headers' => [
                             'Urgency' => 'high'
                         ],
-                        'notification' => [
-                            'title' => $title,
-                            'body' => $body,
-                            'icon' => '/icon-parent-192x192.png',
-                            'badge' => '/icon-parent-192x192.png',
-                            'tag' => 'perfect-study-notification',
-                            'requireInteraction' => true
-                        ]
+                        // 'notification' => [
+                        //     'title' => $title,
+                        //     'body' => $body,
+                        //     'icon' => '/icon-parent-192x192.png',
+                        //     'badge' => '/icon-parent-192x192.png',
+                        //     'tag' => 'perfect-study-notification',
+                        //     'requireInteraction' => true
+                        // ]
                     ]
                 ]
             ];
