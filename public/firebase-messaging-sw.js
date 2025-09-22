@@ -61,24 +61,42 @@ messaging.onBackgroundMessage((payload) => {
 // 알림 클릭 이벤트 핸들러
 self.addEventListener("notificationclick", (event) => {
   console.log("알림 클릭됨: ", event);
+  console.log("알림 데이터: ", event.notification.data);
 
   event.notification.close();
 
   if (event.action === "open" || !event.action) {
+    // 알림 데이터에서 type 확인
+    const notificationData = event.notification.data || {};
+    const notificationType = notificationData.type;
+
+    let targetUrl = "/parent"; // 기본 페이지
+
+    // type에 따라 다른 페이지로 이동
+    if (notificationType === "attendance") {
+      targetUrl = "/parent/attendance"; // 출결 페이지
+    } else if (notificationType === "payment") {
+      targetUrl = "/parent"; // 결제 알림은 홈으로 (결제 관련 페이지가 없으면)
+    }
+
+    console.log("이동할 URL:", targetUrl);
+
     // 알림 클릭 시 앱 열기
     event.waitUntil(
       clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-        // 이미 열려있는 창이 있으면 포커스
+        // 이미 열려있는 창이 있으면 해당 페이지로 이동
         for (let i = 0; i < clientList.length; i++) {
           const client = clientList[i];
           if (client.url.includes("/parent") && "focus" in client) {
+            // 포커스하고 해당 페이지로 이동
+            client.postMessage({ action: "navigate", url: targetUrl });
             return client.focus();
           }
         }
 
-        // 새 창 열기
+        // 새 창 열기 (해당 페이지로 바로 이동)
         if (clients.openWindow) {
-          return clients.openWindow("/parent");
+          return clients.openWindow(targetUrl);
         }
       })
     );
