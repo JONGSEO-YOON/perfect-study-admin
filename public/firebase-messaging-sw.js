@@ -28,7 +28,7 @@ messaging.onBackgroundMessage((payload) => {
   console.log("Data:", payload.data);
 
   // 중복 알림 방지: 앱이 포그라운드에 있으면 알림을 표시하지 않음
-  return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+  return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
     // 활성 창이 있으면 백그라운드 알림을 표시하지 않음
     if (clients.length > 0) {
       console.log("앱이 포그라운드에 있어 백그라운드 알림 표시 안함");
@@ -71,12 +71,12 @@ self.addEventListener("notificationclick", (event) => {
     const notificationType = notificationData.type;
 
     let targetUrl = "/parent"; // 기본 페이지
-
+    alert(notificationType);
     // type에 따라 다른 페이지로 이동
     if (notificationType === "attendance") {
       targetUrl = "/parent/attendance"; // 출결 페이지
     } else if (notificationType === "payment") {
-      targetUrl = "/parent"; // 결제 알림은 홈으로 (결제 관련 페이지가 없으면)
+      targetUrl = "/parent/payment"; // 결제 알림은 홈으로 (결제 관련 페이지가 없으면)
     }
 
     console.log("이동할 URL:", targetUrl);
