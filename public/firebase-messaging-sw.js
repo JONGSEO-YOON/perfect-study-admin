@@ -88,18 +88,23 @@ messaging.onBackgroundMessage((payload) => {
       console.log('[SW] 알림 타입:', notificationType);
 
       if (notificationType) {
-        try {
-          let notifications = JSON.parse(localStorage.getItem('parentNotifications') || '{}');
-          console.log('[SW] 기존 알림 상태:', notifications);
+        console.log('[SW] 메인 스레드에 뱃지 업데이트 메시지 전송');
 
-          notifications[notificationType] = true;
-          localStorage.setItem('parentNotifications', JSON.stringify(notifications));
-
-          console.log('[SW] 업데이트된 알림 상태:', notifications);
-        } catch (e) {
-          console.error('[SW] localStorage 에러:', e);
-          // localStorage 에러 발생해도 알림은 계속 표시
-        }
+        // 모든 클라이언트에게 뱃지 업데이트 메시지 전송
+        self.clients.matchAll({
+          type: "window",
+          includeUncontrolled: true
+        }).then((allClients) => {
+          allClients.forEach(client => {
+            if (client.url.includes("/parent")) {
+              client.postMessage({
+                type: 'UPDATE_BADGE',
+                notificationType: notificationType,
+                messageId: messageId
+              });
+            }
+          });
+        });
       }
 
       const notificationOptions = {

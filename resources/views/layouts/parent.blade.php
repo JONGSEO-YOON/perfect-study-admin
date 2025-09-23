@@ -43,6 +43,29 @@
                     }
                 }
 
+                // Service Worker에서 온 뱃지 업데이트 메시지 처리 (백그라운드 상태)
+                if (event.data && event.data.type === 'UPDATE_BADGE') {
+                    console.log('[BADGE_UPDATE] Service Worker에서 뱃지 업데이트 요청:', event.data);
+
+                    const notificationType = event.data.notificationType;
+                    if (notificationType) {
+                        try {
+                            let notifications = JSON.parse(localStorage.getItem('parentNotifications') || '{}');
+                            console.log('[BADGE_UPDATE] 기존 localStorage:', notifications);
+
+                            notifications[notificationType] = true;
+                            localStorage.setItem('parentNotifications', JSON.stringify(notifications));
+
+                            console.log('[BADGE_UPDATE] 업데이트된 localStorage:', notifications);
+
+                            // 뱃지 업데이트
+                            updateNavigationBadges();
+                        } catch (e) {
+                            console.error('[BADGE_UPDATE] localStorage 에러:', e);
+                        }
+                    }
+                }
+
                 // FCM 메시지 처리 (포그라운드 상태에서 받은 알림)
                 if (event.data && event.data.type === 'FCM_MESSAGE') {
                     console.log('[FOREGROUND] FCM 메시지 수신:', event.data);
