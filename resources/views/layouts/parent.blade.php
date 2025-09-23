@@ -176,22 +176,15 @@
                             console.log('[BADGE] 출결현황 뱃지 추가');
                             const badge = document.createElement('div');
                             badge.className = 'notification-badge';
-                            badge.innerHTML = '●';
                             badge.style.cssText = `
                                 position: absolute;
-                                top: 0px;
-                                right: 0px;
-                                width: 16px;
-                                height: 16px;
-                                background-color: #ff0000;
-                                color: white;
+                                top: -2px;
+                                right: -2px;
+                                width: 8px;
+                                height: 8px;
+                                background-color: #ef4444;
                                 border-radius: 50%;
-                                font-size: 12px;
-                                line-height: 16px;
-                                text-align: center;
                                 z-index: 9999;
-                                border: 2px solid white;
-                                font-weight: bold;
                             `;
 
                             link.style.position = 'relative';
@@ -204,22 +197,15 @@
                             console.log('[BADGE] 결제 뱃지 추가');
                             const badge = document.createElement('div');
                             badge.className = 'notification-badge';
-                            badge.innerHTML = '●';
                             badge.style.cssText = `
                                 position: absolute;
-                                top: 0px;
-                                right: 0px;
-                                width: 16px;
-                                height: 16px;
-                                background-color: #ff0000;
-                                color: white;
+                                top: -2px;
+                                right: -2px;
+                                width: 8px;
+                                height: 8px;
+                                background-color: #ef4444;
                                 border-radius: 50%;
-                                font-size: 12px;
-                                line-height: 16px;
-                                text-align: center;
                                 z-index: 9999;
-                                border: 2px solid white;
-                                font-weight: bold;
                             `;
 
                             link.style.position = 'relative';
