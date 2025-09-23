@@ -25,18 +25,24 @@ let processedMessages = new Set();
 
 // 백그라운드 메시지 핸들러 (data-only 메시지 처리)
 messaging.onBackgroundMessage((payload) => {
+  console.log('[SW] 백그라운드 메시지 수신:', payload);
+
   // data-only 메시지에서 title, body 추출
   const title = payload.data?.title || "퍼펙트 스터디";
   const body = payload.data?.body || "새로운 알림이 있습니다.";
   const messageId = payload.data?.messageId || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+  console.log('[SW] 메시지 정보:', { title, body, messageId, type: payload.data?.type });
+
   // 이미 처리된 메시지인지 확인
   if (processedMessages.has(messageId)) {
+    console.log('[SW] 이미 처리된 메시지:', messageId);
     return Promise.resolve();
   }
 
   // 처리된 메시지로 표시
   processedMessages.add(messageId);
+  console.log('[SW] 새 메시지 처리 시작:', messageId);
 
   // 5분 후 메시지 ID 제거 (메모리 관리)
   setTimeout(() => {
@@ -47,13 +53,18 @@ messaging.onBackgroundMessage((payload) => {
     type: "window",
     includeUncontrolled: true
   }).then((clients) => {
+    console.log('[SW] 클라이언트 목록:', clients.length);
+
     // 활성 창 상태 확인
     let hasVisibleApp = false;
 
     for (const client of clients) {
+      console.log('[SW] 클라이언트 URL:', client.url, 'visibility:', client.visibilityState);
+
       if (client.url.includes("/parent")) {
         if (client.visibilityState === 'visible') {
           hasVisibleApp = true;
+          console.log('[SW] 포그라운드 앱 발견, 메시지 전달');
 
           // 포그라운드 앱에 메시지 전달
           client.postMessage({
@@ -70,14 +81,23 @@ messaging.onBackgroundMessage((payload) => {
 
     // 포그라운드 앱이 없을 때만 알림 표시
     if (!hasVisibleApp) {
+      console.log('[SW] 백그라운드 상태 - 알림 표시 및 뱃지 설정');
+
       // 알림 뱃지를 위한 localStorage 설정 (백그라운드 상태)
       const notificationType = payload.data?.type;
+      console.log('[SW] 알림 타입:', notificationType);
+
       if (notificationType) {
         try {
           let notifications = JSON.parse(localStorage.getItem('parentNotifications') || '{}');
+          console.log('[SW] 기존 알림 상태:', notifications);
+
           notifications[notificationType] = true;
           localStorage.setItem('parentNotifications', JSON.stringify(notifications));
+
+          console.log('[SW] 업데이트된 알림 상태:', notifications);
         } catch (e) {
+          console.error('[SW] localStorage 에러:', e);
           // localStorage 에러 발생해도 알림은 계속 표시
         }
       }
@@ -104,7 +124,10 @@ messaging.onBackgroundMessage((payload) => {
         ],
       };
 
+      console.log('[SW] 알림 표시:', title, notificationOptions);
       return self.registration.showNotification(title, notificationOptions);
+    } else {
+      console.log('[SW] 포그라운드 앱이 있어 알림 표시 안함');
     }
 
     return Promise.resolve();
