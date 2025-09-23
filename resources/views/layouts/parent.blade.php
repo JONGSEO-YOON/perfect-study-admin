@@ -30,6 +30,46 @@
                 }
             } catch (e) { }
         })();
+
+        // Service Worker 메시지 리스너 (포그라운드 상태에서 알림 클릭 처리)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                console.log('=== 포그라운드에서 Service Worker 메시지 받음 ===');
+                console.log('Event data:', event.data);
+
+                if (event.data && event.data.action === 'navigate') {
+                    const targetUrl = event.data.url;
+                    const notificationType = event.data.type;
+
+                    console.log('알림 타입:', notificationType);
+                    console.log('이동할 URL:', targetUrl);
+                    console.log('현재 URL:', window.location.pathname);
+
+                    // 현재 페이지가 목표 페이지와 다르면 이동
+                    if (window.location.pathname !== targetUrl) {
+                        console.log('페이지 이동 실행:', targetUrl);
+                        window.location.href = targetUrl;
+                    } else {
+                        console.log('이미 목표 페이지에 있음');
+                    }
+                }
+
+                // FCM 메시지 처리 (포그라운드 상태에서 받은 알림)
+                if (event.data && event.data.type === 'FCM_MESSAGE') {
+                    const payload = event.data.payload;
+                    const title = event.data.title || payload.data?.title;
+                    const body = event.data.body || payload.data?.body;
+
+                    console.log('포그라운드 FCM 메시지:', title, body);
+
+                    // 포그라운드에서는 브라우저 알림 표시 (선택사항)
+                    if (Notification.permission === 'granted') {
+                        // 간단한 토스트 메시지나 앱 내 알림으로 대체 가능
+                        console.log('포그라운드 상태 - 앱 내에서 알림 처리');
+                    }
+                }
+            });
+        }
     </script>
     <div class="sticky top-0 z-10">
         <livewire:parent.header />
