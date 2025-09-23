@@ -59,14 +59,58 @@
                     const payload = event.data.payload;
                     const title = event.data.title || payload.data?.title;
                     const body = event.data.body || payload.data?.body;
+                    const notificationType = payload.data?.type;
 
                     console.log('포그라운드 FCM 메시지:', title, body);
 
-                    // 포그라운드에서는 브라우저 알림 표시 (선택사항)
+                    // 포그라운드에서도 브라우저 알림 표시
                     if (Notification.permission === 'granted') {
-                        // 간단한 토스트 메시지나 앱 내 알림으로 대체 가능
-                        console.log('포그라운드 상태 - 앱 내에서 알림 처리');
+                        console.log('포그라운드 상태 - 브라우저 알림 표시');
+
+                        const notification = new Notification(title, {
+                            body: body,
+                            icon: '/icon-parent-192x192.png',
+                            badge: '/icon-parent-192x192.png',
+                            tag: 'perfect-study-foreground',
+                            requireInteraction: true,
+                            data: {
+                                type: notificationType,
+                                url: getTargetUrl(notificationType)
+                            }
+                        });
+
+                        // 포그라운드 알림 클릭 이벤트
+                        notification.onclick = function(event) {
+                            console.log('포그라운드 알림 클릭됨');
+                            event.preventDefault();
+
+                            const targetUrl = getTargetUrl(notificationType);
+                            console.log('이동할 URL:', targetUrl);
+
+                            // 포커스 후 페이지 이동
+                            window.focus();
+                            if (window.location.pathname !== targetUrl) {
+                                window.location.href = targetUrl;
+                            }
+
+                            notification.close();
+                        };
+
+                        // 3초 후 자동으로 알림 닫기 (선택사항)
+                        setTimeout(() => {
+                            notification.close();
+                        }, 5000);
                     }
+                }
+
+                // 알림 타입에 따른 URL 결정 함수
+                function getTargetUrl(notificationType) {
+                    if (notificationType === 'attendance') {
+                        return '/parent/attendance';
+                    } else if (notificationType === 'payment') {
+                        return '/parent/payment';
+                    }
+                    return '/parent';
                 }
             });
         }
