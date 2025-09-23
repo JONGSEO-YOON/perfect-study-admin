@@ -27,41 +27,64 @@ messaging.onBackgroundMessage((payload) => {
   console.log("Notification:", payload.notification);
   console.log("Data:", payload.data);
 
-  // 중복 알림 방지: 앱이 포그라운드에 있으면 알림을 표시하지 않음
+  // 중복 알림 방지를 위한 고유 ID 생성
+  const messageId = payload.data?.messageId || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  console.log("Message ID:", messageId);
+
   return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
-    // 활성 창이 있으면 백그라운드 알림을 표시하지 않음
-    if (clients.length > 0) {
-      console.log("앱이 포그라운드에 있어 백그라운드 알림 표시 안함");
-      return;
+    // 활성 창 상태 확인
+    let hasVisibleApp = false;
+
+    for (const client of clients) {
+      if (client.url.includes("/parent") && client.visibilityState === 'visible') {
+        hasVisibleApp = true;
+        console.log("앱이 포그라운드에 있음 - 포그라운드 처리로 위임");
+
+        // 포그라운드 앱에 메시지 전달
+        client.postMessage({
+          type: 'FCM_MESSAGE',
+          payload: payload,
+          messageId: messageId
+        });
+        break;
+      }
     }
 
-    const notificationTitle = payload.notification.title || "퍼펙트 스터디";
-    const notificationOptions = {
-      body: payload.notification.body || "새로운 알림이 있습니다.",
-      icon: "/icon-parent-192x192.png",
-      badge: "/icon-parent-192x192.png",
-      tag: "perfect-study-notification",
-      data: payload.data,
-      requireInteraction: true,
-      renotify: true,
-      actions: [
-        {
-          action: "open",
-          title: "확인",
-          icon: "/icon-parent-192x192.png",
+    // 포그라운드에 앱이 없거나 백그라운드 상태일 때만 알림 표시
+    if (!hasVisibleApp) {
+      const notificationTitle = payload.notification?.title || "퍼펙트 스터디";
+      const notificationOptions = {
+        body: payload.notification?.body || "새로운 알림이 있습니다.",
+        icon: "/icon-parent-192x192.png",
+        badge: "/icon-parent-192x192.png",
+        tag: messageId, // 고유 ID로 중복 방지
+        data: {
+          ...payload.data,
+          messageId: messageId,
+          timestamp: Date.now()
         },
-      ],
-    };
+        requireInteraction: true,
+        renotify: false, // 중복 방지를 위해 false로 변경
+        actions: [
+          {
+            action: "open",
+            title: "확인",
+            icon: "/icon-parent-192x192.png",
+          },
+        ],
+      };
 
-    console.log("백그라운드 알림 표시:", notificationTitle);
-    return self.registration.showNotification(notificationTitle, notificationOptions);
+      console.log("백그라운드 알림 표시:", notificationTitle);
+      return self.registration.showNotification(notificationTitle, notificationOptions);
+    }
   });
 });
 
 // 알림 클릭 이벤트 핸들러
 self.addEventListener("notificationclick", (event) => {
-  console.log("알림 클릭됨: ", event);
-  console.log("알림 데이터: ", event.notification.data);
+  console.log("=== 알림 클릭됨 ===");
+  console.log("Event:", event);
+  console.log("알림 데이터:", event.notification.data);
 
   event.notification.close();
 
@@ -69,6 +92,7 @@ self.addEventListener("notificationclick", (event) => {
     // 알림 데이터에서 type 확인
     const notificationData = event.notification.data || {};
     const notificationType = notificationData.type;
+    const messageId = notificationData.messageId;
 
     let targetUrl = "/parent"; // 기본 페이지
 
@@ -79,29 +103,60 @@ self.addEventListener("notificationclick", (event) => {
       targetUrl = "/parent/payment"; // 결제 페이지
     }
 
+    console.log("알림 타입:", notificationType);
+    console.log("메시지 ID:", messageId);
     console.log("이동할 URL:", targetUrl);
 
     // 알림 클릭 시 앱 열기
     event.waitUntil(
-      clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-        // 이미 열려있는 창이 있으면 해당 페이지로 이동
+      self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true
+      }).then((clientList) => {
+        console.log("찾은 클라이언트 수:", clientList.length);
+
+        // 기존 앱 탭 찾기 (백그라운드 상태 포함)
         for (let i = 0; i < clientList.length; i++) {
           const client = clientList[i];
-          if (client.url.includes("/parent") && "focus" in client) {
-            // 포커스하고 해당 페이지로 이동
+          console.log(`클라이언트 ${i}:`, client.url, "상태:", client.visibilityState);
+
+          if (client.url.includes("/parent")) {
+            console.log("기존 앱 탭 발견 - 포커스 및 네비게이션");
+
+            // 먼저 메시지를 보내고
             client.postMessage({
               action: "navigate",
               url: targetUrl,
               type: notificationType,
-              debug: true
+              messageId: messageId,
+              fromNotification: true,
+              timestamp: Date.now()
             });
-            return client.focus();
+
+            // 그 다음 포커스
+            return client.focus().then(() => {
+              console.log("앱 포커스 완료");
+              return client;
+            }).catch((error) => {
+              console.error("포커스 실패:", error);
+              // 포커스 실패 시 새 창 열기
+              if (self.clients.openWindow) {
+                return self.clients.openWindow(targetUrl);
+              }
+            });
           }
         }
 
-        // 새 창 열기 (해당 페이지로 바로 이동)
-        if (clients.openWindow) {
-          return clients.openWindow(targetUrl);
+        // 앱이 열려있지 않으면 새 창 열기
+        console.log("기존 앱 탭 없음 - 새 창 열기");
+        if (self.clients.openWindow) {
+          return self.clients.openWindow(targetUrl);
+        }
+      }).catch((error) => {
+        console.error("알림 클릭 처리 오류:", error);
+        // 오류 발생 시 기본 페이지 열기
+        if (self.clients.openWindow) {
+          return self.clients.openWindow("/parent");
         }
       })
     );
