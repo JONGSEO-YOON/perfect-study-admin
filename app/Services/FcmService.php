@@ -50,25 +50,22 @@ class FcmService
     {
         try {
             $accessToken = $this->getAccessToken();
+
+            // data-only 메시지로 변경 (중복 알림 방지)
             $message = [
                 'message' => [
                     'token' => $token,
-                    'notification' => [
+                    'data' => array_map('strval', array_merge($data, [
                         'title' => $title,
-                        'body' => $body
-                    ],
-                    'data' => array_map('strval', $data),
+                        'body' => $body,
+                        'messageId' => 'msg_' . time() . '_' . uniqid()
+                    ])),
                     'webpush' => [
                         'headers' => [
                             'Urgency' => 'high'
                         ],
-                        'notification' => [
-                            'title' => $title,
-                            'body' => $body,
-                            'icon' => '/icon-parent-192x192.png',
-                            'badge' => '/icon-parent-192x192.png',
-                            'tag' => 'perfect-study-notification',
-                            'requireInteraction' => true
+                        'fcm_options' => [
+                            'link' => '/parent'
                         ]
                     ]
                 ]

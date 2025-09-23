@@ -20,51 +20,85 @@ firebase.initializeApp(firebaseConfig);
 // Firebase Messaging 인스턴스 가져오기
 const messaging = firebase.messaging();
 
-// 백그라운드 메시지 핸들러
+// 전역 변수로 처리된 메시지 ID 저장 (중복 방지)
+let processedMessages = new Set();
+
+// 백그라운드 메시지 핸들러 (data-only 메시지 처리)
 messaging.onBackgroundMessage((payload) => {
   console.log("=== FCM 백그라운드 메시지 받음 ===");
   console.log("Payload:", payload);
-  console.log("Notification:", payload.notification);
   console.log("Data:", payload.data);
 
-  // 중복 알림 방지를 위한 고유 ID 생성
+  // data-only 메시지에서 title, body 추출
+  const title = payload.data?.title || "퍼펙트 스터디";
+  const body = payload.data?.body || "새로운 알림이 있습니다.";
   const messageId = payload.data?.messageId || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  console.log("Title:", title);
+  console.log("Body:", body);
   console.log("Message ID:", messageId);
 
-  return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+  // 이미 처리된 메시지인지 확인
+  if (processedMessages.has(messageId)) {
+    console.log("이미 처리된 메시지 - 중복 알림 방지");
+    return Promise.resolve();
+  }
+
+  // 처리된 메시지로 표시
+  processedMessages.add(messageId);
+
+  // 5분 후 메시지 ID 제거 (메모리 관리)
+  setTimeout(() => {
+    processedMessages.delete(messageId);
+  }, 5 * 60 * 1000);
+
+  return self.clients.matchAll({
+    type: "window",
+    includeUncontrolled: true
+  }).then((clients) => {
+    console.log("찾은 클라이언트 수:", clients.length);
+
     // 활성 창 상태 확인
     let hasVisibleApp = false;
 
     for (const client of clients) {
-      if (client.url.includes("/parent") && client.visibilityState === 'visible') {
-        hasVisibleApp = true;
-        console.log("앱이 포그라운드에 있음 - 포그라운드 처리로 위임");
+      if (client.url.includes("/parent")) {
+        console.log(`클라이언트 발견: ${client.url}, 상태: ${client.visibilityState}`);
 
-        // 포그라운드 앱에 메시지 전달
-        client.postMessage({
-          type: 'FCM_MESSAGE',
-          payload: payload,
-          messageId: messageId
-        });
-        break;
+        if (client.visibilityState === 'visible') {
+          hasVisibleApp = true;
+          console.log("앱이 포그라운드에 있음 - 포그라운드 처리로 위임");
+
+          // 포그라운드 앱에 메시지 전달
+          client.postMessage({
+            type: 'FCM_MESSAGE',
+            payload: payload,
+            title: title,
+            body: body,
+            messageId: messageId
+          });
+          return Promise.resolve(); // 포그라운드 처리 시 알림 표시 안함
+        }
       }
     }
 
-    // 포그라운드에 앱이 없거나 백그라운드 상태일 때만 알림 표시
+    // 포그라운드 앱이 없을 때만 알림 표시
     if (!hasVisibleApp) {
-      const notificationTitle = payload.notification?.title || "퍼펙트 스터디";
+      console.log("포그라운드 앱 없음 - Service Worker에서 알림 표시");
+
       const notificationOptions = {
-        body: payload.notification?.body || "새로운 알림이 있습니다.",
+        body: body,
         icon: "/icon-parent-192x192.png",
         badge: "/icon-parent-192x192.png",
-        tag: messageId, // 고유 ID로 중복 방지
+        tag: "perfect-study-notification", // 고정 태그로 중복 방지
         data: {
           ...payload.data,
           messageId: messageId,
           timestamp: Date.now()
         },
         requireInteraction: true,
-        renotify: false, // 중복 방지를 위해 false로 변경
+        renotify: true, // 새 알림으로 교체
+        silent: false,
         actions: [
           {
             action: "open",
@@ -74,9 +108,13 @@ messaging.onBackgroundMessage((payload) => {
         ],
       };
 
-      console.log("백그라운드 알림 표시:", notificationTitle);
-      return self.registration.showNotification(notificationTitle, notificationOptions);
+      console.log("백그라운드 알림 표시:", title);
+      return self.registration.showNotification(title, notificationOptions);
     }
+
+    return Promise.resolve();
+  }).catch(error => {
+    console.error("백그라운드 메시지 처리 오류:", error);
   });
 });
 
