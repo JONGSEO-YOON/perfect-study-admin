@@ -50,23 +50,6 @@
                     const body = event.data.body || payload.data?.body;
                     const notificationType = payload.data?.type;
 
-                    // 알림 뱃지를 위한 localStorage 설정
-                    if (notificationType) {
-                        let notifications = {};
-                        try {
-                            notifications = JSON.parse(localStorage.getItem('parentNotifications') || '{}');
-                        } catch (e) {
-                            notifications = {};
-                        }
-
-                        // 해당 타입에 새 알림 추가
-                        notifications[notificationType] = true;
-                        localStorage.setItem('parentNotifications', JSON.stringify(notifications));
-
-                        // 네비게이션 뱃지 업데이트
-                        updateNavigationBadges();
-                    }
-
                     // 포그라운드에서도 브라우저 알림 표시
                     if (Notification.permission === 'granted') {
                         const notification = new Notification(title, {
@@ -114,85 +97,6 @@
                 }
             });
         }
-
-        // 네비게이션 뱃지 업데이트 함수
-        function updateNavigationBadges() {
-            let notifications = {};
-            try {
-                notifications = JSON.parse(localStorage.getItem('parentNotifications') || '{}');
-            } catch (e) {
-                notifications = {};
-            }
-
-            // 각 네비게이션 링크에 뱃지 추가/제거
-            const navLinks = {
-                'attendance': document.querySelector('a[href*="attendance"]'),
-                'payment': document.querySelector('a[href*="payment"]')
-            };
-
-            Object.keys(navLinks).forEach(type => {
-                const link = navLinks[type];
-                if (!link) return;
-
-                // 기존 뱃지 제거
-                const existingBadge = link.querySelector('.notification-badge');
-                if (existingBadge) {
-                    existingBadge.remove();
-                }
-
-                // 새 알림이 있으면 뱃지 추가
-                if (notifications[type]) {
-                    const badge = document.createElement('span');
-                    badge.className = 'notification-badge absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full';
-                    badge.style.cssText = 'position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background-color: #ef4444; border-radius: 50%; border: 2px solid white;';
-
-                    // 링크를 relative position으로 설정
-                    link.style.position = 'relative';
-                    link.appendChild(badge);
-                }
-            });
-        }
-
-        // 페이지 로드 시 뱃지 업데이트
-        document.addEventListener('DOMContentLoaded', function() {
-            updateNavigationBadges();
-        });
-
-        // 페이지 방문 시 해당 알림 제거
-        function clearNotificationForCurrentPage() {
-            const currentPath = window.location.pathname;
-            let notificationType = null;
-
-            if (currentPath.includes('/parent/attendance')) {
-                notificationType = 'attendance';
-            } else if (currentPath.includes('/parent/payment')) {
-                notificationType = 'payment';
-            }
-
-            if (notificationType) {
-                let notifications = {};
-                try {
-                    notifications = JSON.parse(localStorage.getItem('parentNotifications') || '{}');
-                } catch (e) {
-                    notifications = {};
-                }
-
-                // 해당 타입 알림 제거
-                delete notifications[notificationType];
-                localStorage.setItem('parentNotifications', JSON.stringify(notifications));
-
-                // 뱃지 업데이트
-                updateNavigationBadges();
-            }
-        }
-
-        // 페이지 로드 시 현재 페이지 알림 제거
-        clearNotificationForCurrentPage();
-
-        // Livewire 네비게이션 시에도 알림 제거
-        document.addEventListener('livewire:navigated', function() {
-            clearNotificationForCurrentPage();
-        });
     </script>
     <div class="sticky top-0 z-10">
         <livewire:parent.header />

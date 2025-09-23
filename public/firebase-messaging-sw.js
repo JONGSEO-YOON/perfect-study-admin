@@ -70,22 +70,6 @@ messaging.onBackgroundMessage((payload) => {
 
     // 포그라운드 앱이 없을 때만 알림 표시
     if (!hasVisibleApp) {
-      // 알림 뱃지를 위한 localStorage 설정
-      const notificationType = payload.data?.type;
-      if (notificationType) {
-        // 현재 알림 상태 가져오기
-        let notifications = {};
-        try {
-          notifications = JSON.parse(localStorage.getItem('parentNotifications') || '{}');
-        } catch (e) {
-          notifications = {};
-        }
-
-        // 해당 타입에 새 알림 추가
-        notifications[notificationType] = true;
-        localStorage.setItem('parentNotifications', JSON.stringify(notifications));
-      }
-
       const notificationOptions = {
         body: body,
         icon: "/icon-parent-192x192.png",
