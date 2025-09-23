@@ -45,23 +45,35 @@
 
                 // FCM 메시지 처리 (포그라운드 상태에서 받은 알림)
                 if (event.data && event.data.type === 'FCM_MESSAGE') {
+                    console.log('[FOREGROUND] FCM 메시지 수신:', event.data);
+
                     const payload = event.data.payload;
                     const title = event.data.title || payload.data?.title;
                     const body = event.data.body || payload.data?.body;
                     const notificationType = payload.data?.type;
 
+                    console.log('[FOREGROUND] 알림 타입:', notificationType);
+                    console.log('[FOREGROUND] 전체 payload:', payload);
+
                     // 알림 뱃지를 위한 localStorage 설정 (포그라운드 상태)
                     if (notificationType) {
                         try {
                             let notifications = JSON.parse(localStorage.getItem('parentNotifications') || '{}');
+                            console.log('[FOREGROUND] 기존 localStorage:', notifications);
+
                             notifications[notificationType] = true;
                             localStorage.setItem('parentNotifications', JSON.stringify(notifications));
+
+                            console.log('[FOREGROUND] 업데이트된 localStorage:', notifications);
 
                             // 뱃지 업데이트
                             updateNavigationBadges();
                         } catch (e) {
+                            console.error('[FOREGROUND] localStorage 에러:', e);
                             // localStorage 에러 발생해도 알림은 계속 표시
                         }
+                    } else {
+                        console.log('[FOREGROUND] 알림 타입이 없어서 localStorage 업데이트 안함');
                     }
 
                     // 포그라운드에서도 브라우저 알림 표시
