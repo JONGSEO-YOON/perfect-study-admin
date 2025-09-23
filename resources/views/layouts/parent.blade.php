@@ -220,27 +220,47 @@
             }, 100);
         }
 
-        // 현재 페이지에 따라 해당 뱃지 제거
-        function clearCurrentPageBadge() {
+        // 방문한 페이지 기록 저장
+        function markPageAsVisited(pageType) {
+            try {
+                let visitedPages = JSON.parse(localStorage.getItem('parentVisitedPages') || '{}');
+                visitedPages[pageType] = true;
+                localStorage.setItem('parentVisitedPages', JSON.stringify(visitedPages));
+                console.log('[BADGE_CLEAR] 페이지 방문 기록:', visitedPages);
+            } catch (e) {
+                console.error('[BADGE_CLEAR] 방문 기록 저장 에러:', e);
+            }
+        }
+
+        // 페이지 이동 시 이전 페이지의 뱃지 제거
+        function clearPreviousPageBadge() {
             const currentPath = window.location.pathname;
             console.log('[BADGE_CLEAR] 현재 페이지:', currentPath);
 
             try {
                 let notifications = JSON.parse(localStorage.getItem('parentNotifications') || '{}');
+                let visitedPages = JSON.parse(localStorage.getItem('parentVisitedPages') || '{}');
                 let updated = false;
 
-                // 출결현황 페이지일 때 attendance 뱃지 제거
-                if (currentPath.includes('/attendance') && notifications.attendance) {
-                    console.log('[BADGE_CLEAR] 출결현황 페이지 - attendance 뱃지 제거');
+                // 현재 페이지가 아닌 다른 페이지의 뱃지 제거 (한 번 방문한 페이지만)
+                if (!currentPath.includes('/attendance') && notifications.attendance && visitedPages.attendance) {
+                    console.log('[BADGE_CLEAR] 출결현황 페이지를 떠남 - attendance 뱃지 제거');
                     notifications.attendance = false;
                     updated = true;
                 }
 
-                // 결제 페이지일 때 payment 뱃지 제거
-                if (currentPath.includes('/payment') && notifications.payment) {
-                    console.log('[BADGE_CLEAR] 결제 페이지 - payment 뱃지 제거');
+                if (!currentPath.includes('/payment') && notifications.payment && visitedPages.payment) {
+                    console.log('[BADGE_CLEAR] 결제 페이지를 떠남 - payment 뱃지 제거');
                     notifications.payment = false;
                     updated = true;
+                }
+
+                // 현재 페이지 방문 기록
+                if (currentPath.includes('/attendance')) {
+                    markPageAsVisited('attendance');
+                }
+                if (currentPath.includes('/payment')) {
+                    markPageAsVisited('payment');
                 }
 
                 if (updated) {
@@ -255,10 +275,10 @@
             }
         }
 
-        // 페이지 로드 시 뱃지 업데이트 및 현재 페이지 뱃지 제거
+        // 페이지 로드 시 뱃지 업데이트 및 이전 페이지 뱃지 제거
         document.addEventListener('DOMContentLoaded', function() {
             updateNavigationBadges();
-            clearCurrentPageBadge();
+            clearPreviousPageBadge();
         });
 
         // Livewire 네비게이션 후에도 뱃지 제거
@@ -266,7 +286,7 @@
             console.log('[BADGE_CLEAR] Livewire 네비게이션 감지');
             setTimeout(() => {
                 updateNavigationBadges();
-                clearCurrentPageBadge();
+                clearPreviousPageBadge();
             }, 100);
         });
     </script>
