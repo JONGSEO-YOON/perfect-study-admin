@@ -114,60 +114,77 @@
 
         // 네비게이션 뱃지 업데이트 함수
         function updateNavigationBadges() {
-            try {
-                let notifications = JSON.parse(localStorage.getItem('parentNotifications') || '{}');
-                console.log('뱃지 업데이트 - 저장된 알림:', notifications);
+            // 잠시 대기 후 실행 (DOM이 완전히 로드될 때까지)
+            setTimeout(function() {
+                try {
+                    let notifications = JSON.parse(localStorage.getItem('parentNotifications') || '{}');
 
-                // 출결현황 뱃지 처리
-                const attendanceLink = document.querySelector('a[href*="attendance"]');
-                console.log('출결현황 링크 찾음:', attendanceLink);
+                    // 모든 네비게이션 링크 찾기
+                    const allLinks = document.querySelectorAll('nav a');
 
-                if (attendanceLink) {
-                    // 기존 뱃지 제거
-                    const existingBadge = attendanceLink.querySelector('.notification-badge');
-                    if (existingBadge) {
-                        existingBadge.remove();
-                    }
+                    allLinks.forEach(function(link) {
+                        // 기존 뱃지 제거
+                        const existingBadge = link.querySelector('.notification-badge');
+                        if (existingBadge) {
+                            existingBadge.remove();
+                        }
 
-                    // 새 알림이 있으면 뱃지 추가
-                    if (notifications.attendance) {
-                        console.log('출결현황 뱃지 추가 중...');
-                        const badge = document.createElement('span');
-                        badge.className = 'notification-badge';
-                        badge.style.cssText = 'position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background-color: #ef4444; border-radius: 50%; border: 2px solid white; z-index: 999;';
+                        // 출결현황 링크인지 확인
+                        if (link.href && link.href.includes('attendance') && notifications.attendance) {
+                            const badge = document.createElement('div');
+                            badge.className = 'notification-badge';
+                            badge.innerHTML = '●';
+                            badge.style.cssText = `
+                                position: absolute;
+                                top: 0px;
+                                right: 0px;
+                                width: 16px;
+                                height: 16px;
+                                background-color: #ff0000;
+                                color: white;
+                                border-radius: 50%;
+                                font-size: 12px;
+                                line-height: 16px;
+                                text-align: center;
+                                z-index: 9999;
+                                border: 2px solid white;
+                                font-weight: bold;
+                            `;
 
-                        attendanceLink.style.position = 'relative';
-                        attendanceLink.appendChild(badge);
-                        console.log('출결현황 뱃지 추가 완료');
-                    }
+                            link.style.position = 'relative';
+                            link.appendChild(badge);
+                        }
+
+                        // 결제 링크인지 확인
+                        if (link.href && link.href.includes('payment') && notifications.payment) {
+                            const badge = document.createElement('div');
+                            badge.className = 'notification-badge';
+                            badge.innerHTML = '●';
+                            badge.style.cssText = `
+                                position: absolute;
+                                top: 0px;
+                                right: 0px;
+                                width: 16px;
+                                height: 16px;
+                                background-color: #ff0000;
+                                color: white;
+                                border-radius: 50%;
+                                font-size: 12px;
+                                line-height: 16px;
+                                text-align: center;
+                                z-index: 9999;
+                                border: 2px solid white;
+                                font-weight: bold;
+                            `;
+
+                            link.style.position = 'relative';
+                            link.appendChild(badge);
+                        }
+                    });
+                } catch (e) {
+                    // 오류 무시
                 }
-
-                // 결제 뱃지 처리
-                const paymentLink = document.querySelector('a[href*="payment"]');
-                console.log('결제 링크 찾음:', paymentLink);
-
-                if (paymentLink) {
-                    // 기존 뱃지 제거
-                    const existingBadge = paymentLink.querySelector('.notification-badge');
-                    if (existingBadge) {
-                        existingBadge.remove();
-                    }
-
-                    // 새 알림이 있으면 뱃지 추가
-                    if (notifications.payment) {
-                        console.log('결제 뱃지 추가 중...');
-                        const badge = document.createElement('span');
-                        badge.className = 'notification-badge';
-                        badge.style.cssText = 'position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background-color: #ef4444; border-radius: 50%; border: 2px solid white; z-index: 999;';
-
-                        paymentLink.style.position = 'relative';
-                        paymentLink.appendChild(badge);
-                        console.log('결제 뱃지 추가 완료');
-                    }
-                }
-            } catch (e) {
-                console.error('뱃지 업데이트 오류:', e);
-            }
+            }, 100);
         }
 
         // 페이지 로드 시 뱃지 업데이트
