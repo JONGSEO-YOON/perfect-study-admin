@@ -5,16 +5,14 @@
             <a href="{{ route('parent.home') }}"  class="py-2 px-4 font-medium text-sm" wire:navigate wire:current="border-b-2 border-violet-500 text-violet-600">
                 소식
             </a>
-            <a href="{{ route('parent.attendance') }}"  class="py-2 px-4 font-medium text-sm relative" wire:navigate wire:current="border-b-2 border-violet-500 text-violet-600">
+            <a href="{{ route('parent.attendance') }}"  class="py-2 px-4 font-medium text-sm" wire:navigate wire:current="border-b-2 border-violet-500 text-violet-600">
                 출결현황
-                <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">1</span>
             </a>
             <a href="{{ route('parent.report') }}"  class="py-2 px-4 font-medium text-sm" wire:navigate wire:current="border-b-2 border-violet-500 text-violet-600">
                 성적표
             </a>
-             <a href="{{ route('parent.payment') }}"  class="py-2 px-4 font-medium text-sm relative" wire:navigate wire:current="border-b-2 border-violet-500 text-violet-600">
+             <a href="{{ route('parent.payment') }}"  class="py-2 px-4 font-medium text-sm" wire:navigate wire:current="border-b-2 border-violet-500 text-violet-600">
                 결제
-                <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">2</span>
             </a>
         </div>
     </div>

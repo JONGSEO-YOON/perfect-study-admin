@@ -114,23 +114,31 @@
 
         // 네비게이션 뱃지 업데이트 함수
         function updateNavigationBadges() {
+            console.log('[BADGE] updateNavigationBadges 함수 실행됨');
+
             // 잠시 대기 후 실행 (DOM이 완전히 로드될 때까지)
             setTimeout(function() {
                 try {
                     let notifications = JSON.parse(localStorage.getItem('parentNotifications') || '{}');
+                    console.log('[BADGE] localStorage에서 읽은 알림 상태:', notifications);
 
                     // 모든 네비게이션 링크 찾기
                     const allLinks = document.querySelectorAll('nav a');
+                    console.log('[BADGE] 찾은 네비게이션 링크 수:', allLinks.length);
 
-                    allLinks.forEach(function(link) {
+                    allLinks.forEach(function(link, index) {
+                        console.log(`[BADGE] 링크 ${index}: ${link.href}`);
+
                         // 기존 뱃지 제거
                         const existingBadge = link.querySelector('.notification-badge');
                         if (existingBadge) {
+                            console.log(`[BADGE] 기존 뱃지 제거: ${link.href}`);
                             existingBadge.remove();
                         }
 
                         // 출결현황 링크인지 확인
                         if (link.href && link.href.includes('attendance') && notifications.attendance) {
+                            console.log('[BADGE] 출결현황 뱃지 추가');
                             const badge = document.createElement('div');
                             badge.className = 'notification-badge';
                             badge.innerHTML = '●';
@@ -153,10 +161,12 @@
 
                             link.style.position = 'relative';
                             link.appendChild(badge);
+                            console.log('[BADGE] 출결현황 뱃지 DOM에 추가 완료');
                         }
 
                         // 결제 링크인지 확인
                         if (link.href && link.href.includes('payment') && notifications.payment) {
+                            console.log('[BADGE] 결제 뱃지 추가');
                             const badge = document.createElement('div');
                             badge.className = 'notification-badge';
                             badge.innerHTML = '●';
@@ -179,10 +189,12 @@
 
                             link.style.position = 'relative';
                             link.appendChild(badge);
+                            console.log('[BADGE] 결제 뱃지 DOM에 추가 완료');
                         }
                     });
+                    console.log('[BADGE] 모든 링크 처리 완료');
                 } catch (e) {
-                    // 오류 무시
+                    console.error('[BADGE] 에러 발생:', e);
                 }
             }, 100);
         }
