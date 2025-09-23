@@ -6,7 +6,9 @@ use App\Filament\Resources\DailyAttendanceResource\Pages;
 use App\Models\AttendanceLog;
 use App\Models\Student;
 use App\Models\Classroom;
+use App\Services\FcmService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -369,6 +371,9 @@ class DailyAttendanceResource extends Resource
                                     // $set('is_supplementary', false);
                                 }
                             }),
+                        Toggle::make('send_notification')
+                            ->label('알림 발송')
+                            ->default(false),
                         Textarea::make('memo')
                             ->label('메모')
                             ->rows(3),
@@ -395,6 +400,11 @@ class DailyAttendanceResource extends Resource
                             $existingLog = AttendanceLog::find($data['existing_log_id']);
                             if ($existingLog) {
                                 $existingLog->update($attendanceData);
+
+                                // 알림 발송 처리
+                                if ($data['send_notification'] ?? false) {
+                                    self::sendAttendanceNotification($data['student_id'], $attendanceData);
+                                }
                             }
                         } else {
                             // 새 기록 생성
@@ -412,6 +422,11 @@ class DailyAttendanceResource extends Resource
 
                             $attendanceLog->updated_at = now();
                             $attendanceLog->save();
+
+                            // 알림 발송 처리
+                            if ($data['send_notification'] ?? false) {
+                                self::sendAttendanceNotification($data['student_id'], $attendanceData);
+                            }
                         }
                     }),
             ])
@@ -447,6 +462,9 @@ class DailyAttendanceResource extends Resource
                                     // $set('is_supplementary', false);
                                 }
                             }),
+                        Toggle::make('send_notification')
+                            ->label('알림 발송')
+                            ->default(false),
                         Textarea::make('memo')
                             ->label('메모')
                             ->rows(3),
@@ -480,6 +498,11 @@ class DailyAttendanceResource extends Resource
 
                         $attendanceLog->updated_at = now();
                         $attendanceLog->save();
+
+                        // 알림 발송 처리
+                        if ($data['send_notification'] ?? false) {
+                            self::sendAttendanceNotification($record->id, $attendanceData);
+                        }
                     })
                     ->visible(function ($record, $livewire) {
                         $filters = $livewire->getTableFiltersForm()->getState();
@@ -517,6 +540,9 @@ class DailyAttendanceResource extends Resource
                                     // $set('is_supplementary', false);
                                 }
                             }),
+                        Toggle::make('send_notification')
+                            ->label('알림 발송')
+                            ->default(false),
                         Textarea::make('memo')
                             ->label('메모')
                             ->rows(3)
@@ -566,6 +592,11 @@ class DailyAttendanceResource extends Resource
                             ];
 
                             $log->update($updateData);
+
+                            // 알림 발송 처리
+                            if ($data['send_notification'] ?? false) {
+                                self::sendAttendanceNotification($record->id, $updateData);
+                            }
                         }
                     })
                     ->visible(function ($record, $livewire) {
@@ -635,5 +666,72 @@ class DailyAttendanceResource extends Resource
     public static function canCreate(): bool
     {
         return false;
+    }
+
+    /**
+     * 출석 알림 발송
+     */
+    private static function sendAttendanceNotification($studentId, $attendanceData)
+    {
+        try {
+            $student = Student::with('user')->find($studentId);
+            if (!$student) {
+                return;
+            }
+
+            $fcmService = new FcmService();
+            $currentTime = now()->format('H:i');
+
+            // 등원/하원 구분
+            $keyWord = '';
+            if ($attendanceData['check_in_time']) {
+                $keyWord = '등원';
+            } elseif ($attendanceData['check_out_time']) {
+                $keyWord = '하원';
+            } else {
+                $keyWord = '출석';
+            }
+
+            // 정규/보충 구분
+            $attendanceType = ($attendanceData['is_supplementary'] ?? false) ? '보충' : '정규';
+
+            // 부모 전화번호 찾기
+            $parentPhones = [];
+            if ($student->phone_father !== '010--') {
+                $parentPhones[] = $student->phone_father;
+            }
+            if ($student->phone_mother !== '010--') {
+                $parentPhones[] = $student->phone_mother;
+            }
+
+            $uniqueParentPhones = array_unique($parentPhones);
+
+            if (empty($uniqueParentPhones)) {
+                Log::info("학생 {$student->user->name}의 부모 연락처가 없습니다.");
+                return;
+            }
+
+            // 알림 내용 구성
+            $title = "📍 {$student->user->name} 학생 {$keyWord} 알림";
+            $body = "{$student->user->name} 학생이 {$currentTime}에 {$keyWord}하였습니다. ({$attendanceType})";
+
+            foreach ($uniqueParentPhones as $parentPhone) {
+                $fcmService->sendToParent(
+                    $parentPhone,
+                    $title,
+                    $body,
+                    [
+                        'type' => 'attendance',
+                        'title' => $title,
+                        'body' => $body,
+                    ]
+                );
+            }
+        } catch (\Exception $e) {
+            Log::error("출석 알림 전송 중 오류: " . $e->getMessage(), [
+                'student_id' => $studentId,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

@@ -14,6 +14,7 @@ use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
+use App\Services\FcmService;
 
 #[Layout('layouts.public')]
 class AttendanceCalendar extends CalendarWidget
@@ -198,6 +199,9 @@ class AttendanceCalendar extends CalendarWidget
                             $set('is_supplementary', false);
                         }
                     }),
+                Toggle::make('send_notification')
+                    ->label('알림 발송')
+                    ->default(false),
                 Textarea::make('memo')
                     ->label('메모')
                     ->rows(3),
@@ -271,6 +275,11 @@ class AttendanceCalendar extends CalendarWidget
                         ->title('출석 기록이 수정되었습니다.')
                         ->success()
                         ->send();
+
+                    // 알림 발송 처리
+                    if ($data['send_notification'] ?? false) {
+                        $this->sendAttendanceNotification($this->studentId, $attendanceData);
+                    }
                 } else {
                     // 새 기록 생성
                     $attendanceLog = new AttendanceLog($attendanceData);
@@ -292,8 +301,80 @@ class AttendanceCalendar extends CalendarWidget
                         ->title('출석 기록이 생성되었습니다.')
                         ->success()
                         ->send();
+
+                    // 알림 발송 처리
+                    if ($data['send_notification'] ?? false) {
+                        $this->sendAttendanceNotification($this->studentId, $attendanceData);
+                    }
                 }
                 $this->js('location.reload()');
             });
+    }
+
+    /**
+     * 출석 알림 발송
+     */
+    private function sendAttendanceNotification($studentId, $attendanceData)
+    {
+        try {
+            $student = \App\Models\Student::with('user')->find($studentId);
+            if (!$student) {
+                return;
+            }
+
+            $fcmService = new FcmService();
+            $currentTime = now()->format('H:i');
+
+            // 등원/하원 구분
+            $keyWord = '';
+            if ($attendanceData['check_in_time']) {
+                $keyWord = '등원';
+            } elseif ($attendanceData['check_out_time']) {
+                $keyWord = '하원';
+            } else {
+                $keyWord = '출석';
+            }
+
+            // 정규/보충 구분
+            $attendanceType = ($attendanceData['is_supplementary'] ?? false) ? '보충' : '정규';
+
+            // 부모 전화번호 찾기
+            $parentPhones = [];
+            if ($student->phone_father !== '010--') {
+                $parentPhones[] = $student->phone_father;
+            }
+            if ($student->phone_mother !== '010--') {
+                $parentPhones[] = $student->phone_mother;
+            }
+
+            $uniqueParentPhones = array_unique($parentPhones);
+
+            if (empty($uniqueParentPhones)) {
+                Log::info("학생 {$student->user->name}의 부모 연락처가 없습니다.");
+                return;
+            }
+
+            // 알림 내용 구성
+            $title = "📍 {$student->user->name} 학생 {$keyWord} 알림";
+            $body = "{$student->user->name} 학생이 {$currentTime}에 {$keyWord}하였습니다. ({$attendanceType})";
+
+            foreach ($uniqueParentPhones as $parentPhone) {
+                $fcmService->sendToParent(
+                    $parentPhone,
+                    $title,
+                    $body,
+                    [
+                        'type' => 'attendance',
+                        'title' => $title,
+                        'body' => $body,
+                    ]
+                );
+            }
+        } catch (\Exception $e) {
+            Log::error("출석 알림 전송 중 오류: " . $e->getMessage(), [
+                'student_id' => $studentId,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }
