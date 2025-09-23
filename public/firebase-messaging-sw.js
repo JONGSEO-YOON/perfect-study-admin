@@ -70,6 +70,18 @@ messaging.onBackgroundMessage((payload) => {
 
     // 포그라운드 앱이 없을 때만 알림 표시
     if (!hasVisibleApp) {
+      // 알림 뱃지를 위한 localStorage 설정 (백그라운드 상태)
+      const notificationType = payload.data?.type;
+      if (notificationType) {
+        try {
+          let notifications = JSON.parse(localStorage.getItem('parentNotifications') || '{}');
+          notifications[notificationType] = true;
+          localStorage.setItem('parentNotifications', JSON.stringify(notifications));
+        } catch (e) {
+          // localStorage 에러 발생해도 알림은 계속 표시
+        }
+      }
+
       const notificationOptions = {
         body: body,
         icon: "/icon-parent-192x192.png",

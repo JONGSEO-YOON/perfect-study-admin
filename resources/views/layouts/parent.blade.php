@@ -50,6 +50,20 @@
                     const body = event.data.body || payload.data?.body;
                     const notificationType = payload.data?.type;
 
+                    // 알림 뱃지를 위한 localStorage 설정 (포그라운드 상태)
+                    if (notificationType) {
+                        try {
+                            let notifications = JSON.parse(localStorage.getItem('parentNotifications') || '{}');
+                            notifications[notificationType] = true;
+                            localStorage.setItem('parentNotifications', JSON.stringify(notifications));
+
+                            // 뱃지 업데이트
+                            updateNavigationBadges();
+                        } catch (e) {
+                            // localStorage 에러 발생해도 알림은 계속 표시
+                        }
+                    }
+
                     // 포그라운드에서도 브라우저 알림 표시
                     if (Notification.permission === 'granted') {
                         const notification = new Notification(title, {
@@ -97,6 +111,60 @@
                 }
             });
         }
+
+        // 네비게이션 뱃지 업데이트 함수
+        function updateNavigationBadges() {
+            try {
+                let notifications = JSON.parse(localStorage.getItem('parentNotifications') || '{}');
+
+                // 출결현황 뱃지 처리
+                const attendanceLink = document.querySelector('a[href*="attendance"]');
+                if (attendanceLink) {
+                    // 기존 뱃지 제거
+                    const existingBadge = attendanceLink.querySelector('.notification-badge');
+                    if (existingBadge) {
+                        existingBadge.remove();
+                    }
+
+                    // 새 알림이 있으면 뱃지 추가
+                    if (notifications.attendance) {
+                        const badge = document.createElement('span');
+                        badge.className = 'notification-badge';
+                        badge.style.cssText = 'position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background-color: #ef4444; border-radius: 50%; border: 2px solid white;';
+
+                        attendanceLink.style.position = 'relative';
+                        attendanceLink.appendChild(badge);
+                    }
+                }
+
+                // 결제 뱃지 처리
+                const paymentLink = document.querySelector('a[href*="payment"]');
+                if (paymentLink) {
+                    // 기존 뱃지 제거
+                    const existingBadge = paymentLink.querySelector('.notification-badge');
+                    if (existingBadge) {
+                        existingBadge.remove();
+                    }
+
+                    // 새 알림이 있으면 뱃지 추가
+                    if (notifications.payment) {
+                        const badge = document.createElement('span');
+                        badge.className = 'notification-badge';
+                        badge.style.cssText = 'position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background-color: #ef4444; border-radius: 50%; border: 2px solid white;';
+
+                        paymentLink.style.position = 'relative';
+                        paymentLink.appendChild(badge);
+                    }
+                }
+            } catch (e) {
+                // 뱃지 업데이트 실패해도 무시
+            }
+        }
+
+        // 페이지 로드 시 뱃지 업데이트
+        document.addEventListener('DOMContentLoaded', function() {
+            updateNavigationBadges();
+        });
     </script>
     <div class="sticky top-0 z-10">
         <livewire:parent.header />
