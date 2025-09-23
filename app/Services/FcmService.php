@@ -70,7 +70,6 @@ class FcmService
                     ]
                 ]
             ];
-            Log::info('FCM 메시지 data: ' . json_encode($data));
 
             $headers = [
                 'Authorization: Bearer ' . $accessToken,
@@ -88,11 +87,7 @@ class FcmService
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            Log::info('FCM Response Status: ' . $httpCode);
-            Log::info('FCM Response Body: ' . $res);
-
             if ($httpCode >= 200 && $httpCode < 300) {
-                Log::info('FCM 메시지 전송 성공: ' . $res);
                 return true;
             } else {
                 Log::error('FCM 메시지 전송 실패: ' . $res);

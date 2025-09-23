@@ -25,22 +25,13 @@ let processedMessages = new Set();
 
 // 백그라운드 메시지 핸들러 (data-only 메시지 처리)
 messaging.onBackgroundMessage((payload) => {
-  console.log("=== FCM 백그라운드 메시지 받음 ===");
-  console.log("Payload:", payload);
-  console.log("Data:", payload.data);
-
   // data-only 메시지에서 title, body 추출
   const title = payload.data?.title || "퍼펙트 스터디";
   const body = payload.data?.body || "새로운 알림이 있습니다.";
   const messageId = payload.data?.messageId || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-  console.log("Title:", title);
-  console.log("Body:", body);
-  console.log("Message ID:", messageId);
-
   // 이미 처리된 메시지인지 확인
   if (processedMessages.has(messageId)) {
-    console.log("이미 처리된 메시지 - 중복 알림 방지");
     return Promise.resolve();
   }
 
@@ -56,18 +47,13 @@ messaging.onBackgroundMessage((payload) => {
     type: "window",
     includeUncontrolled: true
   }).then((clients) => {
-    console.log("찾은 클라이언트 수:", clients.length);
-
     // 활성 창 상태 확인
     let hasVisibleApp = false;
 
     for (const client of clients) {
       if (client.url.includes("/parent")) {
-        console.log(`클라이언트 발견: ${client.url}, 상태: ${client.visibilityState}`);
-
         if (client.visibilityState === 'visible') {
           hasVisibleApp = true;
-          console.log("앱이 포그라운드에 있음 - 포그라운드 처리로 위임");
 
           // 포그라운드 앱에 메시지 전달
           client.postMessage({
@@ -84,7 +70,21 @@ messaging.onBackgroundMessage((payload) => {
 
     // 포그라운드 앱이 없을 때만 알림 표시
     if (!hasVisibleApp) {
-      console.log("포그라운드 앱 없음 - Service Worker에서 알림 표시");
+      // 알림 뱃지를 위한 localStorage 설정
+      const notificationType = payload.data?.type;
+      if (notificationType) {
+        // 현재 알림 상태 가져오기
+        let notifications = {};
+        try {
+          notifications = JSON.parse(localStorage.getItem('parentNotifications') || '{}');
+        } catch (e) {
+          notifications = {};
+        }
+
+        // 해당 타입에 새 알림 추가
+        notifications[notificationType] = true;
+        localStorage.setItem('parentNotifications', JSON.stringify(notifications));
+      }
 
       const notificationOptions = {
         body: body,
@@ -108,22 +108,15 @@ messaging.onBackgroundMessage((payload) => {
         ],
       };
 
-      console.log("백그라운드 알림 표시:", title);
       return self.registration.showNotification(title, notificationOptions);
     }
 
     return Promise.resolve();
-  }).catch(error => {
-    console.error("백그라운드 메시지 처리 오류:", error);
   });
 });
 
 // 알림 클릭 이벤트 핸들러
 self.addEventListener("notificationclick", (event) => {
-  console.log("=== 알림 클릭됨 ===");
-  console.log("Event:", event);
-  console.log("알림 데이터:", event.notification.data);
-
   event.notification.close();
 
   if (event.action === "open" || !event.action) {
@@ -141,26 +134,17 @@ self.addEventListener("notificationclick", (event) => {
       targetUrl = "/parent/payment"; // 결제 페이지
     }
 
-    console.log("알림 타입:", notificationType);
-    console.log("메시지 ID:", messageId);
-    console.log("이동할 URL:", targetUrl);
-
     // 알림 클릭 시 앱 열기
     event.waitUntil(
       self.clients.matchAll({
         type: "window",
         includeUncontrolled: true
       }).then((clientList) => {
-        console.log("찾은 클라이언트 수:", clientList.length);
-
         // 기존 앱 탭 찾기 (백그라운드 상태 포함)
         for (let i = 0; i < clientList.length; i++) {
           const client = clientList[i];
-          console.log(`클라이언트 ${i}:`, client.url, "상태:", client.visibilityState);
 
           if (client.url.includes("/parent")) {
-            console.log("기존 앱 탭 발견 - 포커스 및 네비게이션");
-
             // 먼저 메시지를 보내고
             client.postMessage({
               action: "navigate",
@@ -172,11 +156,7 @@ self.addEventListener("notificationclick", (event) => {
             });
 
             // 그 다음 포커스
-            return client.focus().then(() => {
-              console.log("앱 포커스 완료");
-              return client;
-            }).catch((error) => {
-              console.error("포커스 실패:", error);
+            return client.focus().catch(() => {
               // 포커스 실패 시 새 창 열기
               if (self.clients.openWindow) {
                 return self.clients.openWindow(targetUrl);
@@ -186,12 +166,10 @@ self.addEventListener("notificationclick", (event) => {
         }
 
         // 앱이 열려있지 않으면 새 창 열기
-        console.log("기존 앱 탭 없음 - 새 창 열기");
         if (self.clients.openWindow) {
           return self.clients.openWindow(targetUrl);
         }
-      }).catch((error) => {
-        console.error("알림 클릭 처리 오류:", error);
+      }).catch(() => {
         // 오류 발생 시 기본 페이지 열기
         if (self.clients.openWindow) {
           return self.clients.openWindow("/parent");
