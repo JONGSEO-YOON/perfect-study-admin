@@ -28,6 +28,7 @@ use App\Livewire\Parent\ReportDetail;
 use App\Livewire\Parent\Attendance as ParentAttendance;
 use App\Livewire\Parent\Notice;
 use App\Livewire\Parent\Payment as ParentPayment;
+use App\Livewire\Parent\RefundPolicy;
 
 // 부모 로그인 그룹
 Route::prefix('parent')->group(function () {
@@ -38,6 +39,7 @@ Route::prefix('parent')->group(function () {
     Route::get('/report', Report::class)->name('parent.report')->middleware(ParentSession::class);
     Route::get('/report-detail/{weekKey}', ReportDetail::class)->name('parent.report-detail')->middleware(ParentSession::class);
     Route::get('/payment', ParentPayment::class)->name('parent.payment')->middleware(ParentSession::class);
+    Route::get('/refund-policy', RefundPolicy::class)->name('parent.refund-policy')->middleware(ParentSession::class);
 });
 
 Route::get('/attendance', Attendance::class)->name('attendance');
