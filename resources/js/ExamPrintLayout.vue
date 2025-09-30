@@ -348,27 +348,102 @@ const calculateExplanationImageHeight = (imageSrc) => {
   });
 };
 
-// 간단하고 안전한 이미지 잘림 방지 함수
+// 문제 경계를 찾는 함수 (캔버스에서 data-question-index 요소의 Y 위치 계산)
+const questionBoundaries = ref([]);
+
+const calculateQuestionBoundaries = async () => {
+  await nextTick();
+  if (!explanationContainer.value) return;
+
+  const boundaries = [];
+  const containerRect = explanationContainer.value.getBoundingClientRect();
+
+  // 구분선(separator) 위치 찾기
+  const separator = explanationContainer.value.querySelector('[data-separator="true"]');
+  if (separator) {
+    const separatorRect = separator.getBoundingClientRect();
+    boundaries.push({
+      y: separatorRect.top - containerRect.top + separatorRect.height,
+      index: -1, // 구분선
+      type: 'separator'
+    });
+  }
+
+  // 각 문제의 시작 위치 찾기
+  const questionElements = explanationContainer.value.querySelectorAll('[data-question-index]');
+  questionElements.forEach((element) => {
+    const rect = element.getBoundingClientRect();
+    const relativeY = rect.top - containerRect.top;
+    const index = parseInt(element.getAttribute('data-question-index'));
+
+    boundaries.push({
+      y: relativeY,
+      index: index,
+      type: 'question',
+      height: rect.height
+    });
+  });
+
+  questionBoundaries.value = boundaries.sort((a, b) => a.y - b.y);
+};
+
+// 문제 경계를 고려한 안전한 분할 지점 찾기
 const findSafeBreakPoint = (canvas, startY, columnHeight) => {
   const targetY = startY + columnHeight;
-  const searchRange = 30; // 검색 범위를 줄여서 안전하게
 
   // 캔버스 경계 체크
   if (targetY >= canvas.height) {
     return canvas.height - startY;
   }
 
+  // 문제 경계 정보가 있으면 우선 활용
+  if (questionBoundaries.value.length > 0) {
+    // 캔버스의 스케일 비율 계산 (실제 DOM 높이 대비 캔버스 높이)
+    const scale = canvas.height / explanationContainer.value.offsetHeight;
+
+    // targetY 근처의 문제 경계 찾기 (캔버스 좌표계로 변환)
+    const scaledBoundaries = questionBoundaries.value.map(b => ({
+      ...b,
+      canvasY: b.y * scale
+    }));
+
+    // targetY 이전에 있는 가장 가까운 문제 경계 찾기
+    let bestBoundary = null;
+    let minDistance = Infinity;
+
+    for (const boundary of scaledBoundaries) {
+      const boundaryY = boundary.canvasY;
+
+      // targetY보다 위에 있고, startY보다 아래에 있는 경계만 고려
+      if (boundaryY > startY + 100 && boundaryY <= targetY + 100) {
+        const distance = Math.abs(boundaryY - targetY);
+
+        // targetY에 가까운 문제 경계를 찾되, targetY 이전 위치 우선
+        if (boundaryY <= targetY && distance < minDistance) {
+          minDistance = distance;
+          bestBoundary = boundary;
+        }
+      }
+    }
+
+    // 적절한 문제 경계를 찾았으면 그 지점 사용
+    if (bestBoundary && minDistance < columnHeight * 0.4) {
+      return Math.max(bestBoundary.canvasY - startY, columnHeight * 0.3);
+    }
+  }
+
+  // 문제 경계를 찾지 못한 경우 기존 여백 기반 로직 사용
+  const searchRange = 30;
+
   try {
     const ctx = canvas.getContext('2d');
     let bestY = targetY;
     let maxWhiteSpace = 0;
 
-    // 목표 지점 위아래로 검색
     for (let y = Math.max(startY + columnHeight - searchRange, startY + 50);
          y <= Math.min(targetY + searchRange, canvas.height - 10);
          y += 3) {
 
-      // 해당 라인이 대부분 흰색인지 확인 (여백인지)
       const imageData = ctx.getImageData(0, y, Math.min(canvas.width, 300), 1);
       const data = imageData.data;
 
@@ -377,7 +452,6 @@ const findSafeBreakPoint = (canvas, startY, columnHeight) => {
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
-        // 밝은 픽셀(여백) 카운트
         if (r > 240 && g > 240 && b > 240) {
           whitePixels++;
         }
@@ -517,6 +591,10 @@ const calculateExplanationPages = async () => {
 
     const elements = explanationContainer.value.getElementsByTagName("math");
     await window.MathJax.typesetPromise([explanationContainer.value]);
+
+    // 문제 경계 계산 (html2canvas 호출 전에)
+    await calculateQuestionBoundaries();
+
     const canvas = await html2canvas(explanationContainer.value, {
     scale: 1,
     useCORS: true,
@@ -971,8 +1049,8 @@ onMounted(() => {
           </div> -->
         </div>
       </div>
-      <div class="w-full h-px bg-black mt-10 mb-4"></div>
-      <div v-for="(question, index) in questions" :key="'exp-' + index">
+      <div class="w-full h-px bg-black mt-10 mb-4" data-separator="true"></div>
+      <div v-for="(question, index) in questions" :key="'exp-' + index" :data-question-index="index">
         <!-- scale: tracking-[7px]  -->
         <div class="flex flex-row gap-x-4">
           <h3>{{ index + startingNumber }})</h3>
