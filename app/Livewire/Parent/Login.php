@@ -120,7 +120,7 @@ class Login extends Component
         // }
     }
 
-    #[Layout('components.layouts.simple')]
+    #[Layout('components.layouts.simple_parent')]
     public function render()
     {
         return view('livewire.parent.login');
