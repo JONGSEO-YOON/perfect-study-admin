@@ -391,7 +391,62 @@ class QuestionResource extends Resource
                 // ->required()
                 ->numeric()
                 ->visible(fn(Get $get) => $get('material_id'))
-                ->placeholder('비어두면 자동 정렬됩니다'),
+                ->placeholder(fn($component) => $component->getRecord() ? null : '비어두면 자동 정렬됩니다')
+                ->live(onBlur: true)
+                ->afterStateUpdated(function ($state, Get $get, $component) {
+                    if (!$state) {
+                        return;
+                    }
+
+                    $materialId = $get('material_id');
+                    if (!$materialId) {
+                        return;
+                    }
+
+                    $query = \App\Models\Question::where('material_id', $materialId)
+                        ->where('seq', $state);
+
+                    // 수정 중인 경우 현재 레코드 제외
+                    if ($record = $component->getRecord()) {
+                        $query->where('id', '!=', $record->id);
+                    }
+
+                    if ($query->exists()) {
+                        // 알림 보내기
+                        Notification::make()
+                            ->danger()
+                            ->title('중복된 문제번호')
+                            ->body('이 교재에 이미 등록된 문제번호입니다.')
+                            ->send();
+
+                        // 필드에 에러 표시 (빨간색)
+                        $component->state($state);
+                    }
+                })
+                ->rules([
+                    fn(Get $get, $component): \Closure => function (string $attribute, $value, \Closure $fail) use ($get, $component) {
+                        if (!$value) {
+                            return;
+                        }
+
+                        $materialId = $get('material_id');
+                        if (!$materialId) {
+                            return;
+                        }
+
+                        $query = \App\Models\Question::where('material_id', $materialId)
+                            ->where('seq', $value);
+
+                        // 수정 중인 경우 현재 레코드 제외
+                        if ($record = $component->getRecord()) {
+                            $query->where('id', '!=', $record->id);
+                        }
+
+                        if ($query->exists()) {
+                            $fail('이 교재에 이미 등록된 문제번호입니다.');
+                        }
+                    },
+                ]),
             // ->afterStateHydrated(function ($component, $state, Get $get) {
             //     // 새 레코드이고 seq가 비어있고 material_id가 있는 경우에만 자동 설정
             //     if (!$state && !$component->getRecord()?->exists && $get('material_id')) {
