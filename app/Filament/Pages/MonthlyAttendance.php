@@ -150,8 +150,8 @@ class MonthlyAttendance extends Page
                     TimePicker::make('check_in_time_only')
                         ->label('등원 시간')
                         ->seconds(false)
-                        ->displayFormat('H:i')
-                        ->required(fn($get) => !$get('is_absent')),
+                        ->displayFormat('H:i'),
+                    // ->required(fn($get) => !$get('is_absent')),
                     TimePicker::make('check_out_time_only')
                         ->label('하원 시간')
                         ->seconds(false)
@@ -335,14 +335,44 @@ class MonthlyAttendance extends Page
         $startDate = Carbon::create($this->selectedYear, $this->selectedMonth, 1)->startOfDay();
         $endDate = $startDate->copy()->endOfMonth()->endOfDay();
 
+        Log::info('AttendanceData Query', [
+            'startDate' => $startDate->format('Y-m-d H:i:s'),
+            'endDate' => $endDate->format('Y-m-d H:i:s'),
+            'selectedYear' => $this->selectedYear,
+            'selectedMonth' => $this->selectedMonth,
+        ]);
+
         $attendanceLogs = AttendanceLog::whereIn('student_id', $students->pluck('id'))
             ->whereBetween('created_at', [$startDate, $endDate])
             ->get()
             ->groupBy('student_id');
 
+        Log::info('AttendanceLogs Count', [
+            'total' => $attendanceLogs->flatten()->count(),
+            'null_check_in' => $attendanceLogs->flatten()->filter(fn($log) => is_null($log->check_in_time))->count(),
+        ]);
+
         $attendanceData = [];
         foreach ($students as $student) {
             $studentLogs = $attendanceLogs->get($student->id, collect());
+
+            // 디버깅: 각 학생의 로그 정보 출력
+            if ($studentLogs->count() > 0) {
+                Log::info('Student Logs', [
+                    'student_id' => $student->id,
+                    'student_name' => $student->user->name ?? 'Unknown',
+                    'logs' => $studentLogs->map(function ($log) {
+                        return [
+                            'id' => $log->id,
+                            'created_at' => $log->created_at->format('Y-m-d H:i:s'),
+                            'created_at_day' => $log->created_at->day,
+                            'check_in_time' => $log->check_in_time ? $log->check_in_time->format('Y-m-d H:i:s') : null,
+                            'check_out_time' => $log->check_out_time ? $log->check_out_time->format('Y-m-d H:i:s') : null,
+                        ];
+                    })->toArray()
+                ]);
+            }
+
             $attendanceData[$student->id] = $studentLogs->groupBy(function ($log) {
                 return $log->created_at->day;
             });

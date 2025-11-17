@@ -66,7 +66,7 @@
                             @foreach ($weekReport['test_report'] as $test)
                                 <div class="mb-3 p-3 bg-fuchsia-100 rounded-lg">
                                     <div class="text-xs font-medium text-fuchsia-800 mb-2">{{ $test['name'] }}</div>
-                                    <div class="grid grid-cols-3 gap-4 text-sm">
+                                    <div class="grid grid-cols-2 gap-4 text-sm">
                                         @php
                                             $total = $test['total'] ?? null;
                                         @endphp
@@ -79,10 +79,10 @@
                                                 <p class="text-stone-600 mb-1">반평균</p>
                                                 <p class="font-bold text-stone-900">{{ number_format($total['classroom_average']) }}</p>
                                             </div>
-                                            <div class="text-center">
+                                            {{-- <div class="text-center">
                                                 <p class="text-stone-600 mb-1">반별 등수</p>
                                                 <p class="font-bold text-stone-900">{{ $total['classroom_rank'] }}등 ({{ $total['classroom_students_count'] ?? 0 }})</p>
-                                            </div>
+                                            </div> --}}
                                         @endif
                                     </div>
                                 </div>

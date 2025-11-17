@@ -42,6 +42,7 @@
                         'weekRow' => true,
                         'attendance' => true,
                         'comment' => true,
+                        'rank' => true,
                     ],
                 ],
                 key('report-card-' . $dateFrom)

@@ -87,7 +87,7 @@
                                 } elseif ($dayLog->is_late) {
                                     $icon = 'x';
                                     $bgColor = 'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800';
-                                } elseif ($dayLog->check_in_time || $dayLog->check_out_time) {
+                                } elseif ($dayLog->check_in_time || $dayLog->check_out_time || $dayLog->created_at) {
                                     if ($dayLog->is_supplementary) {
                                         $icon = '+';
                                         $bgColor = 'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800';

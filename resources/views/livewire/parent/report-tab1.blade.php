@@ -16,9 +16,9 @@
                                     <th class="px-2 py-3 text-xs font-medium text-stone-700 border border-stone-200 whitespace-nowrap">개인점수</th>
                                     <th class="px-2 py-3 text-xs font-medium text-stone-700 border border-stone-200 whitespace-nowrap">반평균</th>
                                     <th class="px-2 py-3 text-xs font-medium text-stone-700 border border-stone-200 whitespace-nowrap">레벨평균</th>
-                                    <th class="px-2 py-3 text-xs font-medium text-stone-700 border border-stone-200 whitespace-nowrap">반별 등수</th>
+                                    {{-- <th class="px-2 py-3 text-xs font-medium text-stone-700 border border-stone-200 whitespace-nowrap">반별 등수</th> --}}
                                     <th class="px-2 py-3 text-xs font-medium text-stone-700 border border-stone-200 whitespace-nowrap">학년평균</th>
-                                    <th class="px-2 py-3 text-xs font-medium text-stone-700 border border-stone-200 whitespace-nowrap">학년 등수</th>
+                                    {{-- <th class="px-2 py-3 text-xs font-medium text-stone-700 border border-stone-200 whitespace-nowrap">학년 등수</th> --}}
                                 </tr>
                             </thead>
                             <tbody>
@@ -40,13 +40,13 @@
                                                 {{ number_format($type['scores']['classroom_average']) }}</td>
                                             <td class="px-2 py-3 border border-stone-200 text-xs text-stone-900 text-center whitespace-nowrap">
                                                 {{ number_format($type['scores']['level_average']) }}</td>
-                                            <td class="px-2 py-3 border border-stone-200 text-xs text-stone-900 text-center whitespace-nowrap">{{ $type['scores']['classroom_rank'] }}등
+                                            {{-- <td class="px-2 py-3 border border-stone-200 text-xs text-stone-900 text-center whitespace-nowrap">{{ $type['scores']['classroom_rank'] }}등
                                                 ({{ $type['scores']['classroom_students_count'] ?? 0 }})
-                                            </td>
+                                            </td> --}}
                                             <td class="px-2 py-3 border border-stone-200 text-xs text-stone-900 text-center whitespace-nowrap">
                                                 {{ number_format($type['scores']['grade_average'] ?? 0) }}</td>
-                                            <td class="px-2 py-3 border border-stone-200 text-xs text-stone-900 text-center whitespace-nowrap">{{ $type['scores']['grade_rank'] ?? 0 }}등
-                                                ({{ $type['scores']['grade_students_count'] ?? 0 }})</td>
+                                            {{-- <td class="px-2 py-3 border border-stone-200 text-xs text-stone-900 text-center whitespace-nowrap">{{ $type['scores']['grade_rank'] ?? 0 }}등
+                                                ({{ $type['scores']['grade_students_count'] ?? 0 }})</td> --}}
                                         </tr>
                                     @endforeach
                                     <tr class="bg-blue-50 font-semibold">
@@ -59,13 +59,13 @@
                                             {{ number_format($test['total']['classroom_average']) }}</td>
                                         <td class="px-2 py-3 border border-stone-200 text-xs text-stone-700 text-center whitespace-nowrap">{{ number_format($test['total']['level_average']) }}
                                         </td>
-                                        <td class="px-2 py-3 border border-stone-200 text-xs text-stone-700 text-center whitespace-nowrap">{{ $test['total']['classroom_rank'] }}등
+                                        {{-- <td class="px-2 py-3 border border-stone-200 text-xs text-stone-700 text-center whitespace-nowrap">{{ $test['total']['classroom_rank'] }}등
                                             ({{ $test['total']['classroom_students_count'] ?? 0 }})
-                                        </td>
+                                        </td> --}}
                                         <td class="px-2 py-3 border border-stone-200 text-xs text-stone-700 text-center whitespace-nowrap">
                                             {{ number_format($test['total']['grade_average'] ?? 0) }}</td>
-                                        <td class="px-2 py-3 border border-stone-200 text-xs text-stone-700 text-center whitespace-nowrap">{{ $test['total']['grade_rank'] ?? 0 }}등
-                                            ({{ $test['total']['grade_students_count'] ?? 0 }})</td>
+                                        {{-- <td class="px-2 py-3 border border-stone-200 text-xs text-stone-700 text-center whitespace-nowrap">{{ $test['total']['grade_rank'] ?? 0 }}등
+                                            ({{ $test['total']['grade_students_count'] ?? 0 }})</td> --}}
                                     </tr>
                                 @endforeach
                             </tbody>

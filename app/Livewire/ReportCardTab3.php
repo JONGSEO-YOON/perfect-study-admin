@@ -36,6 +36,7 @@ class ReportCardTab3 extends Component implements HasActions, HasForms
     'weekRow' => false,
     'attendance' => false,
     'comment' => false,
+    'rank' => false,
   ];
 
   public function mount()
