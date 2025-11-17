@@ -210,16 +210,85 @@ class PaymentResource extends Resource
             ])
             ->filtersLayout(FiltersLayout::AboveContent)
             ->filters([
-                SelectFilter::make('classroom')
-                    ->label('교실')
-                    ->relationship('student.classrooms', 'name', function ($query) {
-                        // 일반강사인 경우 자기 교실만 필터에 표시
-                        if (auth()->user()->role === 'general') {
-                            $teacher = auth()->user()->userable;
-                            $classroomIds = $teacher->classrooms->pluck('id');
-                            $query->whereIn('classrooms.id', $classroomIds);
+                Filter::make('teacher_student')
+                    ->form([
+                        Forms\Components\Select::make('teacher')
+                            ->label('담임')
+                            ->options(function () {
+                                $query = \App\Models\Teacher::with('user');
+
+                                // 일반강사인 경우 자기 자신만 표시
+                                if (auth()->user()->role === 'general') {
+                                    $teacher = auth()->user()->userable;
+                                    $query->where('id', $teacher->id);
+                                }
+
+                                return $query->get()->mapWithKeys(function ($teacher) {
+                                    $label = $teacher->user?->name ?? '이름 없음';
+                                    return [$teacher->id => $label];
+                                });
+                            })
+                            ->placeholder('전체')
+                            ->reactive()
+                            ->afterStateUpdated(fn(Forms\Set $set) => $set('student', null)),
+                        Forms\Components\Select::make('student')
+                            ->label('학생')
+                            ->options(function (Forms\Get $get) {
+                                $teacherId = $get('teacher');
+
+                                $query = \App\Models\Student::query();
+
+                                if ($teacherId) {
+                                    // 선택된 선생님의 교실에 속한 학생만 표시
+                                    $classroomIds = \App\Models\Classroom::where('teacher_id', $teacherId)->pluck('id');
+                                    $query->whereHas('classrooms', function ($q) use ($classroomIds) {
+                                        $q->whereIn('classroom_id', $classroomIds);
+                                    });
+                                } else {
+                                    // 선생님이 선택되지 않은 경우, 일반강사는 자기 교실 학생만
+                                    if (auth()->user()->role === 'general') {
+                                        $teacher = auth()->user()->userable;
+                                        $classroomIds = $teacher->classrooms->pluck('id');
+                                        $query->whereHas('classrooms', function ($q) use ($classroomIds) {
+                                            $q->whereIn('classroom_id', $classroomIds);
+                                        });
+                                    }
+                                }
+
+                                return $query->with('user')
+                                    ->get()
+                                    ->pluck('user.name', 'id');
+                            })
+                            ->placeholder('전체 학생')
+                            ->searchable(),
+                    ])
+                    ->query(function ($query, array $data) {
+                        return $query
+                            ->when(
+                                $data['teacher'],
+                                fn($query, $teacher) => $query->whereHas('student.classrooms', function ($q) use ($teacher) {
+                                    $q->where('teacher_id', $teacher);
+                                })
+                            )
+                            ->when(
+                                $data['student'],
+                                fn($query, $student) => $query->where('student_id', $student)
+                            );
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+
+                        if ($data['teacher'] ?? null) {
+                            $teacher = \App\Models\Teacher::with('user')->find($data['teacher']);
+                            $indicators['teacher'] = '선생님: ' . ($teacher->user->name ?? '');
                         }
-                        return $query;
+
+                        if ($data['student'] ?? null) {
+                            $student = \App\Models\Student::with('user')->find($data['student']);
+                            $indicators['student'] = '학생: ' . ($student->user->name ?? '');
+                        }
+
+                        return $indicators;
                     }),
                 SelectFilter::make('payment_status')
                     ->label('결제 상태')
@@ -237,7 +306,7 @@ class PaymentResource extends Resource
                     ->query(function ($query, array $data) {
                         return $query->when(
                             $data['created_from'],
-                            fn ($query, $date) => $query->whereDate('created_at', '>=', $date),
+                            fn($query, $date) => $query->whereDate('created_at', '>=', $date),
                         );
                     })
                     ->label('시작날짜'),
@@ -249,7 +318,7 @@ class PaymentResource extends Resource
                     ->query(function ($query, array $data) {
                         return $query->when(
                             $data['created_until'],
-                            fn ($query, $date) => $query->whereDate('created_at', '<=', $date),
+                            fn($query, $date) => $query->whereDate('created_at', '<=', $date),
                         );
                     })
                     ->label('종료날짜'),
