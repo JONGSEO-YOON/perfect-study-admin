@@ -20,7 +20,7 @@
     "laravel/sanctum": "^4.0",
     "laravel/tinker": "^2.9",
     "maatwebsite/excel": "^3.1",
-    "mohamedsabil83/filament-forms-tinyeditor": "^2.3",
+    "mohamedsabil83/filament-forms-tinyeditor": "^2.4",
     "rupadana/filament-slider": "^1.0"
   },
   "require-dev": {
