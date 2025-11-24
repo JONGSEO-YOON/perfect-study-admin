@@ -19,8 +19,8 @@ return [
             'upload_directory' => null,
             'custom_configs' => [
                 'external_plugins' => [
-                    'tiny_mce_wiris' => 'https://www.wiris.net/demo/plugins/tiny_mce/plugin.js'
-                    // 'tiny_mce_wiris' => '/js/filament/filament/plugin.js'
+                    // 'tiny_mce_wiris' => 'https://www.wiris.net/demo/plugins/tiny_mce/plugin.js'
+                    'tiny_mce_wiris' => '/js/filament/filament/plugin.min.js'
                 ]
             ]
         ],
