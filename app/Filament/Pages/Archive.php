@@ -40,7 +40,7 @@ class Archive extends Page implements HasForms, HasTable
 
     protected static ?string $title = '자료실';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 3;
 
     protected static bool $shouldRegisterNavigation = true;
 

@@ -43,18 +43,30 @@
                             </svg>
                             {{ $notice->created_at->format('Y.m.d') }}
                         </div>
-                        @if ($notice->attachments && count($notice->attachments) > 0)
-                            <div class="flex items-center gap-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                                </svg>
-                                {{ count($notice->attachments) }}개의 첨부파일
-                            </div>
-                        @endif
+                        <div class="flex items-center gap-2">
+                            @if ($notice->student_id)
+                                <span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium">{{ $notice->student->user->name }}</span>
+                            @elseif ($notice->classroom_id)
+                                <span class="px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs font-medium">{{ $notice->classroom->name }}</span>
+                            @else
+                                <span class="px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">전체</span>
+                            @endif
+                            @if ($notice->attachments && count($notice->attachments) > 0)
+                                <div class="flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                    </svg>
+                                    {{ count($notice->attachments) }}
+                                </div>
+                            @endif
+                        </div>
                     </div>
                 </div>
             @endforeach
+        </div>
+        <div class="mt-6">
+            {{ $notices->links() }}
         </div>
     </div>
 
