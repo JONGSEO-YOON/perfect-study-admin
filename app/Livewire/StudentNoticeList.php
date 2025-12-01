@@ -18,6 +18,7 @@ class StudentNoticeList extends Component
     $classroomIds = $student->classrooms->pluck('id')->toArray();
 
     $notices = StudentNotice::with(['student.user', 'classroom'])
+      ->where('only_parent', false)
       ->where(function ($query) use ($student, $classroomIds) {
         // 1. 전체 공지 (student_id IS NULL AND classroom_id IS NULL)
         $query->where(function ($q) {
