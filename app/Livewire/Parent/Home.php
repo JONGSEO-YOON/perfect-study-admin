@@ -8,6 +8,7 @@ use App\Models\Student;
 use App\Models\AttendanceLog;
 use App\Models\WeeklyTestReport;
 use App\Models\Notice;
+use App\Models\StudentNotice;
 use Livewire\Attributes\Layout;
 
 class Home extends Component
@@ -15,6 +16,7 @@ class Home extends Component
     public $student;
     public $attendances = [];
     public $notices = [];
+    public $studentNotices = [];
     public $weeklyReport; // 추가: 오늘 주차 성적표
 
     public function mount()
@@ -32,6 +34,8 @@ class Home extends Component
             ->orderBy('pinned_at', 'desc')
             ->get();
 
+        $this->loadStudentNotices();
+
         // 오늘 날짜 기준 주차 성적표 가져오기
         $this->loadWeeklyReport();
     }
@@ -47,8 +51,23 @@ class Home extends Component
             ->orderBy('pinned_at', 'desc')
             ->get();
 
+        $this->loadStudentNotices();
+
         // 학생 변경 시 성적표도 다시 로드
         $this->loadWeeklyReport();
+    }
+
+    protected function loadStudentNotices()
+    {
+        if (!$this->student) {
+            $this->studentNotices = [];
+            return;
+        }
+
+        $this->studentNotices = StudentNotice::where('student_id', $this->student->id)
+            ->orderBy('pinned_at', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
 
     // 오늘 날짜 기준 주차 성적표 로드

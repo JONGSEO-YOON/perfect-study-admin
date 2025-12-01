@@ -95,6 +95,9 @@ class StudentNoticeResource extends Resource
                                     ->visible(fn(Get $get) => $get('target_type') === 'student')
                                     ->searchable()
                                     ->preload(),
+                                Forms\Components\Checkbox::make('only_parent')
+                                    ->label('부모에게만 공지')
+                                    ->visible(fn(Get $get) => $get('target_type') === 'student'),
                             ])->columnSpanFull(),
                         TextInput::make('title')
                             ->label('제목')
@@ -172,6 +175,13 @@ class StudentNoticeResource extends Resource
                     ->placeholder('-')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\IconColumn::make('only_parent')
+                    ->label('부모에게만')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-minus')
+                    ->trueColor('success')
+                    ->falseColor('gray'),
                 TextColumn::make('author.name')
                     ->label('작성자')
                     ->searchable()
