@@ -1,0 +1,45 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Node modules (빌드 후 필요 없음)
+node_modules
+
+# Storage (볼륨으로 마운트할 것들)
+storage/app/*
+!storage/app/.gitignore
+storage/logs/*
+!storage/logs/.gitignore
+
+# Development files
+.env
+.env.example
+.env.local
+.env.*.local
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Tests
+tests
+phpunit.xml
+
+# Documentation
+*.md
+!README.md
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+!Dockerfile.prod
+
+# Laravel Sail
+docker
+
+# Misc
+.editorconfig
+.styleci.yml
