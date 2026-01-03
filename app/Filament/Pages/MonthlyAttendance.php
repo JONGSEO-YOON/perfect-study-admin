@@ -21,13 +21,13 @@ class MonthlyAttendance extends Page
 {
     protected static ?string $navigationIcon = null;
 
-    protected static ?string $navigationGroup = '교실 관리';
+    protected static ?string $navigationGroup = '출결';
 
     protected static ?string $navigationLabel = '월별출결 현황';
 
     protected static ?string $title = '월별출결 현황';
 
-    protected static ?int $navigationSort = 8;
+    protected static ?int $navigationSort = 2;
 
     protected static string $view = 'filament.pages.monthly-attendance';
 

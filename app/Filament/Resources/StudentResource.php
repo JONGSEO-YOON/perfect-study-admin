@@ -11,6 +11,7 @@ use App\Models\Classroom;
 use App\Models\GradeSystem;
 use App\Models\School;
 use App\Models\Student;
+use App\Models\Teacher;
 use App\Models\TestSheet;
 use App\Models\WrongAnswerNote;
 use Carbon\Carbon;
@@ -302,6 +303,8 @@ class StudentResource extends Resource
         return $table
             ->defaultSort('created_at', 'desc')
             ->modifyQueryUsing(function ($query) {
+                $query->notWithdrawn();
+                
                 if (auth()->user()->isRoleAbove('manager', true)) {
                     return $query;
                 }
@@ -353,6 +356,21 @@ class StudentResource extends Resource
                 //     ->date('Y-m-d')
                 //     ->label('생년월일')
                 //     ->sortable(),
+                TextColumn::make('status')
+                    ->label('상태')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => match($state) {
+                        'enrolled' => '재원',
+                        'pending' => '승인예정',
+                        'withdrawn' => '퇴원',
+                        default => '재원',
+                    })
+                    ->color(fn ($state) => match($state) {
+                        'enrolled' => 'success',
+                        'pending' => 'warning',
+                        'withdrawn' => 'danger',
+                        default => 'success',
+                    }),
                 TextColumn::make('created_at')
                     ->date('Y-m-d')
                     ->label('등록일')
@@ -725,6 +743,49 @@ class StudentResource extends Resource
                         ->icon('heroicon-m-clipboard-document-list')
                         ->url(fn($record) => '/admin/counselings?tableFilters[student_id][value]=' . $record->id)
                         ->modalWidth('2xl'),
+                    Tables\Actions\Action::make('withdraw')
+                        ->label('퇴원 처리')
+                        ->icon('heroicon-m-arrow-right-on-rectangle')
+                        ->color('danger')
+                        ->visible(fn($record) => $record->canEdit(auth()->user()) && $record->status !== 'withdrawn')
+                        ->requiresConfirmation()
+                        ->modalHeading(fn($record) => $record->user->name . ' 학생 퇴원 처리')
+                        ->modalDescription('퇴원 처리 후에는 퇴원생 관리 메뉴에서 확인할 수 있습니다.')
+                        ->form([
+                            Grid::make(2)->schema([
+                                Select::make('homeroom_teacher_id')
+                                    ->label('담임')
+                                    ->options(fn() => Teacher::with('user')->get()->pluck('user.name', 'id'))
+                                    ->searchable()
+                                    ->preload(),
+                                DatePicker::make('withdrawn_at')
+                                    ->label('퇴원일')
+                                    ->required()
+                                    ->default(now()),
+                            ]),
+                            Select::make('withdrawal_reason')
+                                ->label('퇴원사유')
+                                ->required()
+                                ->options(Student::WITHDRAWAL_REASONS),
+                            Textarea::make('withdrawal_reason_detail')
+                                ->label('상세 사유')
+                                ->placeholder('기타 선택 시 상세 사유를 입력하세요')
+                                ->visible(fn(Get $get) => $get('withdrawal_reason') === 'other'),
+                        ])
+                        ->action(function ($record, array $data) {
+                            if ($record->withdraw($data)) {
+                                Notification::make()
+                                    ->title('퇴원 처리 완료')
+                                    ->body($record->user->name . ' 학생이 퇴원 처리되었습니다.')
+                                    ->success()
+                                    ->send();
+                            } else {
+                                Notification::make()
+                                    ->title('퇴원 처리 실패')
+                                    ->danger()
+                                    ->send();
+                            }
+                        }),
                     DeleteAction::make()
                         ->visible(fn($record) => $record->canEdit(auth()->user()))
                         ->modalHeading('학생 삭제')

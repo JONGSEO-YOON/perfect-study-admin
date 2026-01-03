@@ -34,7 +34,7 @@ class ClassroomResource extends Resource
 
     protected static ?string $title = '반 관리';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $navigationGroup = '교실 관리';
 

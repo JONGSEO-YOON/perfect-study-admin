@@ -12,6 +12,7 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Widgets;
+use Filament\Navigation\NavigationGroup;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -55,6 +56,14 @@ class AdminPanelProvider extends PanelProvider
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
                 \App\Filament\Pages\Dashboard::class,
+            ])
+            ->navigationGroups([
+                NavigationGroup::make('교실 관리'),
+                NavigationGroup::make('출결'),
+                NavigationGroup::make('문제 관리'),
+                NavigationGroup::make('결제'),
+                NavigationGroup::make('자료실'),
+                NavigationGroup::make('설정'),
             ])
             ->font('Pretendard')
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')

@@ -52,7 +52,7 @@ class QuestionResource extends Resource
 
     protected static ?string $navigationGroup = '문제 관리';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 2;
 
     public static function canViewAny(): bool
     {
@@ -786,7 +786,7 @@ class QuestionResource extends Resource
                         ->modalHeading('유사 문제 2')
                         ->modalWidth('2xl'),
                     Tables\Actions\DeleteAction::make()
-                        ->visible(fn($record) => $record->is_editable)
+                        ->visible(fn($record) => $record->is_editable && auth()->user()->role === 'root_admin')
                         ->modalHeading('문제 삭제')
                         ->after(function ($record) {
                             // 교재가 있는 문제인 경우 seq 재정리
