@@ -38,17 +38,28 @@ class Attendance extends Component
             $currentDay = strtolower($currentTime->format('D')); // mon, tue, wed, thu, fri, sat, sun
 
             $hasRegularClass = false;
+            $classStartTime = null;
             foreach ($user->userable->classrooms as $classroom) {
                 $timetable = $classroom->timetable;
                 // 오늘 해당 요일에 스케줄이 있는지 확인
                 if (isset($timetable[$currentDay])) {
                     $hasRegularClass = true;
-                    break;
+                    $startTime = $timetable[$currentDay]['start'] ?? null;
+                    // 가장 이른 수업 시작 시간 기준으로 지각 판단
+                    if ($startTime && ($classStartTime === null || $startTime < $classStartTime)) {
+                        $classStartTime = $startTime;
+                    }
                 }
             }
 
             // 보충 수업 여부 결정 (정규 수업이 없으면 보충)
             $is_supplementary = !$hasRegularClass;
+
+            // 지각 여부 판단: 정규 수업 시작 시간보다 늦으면 지각
+            $is_late = false;
+            if ($hasRegularClass && $classStartTime && $type === 'in') {
+                $is_late = $currentTime->format('H:i') > $classStartTime;
+            }
 
             // 오늘 출석 기록 확인 (학생 ID로 조회)
             $today = now()->format('Y-m-d');
@@ -62,10 +73,10 @@ class Attendance extends Component
 
                 if ($type === 'in') {
                     $updateData['check_in_time'] = now();
+                    $updateData['is_late'] = $is_late;
                 } else {
                     $updateData['check_out_time'] = now();
                 }
-
 
                 $existingLog->update($updateData);
                 $attendanceLog = $existingLog;
@@ -73,7 +84,7 @@ class Attendance extends Component
                 // 새 기록 생성
                 $attendanceData = [
                     'student_id' => $user->userable->id,
-                    'is_late' => false,
+                    'is_late' => $is_late,
                     'is_supplementary' => $is_supplementary,
                 ];
 

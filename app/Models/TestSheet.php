@@ -688,7 +688,8 @@ class TestSheet extends Model
                 $attemptedCount = count(array_filter($answer->answers, function ($ans) {
                     return $ans !== null;
                 }));
-                $totalQuestions = count($this->questions);
+                $totalQuestions = $this->total_score;
+                $totalQuestionCount = count($this->questions);
 
                 // 개인 레벨 분석
                 $personalLevelAnalysis = $this->generateLevelAnalysis(
@@ -729,7 +730,7 @@ class TestSheet extends Model
                     'type_scores' => $typeStats,
                     'attempted_count' => $attemptedCount,
                     'total_questions' => $totalQuestions,
-                    'attempt_rate' => $calculatePercentage($attemptedCount, $totalQuestions),
+                    'attempt_rate' => $calculatePercentage($attemptedCount, $totalQuestionCount),
                     'hierarchical_analysis' => $hierarchicalAnalysis,
                     'detailed_hierarchical_analysis' => $detailedHierarchicalAnalysis,
                     'level_analysis' => [

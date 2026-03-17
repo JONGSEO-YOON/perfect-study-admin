@@ -556,19 +556,24 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             $result = self::selectQuestionsWithWeightedDistribution($params, $excludeIds);
         }
 
-        // 부족한 문제 수를 채우기 위한 추가 선택
+        // 부족한 문제 수를 채우기 위한 추가 선택 (레벨별 균등 분배)
         if ($result->count() < $totalQuestionCount) {
-            $remainingCount = $totalQuestionCount - $result->count();
-            $existingIds = $result->pluck('id')->merge($excludeIds)->unique()->values()->toArray();
             $levels = $params['levels'];
-            for ($i = 0; $i < count($levels); $i++) {
-                $level = $levels[$i];
-                $result = $result->concat(
-                    self::selectAdditionalQuestions($params, $remainingCount, $existingIds, $level)
-                );
+            $existingIds = $result->pluck('id')->merge($excludeIds)->unique()->values()->toArray();
+
+            // 여러 라운드에 걸쳐 레벨별로 균등하게 채움
+            $maxRounds = 5;
+            for ($round = 0; $round < $maxRounds && $result->count() < $totalQuestionCount; $round++) {
                 $remainingCount = $totalQuestionCount - $result->count();
-                if ($remainingCount <= 0) {
-                    break;
+                $perLevel = (int) ceil($remainingCount / count($levels));
+
+                foreach ($levels as $level) {
+                    $needed = min($perLevel, $totalQuestionCount - $result->count());
+                    if ($needed <= 0) break;
+
+                    $additional = self::selectAdditionalQuestions($params, $needed, $existingIds, $level);
+                    $result = $result->concat($additional);
+                    $existingIds = array_merge($existingIds, $additional->pluck('id')->toArray());
                 }
             }
         }
@@ -682,6 +687,11 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         $result = collect();
         $levels = $params['levels'];
         $questionTypeIds = $params['question_type_ids'];
+
+        if (empty($levels) || empty($questionTypeIds)) {
+            return $result;
+        }
+
         $questionsPerLevel = (int) floor($params['question_count'] / count($levels));
         $remainingQuestions = $params['question_count'] % count($levels);
 
@@ -882,6 +892,15 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                 }
                 if ($this->arguments['question']['level'] ?? false) {
                     $levels = [$this->arguments['question']['level']];
+                }
+
+                if (empty($levels) || empty($questionTypeIds)) {
+                    return [
+                        'questions' => [],
+                        'question_ids' => [],
+                        'question_type_ids' => $questionTypeIds,
+                        'levels' => $levels,
+                    ];
                 }
 
                 $questions = self::selectRandomQuestions([
