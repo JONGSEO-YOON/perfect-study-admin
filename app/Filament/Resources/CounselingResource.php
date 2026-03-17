@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\CounselingResource\Pages;
 use App\Filament\Resources\CounselingResource\RelationManagers;
+use App\Filament\Resources\CounselingResource\Widgets;
 use App\Models\Counseling;
 use App\Models\Notification;
 use App\Models\Student;
@@ -26,6 +27,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -39,7 +41,7 @@ class CounselingResource extends Resource
 
     protected static ?string $title = '상담 관리';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $navigationGroup = '교실 관리';
 
@@ -287,17 +289,34 @@ class CounselingResource extends Resource
                     ->sortable(),
             ])
             ->filters([
-                //
-                SelectFilter::make('status')
-                    ->options([
-                        '상담 요청' => '상담 요청',
-                        '상담 진행' => '상담 진행',
-                        '상담 완료' => '상담 완료',
+                Filter::make('date_range')
+                    ->form([
+                        Grid::make(2)
+                            ->schema([
+                                DatePicker::make('from')
+                                    ->label('시작일'),
+                                DatePicker::make('until')
+                                    ->label('종료일'),
+                            ]),
                     ])
-                    ->label('상태'),
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when($data['from'] ?? null, fn(Builder $q, $date) => $q->whereDate('created_at', '>=', $date))
+                            ->when($data['until'] ?? null, fn(Builder $q, $date) => $q->whereDate('created_at', '<=', $date));
+                    }),
+                SelectFilter::make('counselor_id')
+                    ->options(function () {
+                        return User::where('userable_type', Teacher::class)
+                            ->with('userable')
+                            ->get()
+                            ->mapWithKeys(fn($user) => [$user->userable->id => $user->name])
+                            ->toArray();
+                    })
+                    ->searchable()
+                    ->preload()
+                    ->label('상담자'),
                 SelectFilter::make('student_id')
                     ->options(function () {
-
                         $canViewAllStudents =
                             !auth()->user()->userable instanceof \App\Models\Teacher ||
                             auth()->user()->isRoleAbove('general');
@@ -315,6 +334,13 @@ class CounselingResource extends Resource
                     ->searchable()
                     ->preload()
                     ->label('학생'),
+                SelectFilter::make('status')
+                    ->options([
+                        '상담 요청' => '상담 요청',
+                        '상담 진행' => '상담 진행',
+                        '상담 완료' => '상담 완료',
+                    ])
+                    ->label('상태'),
             ], FiltersLayout::AboveContent)
             ->actions([
                 Tables\Actions\EditAction::make()
@@ -341,6 +367,13 @@ class CounselingResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->emptyStateHeading('상담이 없습니다.')
             ->emptyStateDescription('상담을 추가하려면 상담 기록하기 버튼을 눌러주세요.');
+    }
+
+    public static function getWidgets(): array
+    {
+        return [
+            Widgets\CounselingStatsWidget::class,
+        ];
     }
 
     public static function getRelations(): array

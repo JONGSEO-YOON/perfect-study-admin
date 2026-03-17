@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\CounselingResource\Pages;
 
 use App\Filament\Resources\CounselingResource;
+use App\Filament\Resources\CounselingResource\Widgets\CounselingStatsWidget;
 use App\Models\Notification;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
@@ -13,6 +14,13 @@ class ListCounselings extends ListRecords
     protected static string $resource = CounselingResource::class;
 
     protected static ?string $title = '상담 관리';
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            CounselingStatsWidget::class,
+        ];
+    }
 
     public function getBreadcrumb(): ?string
     {

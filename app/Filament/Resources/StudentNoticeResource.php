@@ -34,9 +34,9 @@ class StudentNoticeResource extends Resource
 
     protected static ?string $title = '학생 공지';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 7;
 
-    protected static ?string $navigationGroup = '자료실';
+    protected static ?string $navigationGroup = '교실 관리';
 
     public static function getBreadcrumb(): string
     {

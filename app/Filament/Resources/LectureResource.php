@@ -41,7 +41,7 @@ class LectureResource extends Resource
 
     protected static ?string $title = '강의실';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $navigationGroup = '자료실';
 

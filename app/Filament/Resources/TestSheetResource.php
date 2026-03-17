@@ -40,9 +40,9 @@ class TestSheetResource extends Resource
 
     protected static ?string $title = '문제지 관리';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 1;
 
-    protected static ?string $navigationGroup = '교실 관리';
+    protected static ?string $navigationGroup = '문제 관리';
 
     public static function getBreadcrumb(): string
     {

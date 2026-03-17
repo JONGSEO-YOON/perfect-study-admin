@@ -29,7 +29,7 @@ class PaymentResource extends Resource
 
     protected static ?string $navigationGroup = '결제';
 
-    // protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 1;
 
     public static function canViewAny(): bool
     {

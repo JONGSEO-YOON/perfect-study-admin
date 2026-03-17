@@ -30,11 +30,11 @@ class DailyAttendanceResource extends Resource
 {
     protected static ?string $model = Student::class;
 
-    protected static ?string $navigationGroup = '교실 관리';
+    protected static ?string $navigationGroup = '출결';
 
     protected static ?string $navigationLabel = '일별출결 현황';
 
-    protected static ?int $navigationSort = 7;
+    protected static ?int $navigationSort = 1;
 
     public static function getBreadcrumb(): string
     {

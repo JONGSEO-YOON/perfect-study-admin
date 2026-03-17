@@ -54,7 +54,7 @@ class StudentResource extends Resource
 
     protected static ?string $navigationGroup = '교실 관리';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 1; // 교실 관리
 
     protected static ?string $navigationLabel = '학생 관리';
 

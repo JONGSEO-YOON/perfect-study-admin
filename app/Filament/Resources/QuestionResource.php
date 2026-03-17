@@ -52,7 +52,7 @@ class QuestionResource extends Resource
 
     protected static ?string $navigationGroup = '문제 관리';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 2;
 
     public static function canViewAny(): bool
     {

@@ -35,7 +35,7 @@ class TeacherResource extends Resource
 
     protected static ?string $navigationLabel = '강사 관리';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 3;
 
     protected static bool $shouldRegisterNavigation = true;
 

@@ -3,8 +3,11 @@
 namespace App\Filament\Pages;
 
 use Filament\Pages\Dashboard as BaseDashboard;
-use App\Filament\Widgets\StudentStatsWidget;
 use App\Filament\Widgets\DateDisplayWidget;
+use App\Filament\Widgets\DailyAttendanceWidget;
+use App\Filament\Widgets\DailyPaymentWidget;
+use App\Filament\Widgets\StudentEnrollmentWidget;
+use App\Filament\Widgets\CounselingWidget;
 use Illuminate\Support\Facades\Auth;
 
 class Dashboard extends BaseDashboard
@@ -36,7 +39,10 @@ class Dashboard extends BaseDashboard
     {
         return [
             DateDisplayWidget::class,
-            StudentStatsWidget::class,
+            DailyAttendanceWidget::class,
+            DailyPaymentWidget::class,
+            StudentEnrollmentWidget::class,
+            CounselingWidget::class,
         ];
     }
 }
