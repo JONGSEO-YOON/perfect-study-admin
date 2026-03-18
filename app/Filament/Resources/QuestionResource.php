@@ -160,6 +160,156 @@ class QuestionResource extends Resource
             Section::make()
                 ->columns(4)
                 ->columnSpanFull()
+                ->heading('기출 정보')
+                ->collapsible(true)
+                ->collapsed(fn ($record) => $record && !$record->source_type)
+                ->visible(fn(Get $get) => !$get('is_sub_question'))
+                ->schema([
+                    ToggleButtons::make('source_type')
+                        ->label('문제 출처')
+                        ->inline()
+                        ->options([
+                            '' => '일반 문제',
+                            'mock_exam' => '모의고사 기출',
+                            'school_exam' => '학교 기출',
+                        ])
+                        ->default('')
+                        ->live()
+                        ->afterStateHydrated(function ($component, $state) {
+                            if ($state === null) {
+                                $component->state('');
+                            }
+                        })
+                        ->dehydrateStateUsing(fn ($state) => $state ?: null)
+                        ->columnSpanFull(),
+
+                    // === 모의고사 기출 필드 ===
+                    Grid::make(4)
+                        ->visible(fn(Get $get) => $get('source_type') === 'mock_exam')
+                        ->schema([
+                            Select::make('exam_year')
+                                ->label('년도')
+                                ->options(array_combine(
+                                    range(date('Y'), 2010, -1),
+                                    range(date('Y'), 2010, -1)
+                                ))
+                                ->required()
+                                ->searchable(),
+                            Select::make('exam_month')
+                                ->label('월')
+                                ->options([
+                                    3 => '3월',
+                                    4 => '4월',
+                                    6 => '6월',
+                                    7 => '7월',
+                                    9 => '9월',
+                                    10 => '10월',
+                                    11 => '11월 (수능)',
+                                ])
+                                ->required(),
+                            Select::make('exam_grade')
+                                ->label('학년')
+                                ->options([
+                                    '고1' => '고1',
+                                    '고2' => '고2',
+                                    '고3' => '고3',
+                                ])
+                                ->required(),
+                            Select::make('exam_subject')
+                                ->label('과목')
+                                ->options([
+                                    '공통수학' => '공통수학',
+                                    '대수' => '대수',
+                                    '미적분' => '미적분',
+                                    '미적분2' => '미적분2',
+                                    '확통' => '확률과 통계',
+                                    '기하' => '기하',
+                                ])
+                                ->required(),
+                            Select::make('exam_score')
+                                ->label('배점')
+                                ->options([
+                                    2 => '2점',
+                                    3 => '3점',
+                                    4 => '4점',
+                                ])
+                                ->required(),
+                            TextInput::make('exam_question_number')
+                                ->label('문제 번호')
+                                ->numeric()
+                                ->minValue(1)
+                                ->maxValue(45)
+                                ->placeholder('예: 21'),
+                        ]),
+
+                    // === 학교 기출 필드 ===
+                    Grid::make(4)
+                        ->visible(fn(Get $get) => $get('source_type') === 'school_exam')
+                        ->schema([
+                            Select::make('school_id')
+                                ->label('학교')
+                                ->searchable()
+                                ->getSearchResultsUsing(fn (string $search): array =>
+                                    \App\Models\School::where('name', 'like', "%{$search}%")
+                                        ->limit(50)
+                                        ->pluck('name', 'id')
+                                        ->toArray()
+                                )
+                                ->getOptionLabelUsing(fn ($value): ?string =>
+                                    \App\Models\School::find($value)?->name
+                                )
+                                ->required()
+                                ->columnSpan(2),
+                            Select::make('exam_year')
+                                ->label('년도')
+                                ->options(array_combine(
+                                    range(date('Y'), 2010, -1),
+                                    range(date('Y'), 2010, -1)
+                                ))
+                                ->required()
+                                ->searchable(),
+                            Select::make('exam_semester')
+                                ->label('학기')
+                                ->options([
+                                    1 => '1학기',
+                                    2 => '2학기',
+                                ])
+                                ->required(),
+                            Select::make('exam_subject')
+                                ->label('과목')
+                                ->options([
+                                    '공통수학' => '공통수학',
+                                    '대수' => '대수',
+                                    '미적분' => '미적분',
+                                    '미적분2' => '미적분2',
+                                    '확통' => '확률과 통계',
+                                    '기하' => '기하',
+                                ])
+                                ->required(),
+                            Select::make('exam_type')
+                                ->label('시험 유형')
+                                ->options([
+                                    'midterm' => '중간고사',
+                                    'final' => '기말고사',
+                                ])
+                                ->required(),
+                            Select::make('exam_grade')
+                                ->label('학년')
+                                ->options([
+                                    '고1' => '고1',
+                                    '고2' => '고2',
+                                    '고3' => '고3',
+                                ]),
+                            TextInput::make('exam_question_number')
+                                ->label('문제 번호')
+                                ->numeric()
+                                ->minValue(1)
+                                ->placeholder('예: 15'),
+                        ]),
+                ]),
+            Section::make()
+                ->columns(4)
+                ->columnSpanFull()
                 ->heading('1. 문제 정보')
                 ->collapsible(true)
                 ->schema([
@@ -539,6 +689,23 @@ class QuestionResource extends Resource
                 //         }
                 //     })
                 //     ->label('문제'),
+                TextColumn::make('source_type')
+                    ->label('출처')
+                    ->formatStateUsing(fn ($state) => match($state) {
+                        'mock_exam' => '모의고사',
+                        'school_exam' => '학교기출',
+                        default => '',
+                    })
+                    ->badge()
+                    ->color(fn ($state) => match($state) {
+                        'mock_exam' => 'info',
+                        'school_exam' => 'success',
+                        default => 'gray',
+                    })
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('exam_year')
+                    ->label('출제년도')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->date('Y-m-d')
                     ->sortable()
@@ -620,7 +787,39 @@ class QuestionResource extends Resource
                                 return $query->where('seq', '<=', $seq_to);
                             }
                         );
-                    })
+                    }),
+                Filter::make('source_type')
+                    ->form([
+                        Select::make('source_type')
+                            ->label('문제 출처')
+                            ->options([
+                                'mock_exam' => '모의고사 기출',
+                                'school_exam' => '학교 기출',
+                            ])
+                            ->placeholder('전체'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            $data['source_type'] ?? null,
+                            fn(Builder $query, $type) => $query->where('source_type', $type)
+                        );
+                    }),
+                Filter::make('exam_year')
+                    ->form([
+                        Select::make('exam_year')
+                            ->label('출제 년도')
+                            ->options(array_combine(
+                                range(date('Y'), 2010, -1),
+                                range(date('Y'), 2010, -1)
+                            ))
+                            ->placeholder('전체'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            $data['exam_year'] ?? null,
+                            fn(Builder $query, $year) => $query->where('exam_year', $year)
+                        );
+                    }),
 
             ], FiltersLayout::AboveContent)
             ->actions([

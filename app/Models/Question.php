@@ -18,12 +18,22 @@ class Question extends Model
         return [
             'tags' => 'array',
             'metadata' => 'array',
+            'exam_year' => 'integer',
+            'exam_month' => 'integer',
+            'exam_score' => 'integer',
+            'exam_question_number' => 'integer',
+            'exam_semester' => 'integer',
         ];
     }
 
     public function questionType()
     {
         return $this->belongsTo(QuestionCategory::class, 'question_type_id');
+    }
+
+    public function school()
+    {
+        return $this->belongsTo(School::class);
     }
 
     public function choices()

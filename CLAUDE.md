@@ -95,6 +95,22 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
 - 문제 균등분배 시 부족분이 첫 번째 레벨에 몰리는 문제 수정
 - 새 문제 추가 모달 500 에러 (division by zero) 수정
 
+### 2026-03-18: 기출 문제은행 DB 마이그레이션
+
+- **DB 백업**: `/home/ubuntu/admin/backup_laravel_20260318.sql.gz` (1.2GB)
+  - 백업 시점: 마이그레이션 실행 직전
+  - 복원 방법: `zcat backup_laravel_20260318.sql.gz | docker exec -i admin-mysql-1 mysql -u root -p'gfFgZG9E3' laravel`
+  - 백업 내 데이터: questions 78,587건, test_sheets 845건
+- **마이그레이션 1**: `2026_03_18_400000_add_exam_fields_to_questions_table`
+  - `questions` 테이블에 기출 관련 컬럼 추가 (모두 nullable, 기존 데이터 무영향)
+  - 추가 컬럼: `source_type`, `exam_year`, `exam_month`, `exam_grade`, `exam_subject`, `exam_score`, `exam_question_number`, `school_id`, `exam_semester`, `exam_type`
+  - 인덱스: `source_type`, `idx_mock_exam(source_type, exam_year, exam_month)`, `idx_school_exam(source_type, school_id, exam_year, exam_semester)`
+- **마이그레이션 2**: `2026_03_18_400001_add_exam_fields_to_test_sheets_table`
+  - `test_sheets` 테이블에 기출 문제지 관련 컬럼 추가 (모두 nullable)
+  - 추가 컬럼: `source_type`, `creation_method`, `exam_years`, `exam_months`, `exam_grades`, `exam_subjects`, `exam_scores`, `school_id`, `exam_semesters`, `exam_types`
+- **롤백 방법**: `docker exec admin-laravel.test-1 bash -c "cd /var/www/html && php artisan migrate:rollback --step=2 --force"`
+- **기존 schools 테이블**: 12,547개 학교 데이터 존재 (administrative_code, name, school_type, province, address 등)
+
 ## 알려진 이슈 (TODO)
 
 ### MySQL sort_buffer_size 및 test_sheets 쿼리 최적화
