@@ -27,7 +27,8 @@ class AcademyResource extends Resource
 
     protected static ?int $navigationSort = 10;
 
-    protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
+    // 설정 그룹에 그룹 아이콘이 있으므로 개별 아이콘 제거
+    // protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
 
     public static function canViewAny(): bool
     {
