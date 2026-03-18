@@ -61,13 +61,20 @@ class ClassroomResource extends Resource
                             ->label('반 이름')
                             ->required(),
                         Select::make('teacher_id')
-                            ->label('강사')
+                            ->label('담임')
                             ->options(function () {
                                 return Teacher::with('user')->get()->pluck('user.name', 'id')->toArray();
                             })
                             ->preload()
                             ->searchable()
                             ->required(),
+                        Select::make('sub_teacher_id')
+                            ->label('부담임')
+                            ->options(function () {
+                                return Teacher::with('user')->get()->pluck('user.name', 'id')->toArray();
+                            })
+                            ->preload()
+                            ->searchable(),
                         Select::make('target_grades')
                             ->label('학년')
                             ->multiple()

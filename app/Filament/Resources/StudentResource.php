@@ -11,6 +11,7 @@ use App\Models\Classroom;
 use App\Models\GradeSystem;
 use App\Models\School;
 use App\Models\Student;
+use App\Filament\Resources\WithdrawnStudentResource;
 use App\Models\TestSheet;
 use App\Models\WrongAnswerNote;
 use Carbon\Carbon;
@@ -302,12 +303,16 @@ class StudentResource extends Resource
         return $table
             ->defaultSort('created_at', 'desc')
             ->modifyQueryUsing(function ($query) {
-                if (auth()->user()->isRoleAbove('manager', true)) {
-                    return $query;
+                // 퇴원생은 퇴원생 관리에서 조회
+                $query->where('status', '!=', 'withdrawn');
+
+                if (!auth()->user()->isRoleAbove('manager', true)) {
+                    $query->whereHas('classrooms', function ($q) {
+                        $q->where('classrooms.teacher_id', auth()->user()->userable->id)
+                            ->orWhere('classrooms.sub_teacher_id', auth()->user()->userable->id);
+                    });
                 }
-                return $query->whereHas('classrooms', function ($q) {
-                    $q->where('classrooms.teacher_id', auth()->user()->userable->id);
-                });
+                return $query;
             })
             ->columns([
                 //
@@ -353,6 +358,24 @@ class StudentResource extends Resource
                 //     ->date('Y-m-d')
                 //     ->label('생년월일')
                 //     ->sortable(),
+                TextColumn::make('status')
+                    ->label('상태')
+                    ->badge()
+                    ->color(fn(string $state): string => match ($state) {
+                        'active' => 'success',
+                        'pending' => 'warning',
+                        'withdrawn' => 'danger',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn(string $state): string => match ($state) {
+                        'active' => '재원',
+                        'pending' => '승인예정',
+                        'withdrawn' => '퇴원',
+                        default => $state,
+                    })
+                    ->url(fn($record) => $record->status === 'withdrawn'
+                        ? WithdrawnStudentResource::getUrl('index')
+                        : null),
                 TextColumn::make('created_at')
                     ->date('Y-m-d')
                     ->label('등록일')
@@ -428,6 +451,58 @@ class StudentResource extends Resource
                         }
                     })
                     ->modalWidth('xl'),
+
+                Tables\Actions\Action::make('withdraw')
+                    ->label('퇴원 처리')
+                    ->icon('heroicon-m-user-minus')
+                    ->color('danger')
+                    ->visible(fn() => in_array(auth()->user()->role, ['root_admin', 'admin'])
+                        || auth()->user()->role === 'counselor')
+                    ->requiresConfirmation()
+                    ->modalHeading('퇴원 처리')
+                    ->form([
+                        Select::make('withdrawal_reason')
+                            ->label('퇴원 사유')
+                            ->options([
+                                '성적부진' => '성적부진',
+                                '분위기전환' => '분위기전환',
+                                '선생님맞지않음' => '선생님맞지않음',
+                                '학원분위기안좋음' => '학원분위기안좋음',
+                                '이사' => '이사',
+                                '기타' => '기타',
+                            ])
+                            ->required()
+                            ->reactive(),
+                        TextInput::make('withdrawal_reason_detail')
+                            ->label('기타 사유')
+                            ->visible(fn(\Filament\Forms\Get $get) => $get('withdrawal_reason') === '기타'),
+                        DatePicker::make('withdrawn_at')
+                            ->label('퇴원 일자')
+                            ->required()
+                            ->default(now()),
+                    ])
+                    ->action(function ($record, array $data) {
+                        $oldStatus = $record->status;
+
+                        $record->update([
+                            'status' => 'withdrawn',
+                            'withdrawal_reason' => $data['withdrawal_reason'],
+                            'withdrawal_reason_detail' => $data['withdrawal_reason_detail'] ?? null,
+                            'withdrawn_at' => $data['withdrawn_at'],
+                        ]);
+
+                        \App\Models\StudentStatusHistory::create([
+                            'student_id' => $record->id,
+                            'changed_by' => auth()->id(),
+                            'from_status' => $oldStatus,
+                            'to_status' => 'withdrawn',
+                            'reason' => $data['withdrawal_reason'] === '기타'
+                                ? '기타: ' . ($data['withdrawal_reason_detail'] ?? '')
+                                : $data['withdrawal_reason'],
+                        ]);
+
+                        Notification::make()->title('퇴원 처리되었습니다.')->success()->send();
+                    }),
 
                 ActionGroup::make([
                     Tables\Actions\Action::make('print-wrong-notes')

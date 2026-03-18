@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\SendScheduledPayments;
 use App\Console\Commands\UpdateTestSheetStatus;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -11,3 +12,4 @@ Artisan::command('inspire', function () {
 
 
 Schedule::command(UpdateTestSheetStatus::class)->everyMinute();
+Schedule::command(SendScheduledPayments::class)->dailyAt('09:00');

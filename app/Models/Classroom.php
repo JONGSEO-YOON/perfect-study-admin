@@ -23,6 +23,11 @@ class Classroom extends Model
         return $this->belongsTo(Teacher::class);
     }
 
+    public function subTeacher()
+    {
+        return $this->belongsTo(Teacher::class, 'sub_teacher_id');
+    }
+
     /**
      * Get the students that belong to the classroom.
      */
@@ -40,7 +45,10 @@ class Classroom extends Model
                 && auth()->user()->userable instanceof \App\Models\Teacher
                 && !auth()->user()->isRoleAbove('manager', true)
             ) {
-                $builder->where('teacher_id', auth()->user()->userable->id);
+                $builder->where(function ($q) {
+                    $q->where('teacher_id', auth()->user()->userable->id)
+                        ->orWhere('sub_teacher_id', auth()->user()->userable->id);
+                });
             }
         });
     }

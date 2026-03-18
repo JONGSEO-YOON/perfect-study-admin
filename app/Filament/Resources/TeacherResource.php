@@ -42,6 +42,13 @@ class TeacherResource extends Resource
     protected static ?string $navigationGroup = '교실 관리';
 
 
+    public static function canViewAny(): bool
+    {
+        // 일반 강사는 강사관리 접근 불가
+        return !auth()->user()->userable instanceof \App\Models\Teacher
+            || auth()->user()->isRoleAbove('general');
+    }
+
     public static function getBreadcrumb(): string
     {
         return '';

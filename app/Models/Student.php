@@ -21,6 +21,7 @@ class Student extends Model
         return [
             'sms_targets' => 'array',
             'initially_attended_at' => 'date',
+            'withdrawn_at' => 'date',
             'sms_agree' => 'boolean',
         ];
     }
@@ -69,6 +70,16 @@ class Student extends Model
     {
         return $this->hasMany(AttendanceLog::class)
             ->whereDate('created_at', $date);
+    }
+
+    public function statusHistories()
+    {
+        return $this->hasMany(StudentStatusHistory::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
     }
 
     public function canEdit($user)

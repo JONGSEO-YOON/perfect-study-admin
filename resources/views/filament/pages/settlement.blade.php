@@ -101,10 +101,10 @@
                                         'WAITING_FOR_DEPOSIT', 'IN_PROGRESS' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
                                         default => 'bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-300',
                                     };
-                                    $approvedAt = isset($tx['approvedAt']) ? \Carbon\Carbon::parse($tx['approvedAt'])->format('Y-m-d H:i') : '-';
+                                    $transactionAt = isset($tx['transactionAt']) ? \Carbon\Carbon::parse($tx['transactionAt'])->format('Y-m-d H:i') : '-';
                                 @endphp
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">{{ $approvedAt }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">{{ $transactionAt }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">{{ $tx['_student_name'] }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">{{ $tx['_billing_name'] }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-xs">{{ $tx['_billing_memo'] }}</td>

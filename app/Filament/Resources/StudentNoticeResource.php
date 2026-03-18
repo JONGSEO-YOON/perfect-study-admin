@@ -198,22 +198,18 @@ class StudentNoticeResource extends Resource
                 Tables\Actions\EditAction::make()
                     ->modalHeading('공지 수정하기')
                     ->label(function ($record) {
-                        if (auth()->user()->isRoleAbove('admin', true) || !auth()->user()->userable instanceof \App\Models\Teacher) {
+                        if (true) {
                             return '수정';
                         }
                         return '조회';
                     })
                     ->icon(function ($record) {
-                        if (auth()->user()->isRoleAbove('admin', true) || !auth()->user()->userable instanceof \App\Models\Teacher) {
+                        if (true) {
                             return 'heroicon-m-pencil-square';
                         }
                         return 'heroicon-m-eye';
                     })
-                    ->modalSubmitAction(function () {
-                        if (!auth()->user()->isRoleAbove('admin', true) && auth()->user()->userable instanceof \App\Models\Teacher) {
-                            return false;
-                        }
-                    })
+                    ->modalSubmitAction(true)
                     ->modalWidth('4xl')
                     ->fillForm(function (StudentNotice $record): array {
                         $data = $record->attributesToArray();
