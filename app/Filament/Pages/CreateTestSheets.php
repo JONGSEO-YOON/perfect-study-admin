@@ -661,6 +661,37 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             //     return $query
             // })
             ->where('material_id', null)
+            // 기출 문제 필터링
+            ->when($params['source_type'] ?? null, function ($query) use ($params) {
+                $query->where('source_type', $params['source_type']);
+
+                // 모의고사 기출 필터
+                if ($params['source_type'] === 'mock_exam') {
+                    $query->when($params['exam_year'] ?? null, fn($q, $v) => $q->where('exam_year', $v))
+                        ->when($params['exam_years'] ?? null, fn($q, $v) => $q->whereIn('exam_year', $v))
+                        ->when($params['exam_month'] ?? null, fn($q, $v) => $q->where('exam_month', $v))
+                        ->when($params['exam_months'] ?? null, fn($q, $v) => $q->whereIn('exam_month', $v))
+                        ->when($params['exam_grade'] ?? null, fn($q, $v) => $q->where('exam_grade', $v))
+                        ->when($params['exam_grades'] ?? null, fn($q, $v) => $q->whereIn('exam_grade', $v))
+                        ->when($params['exam_subject'] ?? null, fn($q, $v) => $q->where('exam_subject', $v))
+                        ->when($params['exam_subjects'] ?? null, fn($q, $v) => $q->whereIn('exam_subject', $v))
+                        ->when($params['exam_scores'] ?? null, fn($q, $v) => $q->whereIn('exam_score', $v));
+                }
+
+                // 학교 기출 필터
+                if ($params['source_type'] === 'school_exam') {
+                    $query->when($params['school_id'] ?? null, fn($q, $v) => $q->where('school_id', $v))
+                        ->when($params['exam_year'] ?? null, fn($q, $v) => $q->where('exam_year', $v))
+                        ->when($params['exam_years'] ?? null, fn($q, $v) => $q->whereIn('exam_year', $v))
+                        ->when($params['exam_grade'] ?? null, fn($q, $v) => $q->where('exam_grade', $v))
+                        ->when($params['exam_grades'] ?? null, fn($q, $v) => $q->whereIn('exam_grade', $v))
+                        ->when($params['exam_semester'] ?? null, fn($q, $v) => $q->where('exam_semester', $v))
+                        ->when($params['exam_semesters'] ?? null, fn($q, $v) => $q->whereIn('exam_semester', $v))
+                        ->when($params['exam_type'] ?? null, fn($q, $v) => $q->where('exam_type', $v))
+                        ->when($params['exam_types'] ?? null, fn($q, $v) => $q->whereIn('exam_type', $v))
+                        ->when($params['exam_subjects'] ?? null, fn($q, $v) => $q->whereIn('exam_subject', $v));
+                }
+            })
             ->inRandomOrder()
             ->with('questionType', 'choices');
     }
@@ -1102,6 +1133,17 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             'score_table' => $formData['score_table'],
             'parsed_score_table' => $parsed_score_table,
             'print_layout' => $this->printLayout,
+            // 기출 문제지 필드
+            'source_type' => $this->query['source_type'] ?? null,
+            'creation_method' => $this->query['creation_method'] ?? null,
+            'exam_years' => $this->query['exam_years'] ?? (($this->query['exam_year'] ?? null) ? [$this->query['exam_year']] : null),
+            'exam_months' => $this->query['exam_months'] ?? (($this->query['exam_month'] ?? null) ? [$this->query['exam_month']] : null),
+            'exam_grades' => $this->query['exam_grades'] ?? (($this->query['exam_grade'] ?? null) ? [$this->query['exam_grade']] : null),
+            'exam_subjects' => $this->query['exam_subjects'] ?? (($this->query['exam_subject'] ?? null) ? [$this->query['exam_subject']] : null),
+            'exam_scores' => $this->query['exam_scores'] ?? null,
+            'school_id' => $this->query['school_id'] ?? null,
+            'exam_semesters' => $this->query['exam_semesters'] ?? (($this->query['exam_semester'] ?? null) ? [$this->query['exam_semester']] : null),
+            'exam_types' => $this->query['exam_types'] ?? (($this->query['exam_type'] ?? null) ? [$this->query['exam_type']] : null),
         ];
         if ($this->test_sheet_id && !$this->copy) {
             TestSheet::find($this->test_sheet_id)->update($upsertData);

@@ -34,6 +34,13 @@ class TestSheet extends Model
         'start_date' => 'datetime',
         'end_date' => 'datetime',
         'print_layout' => 'array',
+        'exam_years' => 'array',
+        'exam_months' => 'array',
+        'exam_grades' => 'array',
+        'exam_subjects' => 'array',
+        'exam_scores' => 'array',
+        'exam_semesters' => 'array',
+        'exam_types' => 'array',
     ];
 
     // 강의를 등록한 사용자와의 관계

@@ -111,6 +111,20 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
 - **롤백 방법**: `docker exec admin-laravel.test-1 bash -c "cd /var/www/html && php artisan migrate:rollback --step=2 --force"`
 - **기존 schools 테이블**: 12,547개 학교 데이터 존재 (administrative_code, name, school_type, province, address 등)
 
+### 2026-03-18: 기출 문제지 추가 기능
+
+- **문제지 관리** 페이지에 "모의고사 기출", "학교 기출" 버튼 2개 추가
+- **모의고사 기출 문제지**:
+  - 방식 A (문제번호): 학년, 년도, 월, 과목 단일 선택 → 해당 조건의 기출 문제 검색
+  - 방식 B (단원): 학년/년도/월/과목/배점 복수 선택 가능 + 문제 유형 트리 선택
+- **학교 기출 문제지**:
+  - 방식 A (문제번호): 학교(검색), 학년, 년도, 학기, 시험유형 단일 선택
+  - 방식 B (단원): 학교/학년/년도/학기/시험유형/과목 복수 선택 가능
+- **변경 파일**:
+  - `app/Filament/Resources/TestSheetResource/Pages/ListTestSheets.php` — 버튼 추가
+  - `app/Filament/Pages/CreateTestSheets.php` — buildBaseQuery에 기출 필터링, 저장 시 기출 필드 포함
+  - `app/Models/TestSheet.php` — exam_* 필드 casts 추가
+
 ## 알려진 이슈 (TODO)
 
 ### MySQL sort_buffer_size 및 test_sheets 쿼리 최적화
