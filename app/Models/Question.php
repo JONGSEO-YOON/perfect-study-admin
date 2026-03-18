@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToAcademy;
 use App\Models\Traits\HasUser;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class Question extends Model
 {
-    use HasFactory, HasUser;
+    use HasFactory, HasUser, BelongsToAcademy;
 
     protected $with = ['questionType', 'choices'];
 

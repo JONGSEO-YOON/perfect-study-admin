@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToAcademy;
 use Illuminate\Database\Eloquent\Model;
 
 class SupplementarySchedule extends Model
 {
+    use BelongsToAcademy;
     protected function casts(): array
     {
         return [

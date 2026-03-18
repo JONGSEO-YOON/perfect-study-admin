@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToAcademy;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class TestSheet extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToAcademy;
 
     protected $casts = [
         'display' => 'boolean',

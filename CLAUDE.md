@@ -125,6 +125,26 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
   - `app/Filament/Pages/CreateTestSheets.php` — buildBaseQuery에 기출 필터링, 저장 시 기출 필드 포함
   - `app/Models/TestSheet.php` — exam_* 필드 casts 추가
 
+### 2026-03-18: 멀티 학원(Multi-tenancy) 기반 구축
+
+- **DB 백업**: `/home/ubuntu/admin/backup_laravel_20260318_pre_multitenancy.sql.gz` (1.2GB)
+  - 복원: `zcat backup_laravel_20260318_pre_multitenancy.sql.gz | docker exec -i admin-mysql-1 mysql -u root -p'gfFgZG9E3' laravel`
+- **마이그레이션**: `2026_03_18_500000_create_academies_table`
+  - `academies` 테이블 생성 (name, slug, is_active, toss_client_key, toss_secret_key, toss_customer_key, phone, address, settings)
+  - 17개 핵심 테이블에 `academy_id` 컬럼 추가: users, teachers, students, counselors, classrooms, payments, test_sheets, questions, materials, notices, student_notices, counselings, attendance_logs, supplementary_schedules, resources, lectures, payment_schedules
+  - 기존 모든 데이터 → `academy_id = 1` (퍼펙트 스터디) 자동 배정
+  - **롤백**: `docker exec admin-laravel.test-1 bash -c "cd /var/www/html && php artisan migrate:rollback --step=1 --force"`
+- **신규 파일**:
+  - `app/Models/Academy.php` — 학원 모델
+  - `app/Models/Scopes/AcademyScope.php` — Global Scope (root_admin 전체 조회, 나머지 자기 학원만)
+  - `app/Models/Traits/BelongsToAcademy.php` — trait (academy 관계 + Global Scope + 생성 시 자동 academy_id 설정)
+  - `app/Filament/Resources/AcademyResource.php` — 학원 관리 CRUD (root_admin 전용)
+- **BelongsToAcademy trait 적용 모델**: Teacher, Student, Counselor, Classroom, Payment, TestSheet, Question, Material, Notice, SupplementarySchedule
+- **권한 체계**:
+  - `root_admin` — 모든 학원 조회/관리
+  - `admin` — 자기 학원만 관리
+  - `manager/general/counselor` — 자기 학원 내 역할별 접근
+
 ## 알려진 이슈 (TODO)
 
 ### MySQL sort_buffer_size 및 test_sheets 쿼리 최적화

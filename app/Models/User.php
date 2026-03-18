@@ -16,6 +16,11 @@ class User extends Authenticatable implements FilamentUser
 {
     use HasFactory, Notifiable;
 
+    public function academy()
+    {
+        return $this->belongsTo(Academy::class);
+    }
+
     /**
      * The attributes that are mass assignable.
      *
