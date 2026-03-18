@@ -5,14 +5,18 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\AcademyResource\Pages;
 use App\Models\Academy;
 use Filament\Forms;
+use Filament\Forms\Components\ColorPicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Str;
@@ -59,6 +63,40 @@ class AcademyResource extends Resource
                         ->default(true),
                 ])->columns(2),
 
+            Section::make('브랜딩')
+                ->description('로고, 색상, 로그인 페이지 커스터마이징')
+                ->schema([
+                    FileUpload::make('logo_path')
+                        ->label('학원 로고')
+                        ->image()
+                        ->directory('academy-branding')
+                        ->imageResizeMode('contain')
+                        ->imageCropAspectRatio('16:9')
+                        ->imageResizeTargetWidth('400')
+                        ->imageResizeTargetHeight('200')
+                        ->helperText('로그인 페이지, 사이드바 상단에 표시됩니다'),
+                    FileUpload::make('favicon_path')
+                        ->label('파비콘')
+                        ->image()
+                        ->directory('academy-branding')
+                        ->imageResizeTargetWidth('64')
+                        ->imageResizeTargetHeight('64')
+                        ->helperText('브라우저 탭에 표시되는 작은 아이콘'),
+                    ColorPicker::make('primary_color')
+                        ->label('주요 색상')
+                        ->helperText('버튼, 링크 등에 사용되는 메인 색상'),
+                    FileUpload::make('login_background_path')
+                        ->label('로그인 배경 이미지')
+                        ->image()
+                        ->directory('academy-branding')
+                        ->helperText('로그인 페이지 배경으로 사용됩니다'),
+                    Textarea::make('login_welcome_message')
+                        ->label('로그인 환영 메시지')
+                        ->rows(2)
+                        ->placeholder('예: 퍼펙트 스터디에 오신 것을 환영합니다!')
+                        ->columnSpanFull(),
+                ])->columns(2),
+
             Section::make('토스 페이먼츠 설정')
                 ->description('학원별 결제 가맹점 키를 설정합니다.')
                 ->schema([
@@ -83,6 +121,7 @@ class AcademyResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('id')->label('ID')->sortable(),
+                ImageColumn::make('logo_path')->label('로고')->circular(),
                 TextColumn::make('name')->label('학원 이름')->searchable(),
                 TextColumn::make('slug')->label('슬러그'),
                 IconColumn::make('is_active')->label('활성')->boolean(),
