@@ -40,6 +40,12 @@ class UserWebController extends Controller implements HasMiddleware
       'password' => ['required'],
     ]);
 
+    // 서브도메인 학원 필터링
+    $academy = app()->bound('current_academy') ? app('current_academy') : null;
+    if ($academy) {
+      $credentials['academy_id'] = $academy->id;
+    }
+
     if (Auth::attempt($credentials)) {
       $user = Auth::user();
 

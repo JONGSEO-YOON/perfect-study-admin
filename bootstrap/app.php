@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ResolveAcademy;
 use App\Http\Middleware\StudentCheckMiddleware;
 // use App\Http\Middleware\ParentSession;
 use Illuminate\Foundation\Application;
@@ -20,6 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         $middleware->trustProxies(at: '*');
+
+        // 서브도메인에서 학원 식별 (모든 웹 요청)
+        $middleware->web(append: [
+            ResolveAcademy::class,
+        ]);
 
         // 커스텀 미들웨어 등록
         $middleware->alias([

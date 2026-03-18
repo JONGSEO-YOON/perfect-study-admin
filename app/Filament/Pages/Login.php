@@ -37,10 +37,18 @@ class Login extends BaseLogin
 
   protected function getCredentialsFromFormData(array $data): array
   {
-    return [
+    $credentials = [
       'username' => $data['username'],
       'password' => $data['password'],
     ];
+
+    // 서브도메인 학원 소속 사용자만 로그인 허용
+    $academy = app()->bound('current_academy') ? app('current_academy') : null;
+    if ($academy) {
+      $credentials['academy_id'] = $academy->id;
+    }
+
+    return $credentials;
   }
 
   protected function throwFailureValidationException(): never
@@ -66,5 +74,14 @@ class Login extends BaseLogin
 
     // 기본값
     return '/admin';
+  }
+
+  public function getHeading(): string
+  {
+    $academy = app()->bound('current_academy') ? app('current_academy') : null;
+    if ($academy && $academy->login_welcome_message) {
+      return $academy->login_welcome_message;
+    }
+    return __('filament-panels::pages/auth/login.heading');
   }
 }

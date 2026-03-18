@@ -25,6 +25,12 @@ class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
+        // 현재 학원의 브랜딩 적용
+        $academy = app()->bound('current_academy') ? app('current_academy') : null;
+        $brandLogo = $academy && $academy->logo_path
+            ? asset('storage/' . $academy->logo_path)
+            : asset('logo.png');
+
         return $panel
             ->default()
             ->id('admin')
@@ -49,7 +55,8 @@ class AdminPanelProvider extends PanelProvider
                     // \Hasnayeen\Themes\ThemesPlugin::make(),
                 ]
             )
-            ->brandLogo(asset('logo.png'))
+            ->brandLogo($brandLogo)
+            ->brandName($academy?->name)
             ->maxContentWidth(MaxWidth::ScreenTwoExtraLarge)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')

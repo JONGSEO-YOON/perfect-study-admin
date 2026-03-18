@@ -145,6 +145,22 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
   - `admin` — 자기 학원만 관리
   - `manager/general/counselor` — 자기 학원 내 역할별 접근
 
+### 2026-03-18: 서브도메인 기반 멀티 학원 라우팅
+
+- **방식**: `{slug}.perfectstudy.co.kr` 서브도메인으로 학원 분리
+- **DNS 설정 필요**: `*.perfectstudy.co.kr` → A 레코드 → 서버 IP
+- **ResolveAcademy 미들웨어**: 모든 웹 요청에서 서브도메인 → 학원 식별
+  - `perfectstudy.co.kr` → academy_id=1 (퍼펙트 스터디)
+  - `test-academy.perfectstudy.co.kr` → slug=test-academy 학원
+  - `www.perfectstudy.co.kr` → 기본 (퍼펙트 스터디)
+- **로그인 제한**: 서브도메인 학원 소속 계정만 로그인 가능 (admin, 학생, 학부모 모두)
+- **브랜딩**: 서브도메인별로 로고, 학원명, 환영 메시지 자동 적용
+- **config/app.php**: `APP_DOMAIN` 환경변수 추가 (기본값: perfectstudy.co.kr)
+- **접속 URL 예시**:
+  - 어드민: `test-academy.perfectstudy.co.kr/admin/login`
+  - 학생: `test-academy.perfectstudy.co.kr/login`
+  - 학부모: `test-academy.perfectstudy.co.kr/parent`
+
 ## 알려진 이슈 (TODO)
 
 ### MySQL sort_buffer_size 및 test_sheets 쿼리 최적화
