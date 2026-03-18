@@ -594,17 +594,27 @@ class CreateTestSheets extends Page implements HasForms, HasActions
 
         switch ($target_group) {
             case 'grade':
-                $targetQuery->whereJsonContains('target_grades', $params['target_grades']);
+                if (!empty($params['target_grades'])) {
+                    $targetQuery->whereJsonContains('target_grades', $params['target_grades']);
+                }
                 break;
             case 'level':
-                $targetQuery->whereJsonContains('target_grades', $params['target_grades'])
-                    ->whereJsonContains('target_levels', $params['target_levels']);
+                if (!empty($params['target_grades'])) {
+                    $targetQuery->whereJsonContains('target_grades', $params['target_grades']);
+                }
+                if (!empty($params['target_levels'])) {
+                    $targetQuery->whereJsonContains('target_levels', $params['target_levels']);
+                }
                 break;
             case 'classroom':
-                $targetQuery->whereJsonContains('target_classrooms', $params['target_classrooms']);
+                if (!empty($params['target_classrooms'])) {
+                    $targetQuery->whereJsonContains('target_classrooms', $params['target_classrooms']);
+                }
                 break;
             case 'student':
-                $targetQuery->whereJsonContains('target_students', $params['target_students']);
+                if (!empty($params['target_students'])) {
+                    $targetQuery->whereJsonContains('target_students', $params['target_students']);
+                }
                 break;
         }
 
@@ -697,10 +707,15 @@ class CreateTestSheets extends Page implements HasForms, HasActions
 
         foreach ($levels as $levelIndex => $level) {
             $levelQuestionCount = $questionsPerLevel + ($levelIndex < $remainingQuestions ? 1 : 0);
-            $questionsPerType = (int) floor($levelQuestionCount / count($questionTypeIds));
-            $remainingTypeQuestions = $levelQuestionCount % count($questionTypeIds);
 
-            foreach ($questionTypeIds as $typeIndex => $typeId) {
+            // 유형 ID를 셔플하여 나머지 문제가 특정 유형에 몰리지 않게 함
+            $shuffledTypeIds = $questionTypeIds;
+            shuffle($shuffledTypeIds);
+
+            $questionsPerType = (int) floor($levelQuestionCount / count($shuffledTypeIds));
+            $remainingTypeQuestions = $levelQuestionCount % count($shuffledTypeIds);
+
+            foreach ($shuffledTypeIds as $typeIndex => $typeId) {
                 $typeQuestionCount = $questionsPerType + ($typeIndex < $remainingTypeQuestions ? 1 : 0);
                 $questions = self::selectQuestionsForType($typeId, $typeQuestionCount, $params, $excludeIds, $level);
                 $result = $result->concat($questions);
@@ -723,10 +738,14 @@ class CreateTestSheets extends Page implements HasForms, HasActions
 
         foreach ($levelQuestionCounts as $level => $count) {
             if ($count > 0) {
-                $questionsPerType = (int) floor($count / count($questionTypeIds));
-                $remainingTypeQuestions = $count % count($questionTypeIds);
+                // 유형 ID를 셔플하여 나머지 문제가 특정 유형에 몰리지 않게 함
+                $shuffledTypeIds = $questionTypeIds;
+                shuffle($shuffledTypeIds);
 
-                foreach ($questionTypeIds as $typeIndex => $typeId) {
+                $questionsPerType = (int) floor($count / count($shuffledTypeIds));
+                $remainingTypeQuestions = $count % count($shuffledTypeIds);
+
+                foreach ($shuffledTypeIds as $typeIndex => $typeId) {
                     $typeQuestionCount = $questionsPerType + ($typeIndex < $remainingTypeQuestions ? 1 : 0);
                     $questions = self::selectQuestionsForType($typeId, $typeQuestionCount, $params, $excludeIds, $level);
                     $result = $result->concat($questions);
