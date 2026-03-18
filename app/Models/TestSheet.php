@@ -50,6 +50,18 @@ class TestSheet extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function permissions()
+    {
+        return $this->hasMany(TestSheetPermission::class);
+    }
+
+    public function sharedAcademies()
+    {
+        return $this->belongsToMany(Academy::class, 'test_sheet_permissions')
+            ->withPivot('is_allowed')
+            ->withTimestamps();
+    }
+
     // 교사와의 다대다 관계
     public function teachers()
     {
