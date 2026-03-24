@@ -92,3 +92,18 @@ Route::get('/payment/{paymentId}', Payment::class)->name('payment');
 Route::get('/payment/{paymentId}/result', PaymentResult::class)->name('payment.result');
 Route::get('/toss-payments/success', [TossPaymentController::class, 'handleSuccess']);
 Route::get('/toss-payments/fail', [TossPaymentController::class, 'handleFailure']);
+
+// 학원 경로 기반 접속: /a/{slug} → 해당 학원 컨텍스트로 전환
+Route::get('/a/{slug}/{path?}', function ($slug, $path = null) {
+    $academy = \App\Models\Academy::where('slug', $slug)->where('is_active', true)->first();
+    if (!$academy) {
+        abort(404, '학원을 찾을 수 없습니다.');
+    }
+    session(['academy_slug' => $slug]);
+    // 로그아웃 후 해당 학원 로그인 페이지로 리다이렉트
+    if (auth()->check()) {
+        auth()->logout();
+    }
+    $redirectPath = $path ? '/' . $path : '/admin/login';
+    return redirect($redirectPath);
+})->where('path', '.*');

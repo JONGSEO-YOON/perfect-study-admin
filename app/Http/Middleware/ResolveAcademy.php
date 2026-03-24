@@ -8,12 +8,12 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * 서브도메인에서 학원을 식별하는 미들웨어
+ * 서브도메인 또는 세션에서 학원을 식별하는 미들웨어
  *
- * - perfectstudy.co.kr → academy_id = 1 (기본)
- * - test-academy.perfectstudy.co.kr → slug = test-academy
- * - www.perfectstudy.co.kr → 기본
- * - localhost → 기본 (개발환경)
+ * 우선순위:
+ * 1. 서브도메인 (test-academy.perfectstudy.co.kr)
+ * 2. 세션 (academy_slug) - /a/{slug} 경로로 접속 시 설정됨
+ * 3. 기본 (academy_id = 1, 퍼펙트 스터디)
  */
 class ResolveAcademy
 {
@@ -24,11 +24,10 @@ class ResolveAcademy
 
         $academy = null;
 
-        // 서브도메인 추출
+        // 1. 서브도메인에서 학원 식별
         if (str_ends_with($host, '.' . $baseDomain)) {
             $subdomain = str_replace('.' . $baseDomain, '', $host);
 
-            // www는 기본 도메인 취급
             if ($subdomain !== 'www' && $subdomain !== '') {
                 $academy = Academy::where('slug', $subdomain)
                     ->where('is_active', true)
@@ -40,7 +39,14 @@ class ResolveAcademy
             }
         }
 
-        // 기본 도메인이거나 서브도메인 없음 → 퍼펙트 스터디
+        // 2. 세션에서 학원 식별 (/a/{slug} 경로로 접속 시)
+        if (!$academy && session('academy_slug')) {
+            $academy = Academy::where('slug', session('academy_slug'))
+                ->where('is_active', true)
+                ->first();
+        }
+
+        // 3. 기본 도메인 → 퍼펙트 스터디
         if (!$academy) {
             $academy = Academy::find(1);
         }
