@@ -66,22 +66,45 @@ class PageSelector extends Component implements HasMingles
 
     public function editQuestions($data)
     {
-        // 정렬 로직 구현
-        usort($data, function ($a, $b) {
-            // 1. 페이지 번호로 먼저 정렬
-            if ($a['pageNumber'] !== $b['pageNumber']) {
-                return $a['pageNumber'] - $b['pageNumber'];
+        // 페이지별로 그룹화하여 정렬
+        $grouped = [];
+        foreach ($data as $item) {
+            $grouped[$item['pageNumber']][] = $item;
+        }
+        ksort($grouped);
+
+        $data = [];
+        foreach ($grouped as $pageNumber => $pageItems) {
+            // 페이지 내 문제들의 x좌표 중앙값을 기준으로 열 분리
+            // 페이지 너비의 45% 지점을 기준으로 좌/우 열 판단
+            $pageWidth = !empty($pageItems[0]['pageWidth']) ? $pageItems[0]['pageWidth'] : 1000;
+            $columnThreshold = $pageWidth * 0.45;
+
+            $leftCol = [];
+            $rightCol = [];
+            foreach ($pageItems as $item) {
+                $centerX = $item['x'] + ($item['width'] / 2);
+                if ($centerX < $columnThreshold) {
+                    $leftCol[] = $item;
+                } else {
+                    $rightCol[] = $item;
+                }
             }
 
-            // 2. x 좌표가 50px 이상 차이나는 경우 x 좌표로 정렬
-            $xDiff = abs($a['x'] - $b['x']);
-            if ($xDiff >= 100) {
-                return $a['x'] - $b['x'];
-            }
+            // 각 열 내에서 y좌표로 정렬
+            usort($leftCol, fn($a, $b) => $a['y'] - $b['y']);
+            usort($rightCol, fn($a, $b) => $a['y'] - $b['y']);
 
-            // 3. x 좌표가 비슷한 경우 y 좌표로 정렬
-            return $a['y'] - $b['y'];
-        });
+            // 1단 레이아웃인 경우 (한쪽 열에만 문제가 있으면) y좌표로만 정렬
+            if (empty($leftCol) || empty($rightCol)) {
+                $allItems = array_merge($leftCol, $rightCol);
+                usort($allItems, fn($a, $b) => $a['y'] - $b['y']);
+                $data = array_merge($data, $allItems);
+            } else {
+                // 2단 레이아웃: 좌측 열 → 우측 열
+                $data = array_merge($data, $leftCol, $rightCol);
+            }
+        }
 
         // questions 디렉토리 생성
         $questionsPath = storage_path("app/public/converted-pdfs/{$this->id}/questions");
