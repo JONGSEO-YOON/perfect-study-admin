@@ -660,9 +660,17 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             // }, function ($query) {
             //     return $query
             // })
-            ->where('material_id', null)
-            // 기출 문제 필터링
+            // source_type 필터: null/''=교재만, 'all'=전체(교재+기출), 'mock_exam'/'school_exam'=해당 기출만
+            ->when(empty($params['source_type']), function ($query) {
+                // 기본: 교재 문제만 (기존 동작 유지)
+                return $query->where('material_id', null)->whereNull('source_type');
+            })
+            ->when(($params['source_type'] ?? null) === 'all', function ($query) {
+                // 전체: 교재 + 기출 모두
+                return $query;
+            })
             ->when($params['source_type'] ?? null, function ($query) use ($params) {
+                if ($params['source_type'] === 'all') return;
                 $query->where('source_type', $params['source_type']);
 
                 // 모의고사 기출 필터

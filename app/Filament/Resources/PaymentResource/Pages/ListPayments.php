@@ -201,7 +201,7 @@ class ListPayments extends ListRecords
                         'billing_memo' => $data['billing_memo'] ?? null,
                         'send_day' => $data['send_day'],
                         'is_active' => true,
-                        'next_send_at' => now()->day($data['send_day'])->startOfDay(),
+                        'next_send_at' => now()->day((int) $data['send_day'])->startOfDay(),
                     ]);
 
                     Notification::make()

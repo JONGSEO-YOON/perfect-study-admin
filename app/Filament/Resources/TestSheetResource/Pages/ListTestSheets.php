@@ -274,6 +274,18 @@ class ListTestSheets extends ListRecords
                     //             ->visible(fn(Get $get) => $get('target_group') === 'student'),
                     //     ]),
                     Hidden::make('target_group')->default(null),
+                    ToggleButtons::make('source_type')
+                        ->label('문제 소스')
+                        ->inline()
+                        ->options([
+                            '' => '교재 문제만',
+                            'all' => '교재 + 기출 전체',
+                            'mock_exam' => '모의고사 기출만',
+                            'school_exam' => '학교 기출만',
+                        ])
+                        ->default('')
+                        ->live()
+                        ->columnSpanFull(),
                     ViewField::make('question_type_ids')
                         ->label('문제 유형')
                         ->view('filament.components.forms.question-type', [
