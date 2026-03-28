@@ -120,7 +120,7 @@ class MyPage extends Page implements HasForms
         $user = User::find(auth()->id());
         $this->data = [
             ...$user->toArray(),
-            'birthed_at' => $user->birthed_at->format('Y-m-d'),
+            'birthed_at' => $user->birthed_at?->format('Y-m-d'),
         ];
     }
 
