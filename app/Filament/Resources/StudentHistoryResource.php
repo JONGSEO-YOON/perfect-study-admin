@@ -68,13 +68,13 @@ class StudentHistoryResource extends Resource
                     ->label('현재 상태')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
-                        'active' => 'success',
+                        'active', 'enrolled' => 'success',
                         'pending' => 'warning',
                         'withdrawn' => 'danger',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn(string $state): string => match ($state) {
-                        'active' => '재원',
+                        'active', 'enrolled' => '재원',
                         'pending' => '승인예정',
                         'withdrawn' => '퇴원',
                         default => $state,
@@ -89,6 +89,7 @@ class StudentHistoryResource extends Resource
                     ->label('상태')
                     ->options([
                         'active' => '재원',
+                        'enrolled' => '재원(기존)',
                         'pending' => '승인예정',
                         'withdrawn' => '퇴원',
                     ]),

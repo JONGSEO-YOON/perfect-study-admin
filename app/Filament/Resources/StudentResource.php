@@ -362,13 +362,13 @@ class StudentResource extends Resource
                     ->label('상태')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
-                        'active' => 'success',
+                        'active', 'enrolled' => 'success',
                         'pending' => 'warning',
                         'withdrawn' => 'danger',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn(string $state): string => match ($state) {
-                        'active' => '재원',
+                        'active', 'enrolled' => '재원',
                         'pending' => '승인예정',
                         'withdrawn' => '퇴원',
                         default => $state,
