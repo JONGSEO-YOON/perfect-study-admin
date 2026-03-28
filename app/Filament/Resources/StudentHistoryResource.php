@@ -135,54 +135,26 @@ class StudentHistoryResource extends Resource
         $events[] = [
             'date' => $student->created_at,
             'type' => 'register',
-            'icon' => 'user-plus',
             'color' => 'blue',
             'title' => '학원 등록',
-            'description' => $student->created_at->format('Y-m-d') . ' 등록',
+            'description' => '',
         ];
 
-        // 2. 최초 수강일
-        if ($student->user?->initially_attended_at) {
-            $events[] = [
-                'date' => $student->user->initially_attended_at,
-                'type' => 'first_attend',
-                'icon' => 'academic-cap',
-                'color' => 'green',
-                'title' => '최초 수강',
-                'description' => $student->user->initially_attended_at->format('Y-m-d') . ' 수강 시작',
-            ];
-        }
-
-        // 3. 결제 이력
-        $payments = $student->payments()
-            ->whereIn('payment_status', ['paid', 'cancelled'])
-            ->orderBy('created_at')
-            ->get();
-
-        foreach ($payments as $payment) {
-            if ($payment->payment_status === 'paid') {
+        // 2. 반 배정 이력 (classroom_student 피벗)
+        $classrooms = $student->classrooms()->withPivot('created_at')->get();
+        foreach ($classrooms as $classroom) {
+            if ($classroom->pivot->created_at) {
                 $events[] = [
-                    'date' => $payment->paid_at ?? $payment->created_at,
-                    'type' => 'payment',
-                    'icon' => 'credit-card',
-                    'color' => 'emerald',
-                    'title' => '결제 완료',
-                    'description' => ($payment->billing_name ?: '수업료') . ' - ' . number_format($payment->amount) . '원',
-                ];
-            } elseif ($payment->payment_status === 'cancelled') {
-                $events[] = [
-                    'date' => $payment->cancelled_at ?? $payment->created_at,
-                    'type' => 'payment_cancel',
-                    'icon' => 'x-circle',
-                    'color' => 'orange',
-                    'title' => '결제 취소',
-                    'description' => ($payment->billing_name ?: '수업료') . ' - ' . number_format($payment->amount) . '원'
-                        . ($payment->cancel_reason ? ' (' . $payment->cancel_reason . ')' : ''),
+                    'date' => \Carbon\Carbon::parse($classroom->pivot->created_at),
+                    'type' => 'classroom',
+                    'color' => 'green',
+                    'title' => '반 배정',
+                    'description' => $classroom->name,
                 ];
             }
         }
 
-        // 4. 상태 변경 이력 (퇴원/재등록)
+        // 3. 상태 변경 이력 (퇴원/재등록)
         $statusHistories = $student->statusHistories()
             ->with('changedBy')
             ->orderBy('created_at')
@@ -193,32 +165,34 @@ class StudentHistoryResource extends Resource
                 $events[] = [
                     'date' => $history->created_at,
                     'type' => 'withdrawn',
-                    'icon' => 'user-minus',
                     'color' => 'red',
                     'title' => '퇴원',
                     'description' => ($history->reason ?: '사유 없음')
+                        . ($history->memo ? ' - ' . $history->memo : '')
                         . ($history->changedBy ? ' (처리: ' . $history->changedBy->name . ')' : ''),
                 ];
             } elseif ($history->to_status === 'active' && $history->from_status === 'withdrawn') {
                 $events[] = [
                     'date' => $history->created_at,
                     'type' => 're_register',
-                    'icon' => 'arrow-path',
                     'color' => 'indigo',
                     'title' => '재등록',
                     'description' => ($history->reason ?: '')
                         . ($history->changedBy ? ' (처리: ' . $history->changedBy->name . ')' : ''),
                 ];
-            } elseif ($history->to_status === 'active' && $history->from_status === 'pending') {
-                $events[] = [
-                    'date' => $history->created_at,
-                    'type' => 'approved',
-                    'icon' => 'check-circle',
-                    'color' => 'green',
-                    'title' => '승인 완료',
-                    'description' => $history->changedBy ? '처리: ' . $history->changedBy->name : '',
-                ];
             }
+        }
+
+        // 4. 현재 퇴원 상태인데 statusHistories에 기록이 없는 경우 (이전 데이터)
+        if ($student->status === 'withdrawn' && $statusHistories->where('to_status', 'withdrawn')->isEmpty()) {
+            $events[] = [
+                'date' => $student->withdrawn_at ? \Carbon\Carbon::parse($student->withdrawn_at) : $student->updated_at,
+                'type' => 'withdrawn',
+                'color' => 'red',
+                'title' => '퇴원',
+                'description' => ($student->withdrawal_reason ?: '사유 없음')
+                    . ($student->withdrawal_reason_detail ? ' - ' . $student->withdrawal_reason_detail : ''),
+            ];
         }
 
         // 날짜순 정렬 (최신이 위로)
