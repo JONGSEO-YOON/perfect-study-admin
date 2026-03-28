@@ -36,7 +36,7 @@ class SupplementaryScheduleResource extends Resource
 
     protected static ?string $navigationGroup = '교실 관리';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 6;
 
     public static function getBreadcrumb(): string
     {

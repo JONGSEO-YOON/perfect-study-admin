@@ -41,7 +41,7 @@ class CounselingResource extends Resource
 
     protected static ?string $title = '상담 관리';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 5;
 
     protected static ?string $navigationGroup = '교실 관리';
 

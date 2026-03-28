@@ -29,7 +29,7 @@ class NoticeResource extends Resource
 
     protected static ?string $title = '공지사항';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 7;
 
     protected static ?string $navigationGroup = '교실 관리';
 

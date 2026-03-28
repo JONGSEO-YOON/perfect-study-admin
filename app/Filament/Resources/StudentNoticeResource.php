@@ -34,7 +34,7 @@ class StudentNoticeResource extends Resource
 
     protected static ?string $title = '학생 공지';
 
-    protected static ?int $navigationSort = 7;
+    protected static ?int $navigationSort = 8;
 
     protected static ?string $navigationGroup = '교실 관리';
 
