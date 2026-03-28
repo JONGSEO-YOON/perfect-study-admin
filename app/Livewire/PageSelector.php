@@ -75,9 +75,14 @@ class PageSelector extends Component implements HasMingles
 
         $data = [];
         foreach ($grouped as $pageNumber => $pageItems) {
-            // 페이지 내 문제들의 x좌표 중앙값을 기준으로 열 분리
-            // 페이지 너비의 45% 지점을 기준으로 좌/우 열 판단
-            $pageWidth = !empty($pageItems[0]['pageWidth']) ? $pageItems[0]['pageWidth'] : 1000;
+            // 실제 이미지 너비를 기준으로 열 분리
+            $sourcePath = storage_path("app/public/converted-pdfs/{$this->id}/page_{$pageNumber}.jpg");
+            if (file_exists($sourcePath)) {
+                $imageSize = getimagesize($sourcePath);
+                $pageWidth = $imageSize ? $imageSize[0] : 1000;
+            } else {
+                $pageWidth = 1000;
+            }
             $columnThreshold = $pageWidth * 0.45;
 
             $leftCol = [];
