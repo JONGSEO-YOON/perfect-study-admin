@@ -31,7 +31,6 @@
                     <div class="relative flex items-start gap-4 pl-12">
                         {{-- 아이콘 원 --}}
                         <div class="absolute left-2 w-7 h-7 rounded-full flex items-center justify-center {{ $colorClasses['bg'] }}">
-                            @svg('heroicon-s-' . $event['icon'], 'w-4 h-4')
                         </div>
 
                         {{-- 내용 --}}
