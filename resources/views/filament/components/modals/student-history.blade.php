@@ -29,8 +29,8 @@
                         };
                     @endphp
                     <div class="relative flex items-start gap-4 pl-12">
-                        {{-- 아이콘 원 --}}
-                        <div class="absolute left-2 w-7 h-7 rounded-full flex items-center justify-center {{ $colorClasses['bg'] }}">
+                        {{-- 타임라인 점 --}}
+                        <div class="absolute left-[14px] w-3 h-3 rounded-full {{ $colorClasses['bg'] }}">
                         </div>
 
                         {{-- 내용 --}}
