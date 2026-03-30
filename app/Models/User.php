@@ -16,6 +16,15 @@ class User extends Authenticatable implements FilamentUser
 {
     use HasFactory, Notifiable;
 
+    protected static function booted(): void
+    {
+        static::creating(function (User $user) {
+            if (!$user->academy_id && auth()->check()) {
+                $user->academy_id = auth()->user()->academy_id;
+            }
+        });
+    }
+
     public function academy()
     {
         return $this->belongsTo(Academy::class);
@@ -30,6 +39,18 @@ class User extends Authenticatable implements FilamentUser
         'name',
         'email',
         'password',
+        'username',
+        'phone',
+        'birthed_at',
+        'gender',
+        'address',
+        'postal_code',
+        'profile_photo_path',
+        'remark',
+        'attachments',
+        'academy_id',
+        'userable_type',
+        'userable_id',
     ];
 
     /**

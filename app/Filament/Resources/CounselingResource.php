@@ -223,6 +223,8 @@ class CounselingResource extends Resource
     {
         return $table
             ->modifyQueryUsing(function (Builder $query) {
+                $query->with(['student.user', 'counselor.user', 'requester']);
+
                 $canViewAllStudents =
                     !auth()->user()->userable instanceof \App\Models\Teacher ||
                     auth()->user()->isRoleAbove('general');

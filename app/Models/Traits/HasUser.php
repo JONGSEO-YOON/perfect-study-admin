@@ -12,6 +12,7 @@ trait HasUser
         $model->user->delete();
       }
     });
+
   }
 
   /**

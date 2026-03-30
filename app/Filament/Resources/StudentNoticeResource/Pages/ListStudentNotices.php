@@ -25,7 +25,7 @@ class ListStudentNotices extends ListRecords
                 ->label('공지 추가하기')
                 ->modalHeading('공지 추가하기')
                 ->visible(
-                    fn() => auth()->user()->isRoleAbove('admin', true) || !auth()->user()->userable instanceof \App\Models\Teacher
+                    fn() => auth()->user()->isRoleAbove('general', true) || !auth()->user()->userable instanceof \App\Models\Teacher
                 )
                 ->modalWidth('4xl')
                 ->createAnother(false)

@@ -84,15 +84,14 @@ class SupplementaryScheduleResource extends Resource
                         Select::make('student_id')
                             ->label('보충 학생')
                             ->options(function () {
-                                $query = User::where('userable_type', Student::class)
-                                    ->with('userable');
+                                $query = Student::with('user');
                                 if (auth()->user()->role === 'general' && auth()->user()->userable instanceof Teacher) {
-                                    $query->whereHas('student.classrooms', function ($q) {
+                                    $query->whereHas('classrooms', function ($q) {
                                         $q->where('classrooms.teacher_id', auth()->user()->userable->id);
                                     });
                                 }
                                 return $query->get()
-                                    ->mapWithKeys(fn($user) => [$user->userable->id => $user->name])
+                                    ->mapWithKeys(fn($student) => [$student->id => $student->user->name ?? ''])
                                     ->toArray();
                             })
                             ->searchable()

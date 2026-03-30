@@ -14,6 +14,7 @@
                     <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">발송일</th>
                     <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">상태</th>
                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">마지막 발송</th>
+                    <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">관리</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -35,6 +36,43 @@
                         </td>
                         <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
                             {{ $schedule->last_sent_at?->format('Y-m-d') ?? '-' }}
+                        </td>
+                        <td class="px-4 py-2 text-center">
+                            <div class="flex items-center justify-center gap-2">
+                                <button
+                                    type="button"
+                                    wire:click="mountAction('edit_schedule', { schedule_id: {{ $schedule->id }} })"
+                                    class="text-xs text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
+                                >
+                                    수정
+                                </button>
+                                <span class="text-gray-300 dark:text-gray-600">|</span>
+                                @if ($schedule->is_active)
+                                    <button
+                                        type="button"
+                                        wire:click="mountAction('toggle_schedule', { schedule_id: {{ $schedule->id }} })"
+                                        class="text-xs text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300 font-medium"
+                                    >
+                                        비활성
+                                    </button>
+                                @else
+                                    <button
+                                        type="button"
+                                        wire:click="mountAction('toggle_schedule', { schedule_id: {{ $schedule->id }} })"
+                                        class="text-xs text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 font-medium"
+                                    >
+                                        활성
+                                    </button>
+                                @endif
+                                <span class="text-gray-300 dark:text-gray-600">|</span>
+                                <button
+                                    type="button"
+                                    wire:click="mountAction('delete_schedule', { schedule_id: {{ $schedule->id }} })"
+                                    class="text-xs text-danger-600 hover:text-danger-800 dark:text-danger-400 dark:hover:text-danger-300 font-medium"
+                                >
+                                    삭제
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 @endforeach

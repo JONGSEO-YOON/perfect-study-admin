@@ -132,7 +132,8 @@ class ClassroomResource extends Resource
                 TextColumn::make('name')
                     ->label('이름')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->url(fn($record) => ClassroomResource::getUrl('view', ['record' => $record])),
                 TextColumn::make('teacher.user.name')
                     ->label('강사')
                     ->searchable()
@@ -174,6 +175,10 @@ class ClassroomResource extends Resource
 
             ])
             ->actions([
+                Tables\Actions\Action::make('view-detail')
+                    ->label('상세')
+                    ->icon('heroicon-m-eye')
+                    ->url(fn($record) => ClassroomResource::getUrl('view', ['record' => $record])),
                 Tables\Actions\Action::make('edit-students')
                     ->modalHeading(false)
                     ->label('학생 관리')
@@ -188,7 +193,7 @@ class ClassroomResource extends Resource
                     ->modalWidth('xl'),
                 Tables\Actions\EditAction::make()
                     ->modalHeading('반 수정하기')
-                    ->modalWidth('xl'),
+                    ->modalWidth('2xl'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -210,6 +215,7 @@ class ClassroomResource extends Resource
     {
         return [
             'index' => Pages\ListClassrooms::route('/'),
+            'view' => Pages\ViewClassroom::route('/{record}'),
             // 'create' => Pages\CreateClassroom::route('/create'),
             // 'edit' => Pages\EditClassroom::route('/{record}/edit'),
         ];

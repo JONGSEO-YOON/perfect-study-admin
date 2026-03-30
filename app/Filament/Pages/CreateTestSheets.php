@@ -1152,6 +1152,8 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             'school_id' => $this->query['school_id'] ?? null,
             'exam_semesters' => $this->query['exam_semesters'] ?? (($this->query['exam_semester'] ?? null) ? [$this->query['exam_semester']] : null),
             'exam_types' => $this->query['exam_types'] ?? (($this->query['exam_type'] ?? null) ? [$this->query['exam_type']] : null),
+            // 기출 문제지는 기본적으로 내 학원만 (share_scope = null)
+            // root_admin/admin이 공유 설정에서 변경 가능
         ];
         if ($this->test_sheet_id && !$this->copy) {
             TestSheet::find($this->test_sheet_id)->update($upsertData);

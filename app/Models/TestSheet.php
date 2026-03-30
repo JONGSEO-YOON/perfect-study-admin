@@ -79,6 +79,66 @@ class TestSheet extends Model
         });
     }
 
+    /**
+     * 공유된 기출 문제지를 포함하는 scope
+     * - 자기 학원 문제지 (AcademyScope가 이미 처리)
+     * - share_scope='all'인 다른 학원 기출 문제지
+     * - share_scope='restricted'이고 test_sheet_permissions에 허용된 문제지
+     */
+    public function scopeWithSharedExams(Builder $query): Builder
+    {
+        if (!auth()->check()) {
+            return $query;
+        }
+
+        $user = auth()->user();
+
+        // root_admin은 모든 것을 볼 수 있음
+        if ($user->userable_type === 'App\\Models\\Teacher') {
+            $role = \Illuminate\Support\Facades\DB::table('teachers')
+                ->where('id', $user->userable_id)->value('role');
+            if ($role === 'root_admin') {
+                return $query->withoutGlobalScope(\App\Models\Scopes\AcademyScope::class);
+            }
+        }
+
+        $academyId = $user->academy_id;
+
+        // AcademyScope를 해제하고 직접 조건을 걸어야 다른 학원 공유 문제지도 보임
+        return $query->withoutGlobalScope(\App\Models\Scopes\AcademyScope::class)
+            ->where(function ($q) use ($academyId) {
+                // 1) 자기 학원 문제지
+                $q->where('test_sheets.academy_id', $academyId)
+                    // 2) share_scope='all'인 다른 학원 기출 문제지
+                    ->orWhere(function ($q) use ($academyId) {
+                        $q->where('test_sheets.academy_id', '!=', $academyId)
+                            ->where('test_sheets.share_scope', 'all');
+                    })
+                    // 3) share_scope='restricted'이고 허용된 문제지
+                    ->orWhere(function ($q) use ($academyId) {
+                        $q->where('test_sheets.academy_id', '!=', $academyId)
+                            ->where('test_sheets.share_scope', 'restricted')
+                            ->whereHas('permissions', function ($q) use ($academyId) {
+                                $q->where('academy_id', $academyId)
+                                    ->where('is_allowed', true);
+                            });
+                    });
+            });
+    }
+
+    /**
+     * 문제지의 공유 상태 라벨
+     */
+    public function getShareScopeLabelAttribute(): string
+    {
+        return match ($this->share_scope) {
+            'all' => '전체 공개',
+            'restricted' => '일부 학원 공개',
+            'academy' => '내 학원만',
+            default => '내 학원만',
+        };
+    }
+
     public function getTargetGradeNamesAttribute()
     {
 

@@ -8,13 +8,21 @@
                 </a>
             </div>
             <!-- User Menu -->
-            <div class="flex items-center">
+            <div class="flex items-center gap-2">
+                @if (count($academies) > 1)
+                    <!-- Academy Select -->
+                    <select wire:model="academyId" wire:change="changeAcademy" class="block py-2 px-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-violet-500 focus:border-violet-500 text-xs text-gray-600 bg-gray-50">
+                        @foreach ($academies as $academy)
+                            <option value="{{ $academy['id'] }}">{{ $academy['name'] }}</option>
+                        @endforeach
+                    </select>
+                @endif
 
                 <!-- Children Select -->
                 <div class="flex items-center">
                     <select wire:model="studentId" wire:change="changeStudent" class="block py-2 border-0 focus:outline-none focus:ring-violet-500 focus:border-violet-500 font-sd text-sm text-violet-600">
                         @foreach ($students as $student)
-                            <option value="{{ $student->id }}" wire:key="{{$student->id}}">{{ $student->user->name }}</option>
+                            <option value="{{ $student['id'] }}" wire:key="{{ $student['id'] }}">{{ $student['user']['name'] ?? '' }}</option>
                         @endforeach
                     </select>
                 </div>

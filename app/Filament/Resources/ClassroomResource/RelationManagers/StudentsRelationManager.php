@@ -34,6 +34,26 @@ class StudentsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('user.name')
                     ->searchable()
                     ->label('이름'),
+                Tables\Columns\TextColumn::make('user.phone')
+                    ->label('전화번호')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('gradeSystem.display_name')
+                    ->label('학년'),
+                Tables\Columns\TextColumn::make('school.name')
+                    ->label('학교')
+                    ->default('-'),
+                Tables\Columns\TextColumn::make('status')
+                    ->label('상태')
+                    ->badge()
+                    ->formatStateUsing(fn($state) => match ($state) {
+                        'enrolled' => '재원',
+                        'withdrawn' => '퇴원',
+                        default => $state ?? '재원',
+                    })
+                    ->color(fn($state) => match ($state) {
+                        'withdrawn' => 'danger',
+                        default => 'success',
+                    }),
                 Tables\Columns\TextColumn::make('user.birthed_at')
                     ->date('Y-m-d')
                     ->label('생년월일'),

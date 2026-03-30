@@ -31,6 +31,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use App\Models\Academy;
 
 class TestSheetResource extends Resource
 {
@@ -68,22 +69,21 @@ class TestSheetResource extends Resource
     {
         return $table
             ->modifyQueryUsing(function ($query) {
-                return $query->originals()
+                $role = auth()->user()->role;
+
+                return $query->withSharedExams()
+                    ->originals()
                     ->whereNotNull('target_group')
-                    ->when(auth()->user()->role === 'general', function ($query) {
-                        // 일반 강사인 경우 해당 강사의 클래스들에 해당하는 시험지만 조회
+                    ->when(in_array($role, ['general', 'manager']), function ($query) {
+                        // general/manager: 자기가 올린 문제지 + 강사 할당된 문제지만
                         $teacher = auth()->user()->userable;
-                        $classrooms = $teacher->classrooms;
-                        // dd($classrooms);
-                        return $query->where(function ($subQuery) use ($classrooms) {
-                            foreach ($classrooms as $classroom) {
-                                $subQuery->orWhere(function ($q) use ($classroom) {
-                                    $q->availableForClass($classroom)->orWhere('user_id', auth()->user()->id);
+                        return $query->where(function ($subQuery) use ($teacher) {
+                            $subQuery->where('user_id', auth()->user()->id)
+                                ->orWhereHas('teachers', function ($q) use ($teacher) {
+                                    $q->where('teachers.id', $teacher->id);
                                 });
-                            }
                         });
                     });
-                // ->orWhere('user_id', auth()->user()->id);
             })
             ->defaultSort('id', 'desc')
             ->columns([
@@ -137,6 +137,23 @@ class TestSheetResource extends Resource
                         }
                         return '';
                     }),
+                TextColumn::make('share_scope')
+                    ->label('공유')
+                    ->formatStateUsing(fn($record) => match ($record->share_scope) {
+                        'all' => '전체 공개',
+                        'restricted' => '일부 공개',
+                        default => '',
+                    })
+                    ->badge()
+                    ->color(fn($state) => match ($state) {
+                        'all' => 'success',
+                        'restricted' => 'warning',
+                        default => 'gray',
+                    })
+                    ->visible(fn() => auth()->user()->role === 'root_admin' || auth()->user()->role === 'admin'),
+                TextColumn::make('academy.name')
+                    ->label('학원')
+                    ->visible(fn() => auth()->user()->role === 'root_admin'),
                 TextColumn::make('start_date')
                     ->date('Y-m-d H:i')
                     ->label('출제일')
@@ -258,7 +275,7 @@ class TestSheetResource extends Resource
                 // Tables\Actions\EditAction::make(),
                 Tables\Actions\Action::make('start-test-sheet')
                     ->label('문제지 출제')
-                    ->visible(fn($record) => $record->status === 'pending' && empty($record->start_date))
+                    ->visible(fn($record) => $record->academy_id === auth()->user()->academy_id && $record->status === 'pending' && empty($record->start_date))
                     ->icon('heroicon-m-check')
                     ->modalHeading('문제지 출제')
                     ->requiresConfirmation()
@@ -269,6 +286,10 @@ class TestSheetResource extends Resource
                 Tables\Actions\Action::make('start-second-test-sheet')
                     ->label('오답 테스트 출제')
                     ->visible(function ($record) {
+                        // 타 학원 문제지는 조작 불가
+                        if ($record->academy_id !== auth()->user()->academy_id) {
+                            return false;
+                        }
                         // 원본 테스트이고 마감 상태인지 확인
                         if (!$record->isOriginal() || $record->status !== 'completed') {
                             return false;
@@ -301,7 +322,7 @@ class TestSheetResource extends Resource
                 Tables\Actions\Action::make('end-test-sheet')
                     ->label('문제지 마감')
                     ->color('danger')
-                    ->visible(fn($record) => $record->status === 'progress')
+                    ->visible(fn($record) => $record->academy_id === auth()->user()->academy_id && $record->status === 'progress')
                     ->icon('heroicon-m-check')
                     ->modalHeading('문제지 마감')
                     ->requiresConfirmation()
@@ -310,6 +331,9 @@ class TestSheetResource extends Resource
                     ->label('오답테스트 마감')
                     ->color('danger')
                     ->visible(function ($record) {
+                        if ($record->academy_id !== auth()->user()->academy_id) {
+                            return false;
+                        }
                         return WrongAnswerTestSheet::where('original_test_sheet_id', $record->id)
                             ->where('retry_count', 2)
                             ->whereHas('testSheet', function ($query) {
@@ -405,13 +429,71 @@ class TestSheetResource extends Resource
                     ->label('수정')
                     ->icon('heroicon-m-pencil-square')
                     ->url(fn($record) => '/admin/test-sheets/create/' . $record->temp_data_id . '?test_sheet_id=' . $record->id)
-                    ->visible(fn($record) => $record->status === 'pending'),
+                    ->visible(fn($record) => $record->academy_id === auth()->user()->academy_id && $record->status === 'pending'),
                 ActionGroup::make([
+                    Tables\Actions\Action::make('share-settings')
+                        ->label('공유 설정')
+                        ->icon('heroicon-m-share')
+                        ->visible(fn($record) =>
+                            $record->academy_id === auth()->user()->academy_id &&
+                            in_array(auth()->user()->role, ['root_admin', 'admin']) &&
+                            in_array($record->source_type, ['mock_exam', 'school_exam'])
+                        )
+                        ->modalHeading('문제지 공유 설정')
+                        ->modalWidth('lg')
+                        ->fillForm(fn($record) => [
+                            'share_scope' => $record->share_scope ?? 'academy',
+                            'allowed_academy_ids' => $record->permissions()
+                                ->where('is_allowed', true)
+                                ->pluck('academy_id')
+                                ->toArray(),
+                        ])
+                        ->form([
+                            Forms\Components\Radio::make('share_scope')
+                                ->label('공유 범위')
+                                ->options([
+                                    'academy' => '내 학원만 (비공개)',
+                                    'all' => '전체 학원 공개',
+                                    'restricted' => '선택 학원만 공개',
+                                ])
+                                ->default('academy')
+                                ->live()
+                                ->required(),
+                            Forms\Components\CheckboxList::make('allowed_academy_ids')
+                                ->label('공개할 학원')
+                                ->options(function () {
+                                    return Academy::where('id', '!=', auth()->user()->academy_id)
+                                        ->where('is_active', true)
+                                        ->pluck('name', 'id');
+                                })
+                                ->visible(fn(Forms\Get $get) => $get('share_scope') === 'restricted')
+                                ->columns(2),
+                        ])
+                        ->action(function ($record, array $data) {
+                            $shareScope = $data['share_scope'] === 'academy' ? null : $data['share_scope'];
+                            $record->update(['share_scope' => $shareScope]);
+
+                            // restricted인 경우 permissions 동기화
+                            $record->permissions()->delete();
+                            if ($data['share_scope'] === 'restricted' && !empty($data['allowed_academy_ids'])) {
+                                foreach ($data['allowed_academy_ids'] as $academyId) {
+                                    $record->permissions()->create([
+                                        'academy_id' => $academyId,
+                                        'is_allowed' => true,
+                                    ]);
+                                }
+                            }
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('공유 설정이 저장되었습니다.')
+                                ->success()
+                                ->send();
+                        }),
                     Tables\Actions\DeleteAction::make()
                         ->label('삭제')
                         ->modalHeading('시험지 삭제')
                         ->icon('heroicon-m-trash')
-                        ->visible(fn($record) => $record->status === 'pending'),
+                        ->visible(fn($record) => $record->academy_id === auth()->user()->academy_id && $record->status === 'pending'),
                     Tables\Actions\Action::make('print-test-sheet')
                         ->label('문제지 출력')
                         ->icon('heroicon-m-printer')
@@ -439,7 +521,7 @@ class TestSheetResource extends Resource
                         ->label('강사 할당')
                         ->icon('heroicon-m-document-text')
                         ->modalHeading('강사 할당')
-                        ->visible(fn() => auth()->user()->role !== 'general')
+                        ->visible(fn($record) => $record->academy_id === auth()->user()->academy_id && auth()->user()->role !== 'general')
                         ->form([
                             Select::make('teacher_ids')
                                 ->label('강사')

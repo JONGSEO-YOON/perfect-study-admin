@@ -71,6 +71,10 @@ class DailyAttendanceResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->width('120px'),
+                TextColumn::make('user.phone')
+                    ->label('전화번호')
+                    ->searchable()
+                    ->width('130px'),
                 TextColumn::make('gradeSystem.display_name')
                     ->label('학년')
                     ->sortable()
