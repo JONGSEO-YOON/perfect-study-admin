@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Traits\BelongsToAcademy;
 use App\Models\Traits\HasUser;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +9,22 @@ use Illuminate\Database\Eloquent\Builder;
 
 class Question extends Model
 {
-    use HasFactory, HasUser, BelongsToAcademy;
+    use HasFactory, HasUser;
+
+    public function academy()
+    {
+        return $this->belongsTo(Academy::class);
+    }
+
+    protected static function booted(): void
+    {
+        // 생성 시 자동으로 academy_id 설정
+        static::creating(function ($model) {
+            if (!$model->academy_id && auth()->check()) {
+                $model->academy_id = auth()->user()->academy_id;
+            }
+        });
+    }
 
     protected $with = ['questionType', 'choices'];
 
@@ -25,6 +39,27 @@ class Question extends Model
             'exam_question_number' => 'integer',
             'exam_semester' => 'integer',
         ];
+    }
+
+    /**
+     * 수정 권한: root_admin은 모든 문제, 나머지는 자기가 만든 문제 또는 자기 학원 교재 문제만
+     */
+    public function getIsEditableAttribute(): bool
+    {
+        if (!auth()->check()) return false;
+
+        // root_admin: 모든 문제 수정 가능
+        if (auth()->user()->role === 'root_admin') return true;
+
+        // 자기가 만든 문제
+        if ($this->user_id === auth()->id()) return true;
+
+        // 자기 학원의 교재에 속한 문제 (manager 이상)
+        if ($this->material_id && auth()->user()->isRoleAbove('manager', true)) {
+            return $this->academy_id === auth()->user()->academy_id;
+        }
+
+        return false;
     }
 
     public function questionType()
@@ -119,12 +154,4 @@ class Question extends Model
         });
     }
 
-    /**
-     * 현재 사용자가 이 문제를 편집할 수 있는지 확인
-     */
-    public function getIsEditableAttribute(): bool
-    {
-        return auth()->user()->isRoleAbove('manager') ||
-            $this->user_id === auth()->id();
-    }
 }

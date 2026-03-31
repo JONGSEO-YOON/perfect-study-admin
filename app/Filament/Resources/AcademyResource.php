@@ -63,6 +63,17 @@ class AcademyResource extends Resource
                         ->default(true),
                 ])->columns(2),
 
+            Section::make('사업자 정보')
+                ->description('부모님/학생 앱 하단 푸터에 표시됩니다.')
+                ->schema([
+                    TextInput::make('representative_name')
+                        ->label('대표자명')
+                        ->placeholder('예: 홍길동'),
+                    TextInput::make('business_number')
+                        ->label('사업자등록번호')
+                        ->placeholder('예: 598-06-02832'),
+                ])->columns(2),
+
             Section::make('브랜딩')
                 ->description('로고, 색상, 로그인 페이지 커스터마이징')
                 ->schema([
@@ -95,6 +106,19 @@ class AcademyResource extends Resource
                         ->rows(2)
                         ->placeholder('예: 퍼펙트 스터디에 오신 것을 환영합니다!')
                         ->columnSpanFull(),
+                ])->columns(2),
+
+            Section::make('메뉴 공개 설정')
+                ->description('학원별로 자료실/강의실 메뉴의 공개 여부를 설정합니다.')
+                ->schema([
+                    Toggle::make('settings.resources_visible')
+                        ->label('자료실 공개')
+                        ->default(true)
+                        ->helperText('비활성화 시 해당 학원 사용자에게 자료실 메뉴가 표시되지 않습니다.'),
+                    Toggle::make('settings.lectures_visible')
+                        ->label('강의실 공개')
+                        ->default(true)
+                        ->helperText('비활성화 시 해당 학원 사용자에게 강의실 메뉴가 표시되지 않습니다.'),
                 ])->columns(2),
 
             Section::make('토스 페이먼츠 설정')

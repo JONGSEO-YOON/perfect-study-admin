@@ -52,9 +52,13 @@ class SupplementaryScheduleResource extends Resource
                         Select::make('teacher_id')
                             ->label('담당 선생님')
                             ->options(function () {
-                                return User::where('userable_type', Teacher::class)
-                                    ->with('userable')
-                                    ->get()
+                                $query = User::where('userable_type', Teacher::class)
+                                    ->with('userable');
+                                if (auth()->user()->academy_id) {
+                                    $query->where('academy_id', auth()->user()->academy_id);
+                                }
+                                return $query->get()
+                                    ->filter(fn($user) => $user->userable !== null)
                                     ->mapWithKeys(fn($user) => [$user->userable->id => $user->name])
                                     ->toArray();
                             })
@@ -182,7 +186,8 @@ class SupplementaryScheduleResource extends Resource
                         return User::where('userable_type', Teacher::class)
                             ->with('userable')
                             ->get()
-                            ->mapWithKeys(fn($user) => [$user->userable->id => $user->name])
+                            ->filter(fn($user) => $user->userable !== null)
+                                    ->mapWithKeys(fn($user) => [$user->userable->id => $user->name])
                             ->toArray();
                     })
                     ->searchable()

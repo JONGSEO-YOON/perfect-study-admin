@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToAcademy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class StudentNotice extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToAcademy;
 
     protected $casts = [
         'attachments' => 'array',

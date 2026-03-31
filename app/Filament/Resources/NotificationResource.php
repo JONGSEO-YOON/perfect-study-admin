@@ -27,6 +27,8 @@ class NotificationResource extends Resource
 
     protected static ?string $navigationGroup = '설정';
 
+    protected static ?string $navigationIcon = null;
+
     protected static ?string $model = Notification::class;
 
     public static function getBreadcrumb(): string

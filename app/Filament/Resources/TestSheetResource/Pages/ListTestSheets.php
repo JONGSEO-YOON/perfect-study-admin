@@ -21,6 +21,7 @@ use Filament\Forms\Components\ViewField;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Resources\Pages\ListRecords;
+use App\Forms\Components\ExamGridSelect;
 
 class ListTestSheets extends ListRecords
 {
@@ -31,6 +32,33 @@ class ListTestSheets extends ListRecords
     public function getBreadcrumb(): ?string
     {
         return null;
+    }
+
+    protected static function getExamSubjectItems(): array
+    {
+        // 고/고3 루트 카테고리 하위의 과목(depth=1)을 자동으로 가져옴
+        $rootIds = \App\Models\QuestionCategory::where('depth', 0)
+            ->whereRaw("REPLACE(REPLACE(name, '<p>', ''), '</p>', '') IN ('고', '고3')")
+            ->pluck('id');
+
+        return \App\Models\QuestionCategory::where('depth', 1)
+            ->whereIn('id', function ($q) use ($rootIds) {
+                $q->select('descendant_id')
+                    ->from('question_category_closure')
+                    ->where('depth', 1)
+                    ->whereIn('ancestor_id', $rootIds);
+            })
+            ->orderBy('id')
+            ->pluck('name')
+            ->map(fn($name) => trim(str_replace('(2025개정)', '', strip_tags(trim($name)))))
+            ->filter(fn($name) => !in_array($name, ['교과외', '연산문제']))
+            ->unique()
+            ->map(fn($name) => [
+                'value' => $name,
+                'label' => $name,
+            ])
+            ->values()
+            ->toArray();
     }
 
     protected function getHeaderActions(): array
@@ -397,127 +425,91 @@ class ListTestSheets extends ListRecords
             Actions\CreateAction::make('create-mock-exam')
                 ->icon('heroicon-m-academic-cap')
                 ->modalHeading('모의고사 기출 문제지 추가')
-                ->modalWidth('3xl')
+                ->modalWidth('5xl')
                 ->createAnother(false)
                 ->label('모의고사 기출')
                 ->color('info')
                 ->form([
-                    ToggleButtons::make('creation_method')
-                        ->label('추가 방식')
-                        ->inline()
-                        ->options([
-                            'number' => '문제 번호로 추가',
-                            'category' => '단원으로 추가',
-                        ])
-                        ->default('number')
-                        ->live()
-                        ->required()
+                    Grid::make(4)
+                        ->schema([
+                            ExamGridSelect::make('exam_grades')
+                                ->label('학년 선택')
+                                ->multiple()
+                                ->cols(2)
+                                ->maxHeight(240)
+                                ->items(
+                                    \App\Models\GradeSystem::orderBy('sequential_order')
+                                        ->get()
+                                        ->map(fn($g) => ['value' => $g->display_name, 'label' => $g->display_name])
+                                        ->toArray()
+                                ),
+                            ExamGridSelect::make('exam_years')
+                                ->label('년도 선택')
+                                ->multiple()
+                                ->cols(2)
+                                ->maxHeight(240)
+                                ->items(
+                                    collect(range(date('Y'), 1994, -1))
+                                        ->map(fn($y) => ['value' => $y, 'label' => $y . '년'])
+                                        ->toArray()
+                                ),
+                            ExamGridSelect::make('exam_months')
+                                ->label('월 선택')
+                                ->multiple()
+                                ->cols(2)
+                                ->maxHeight(240)
+                                ->items([
+                                    ['value' => 3, 'label' => '3월'],
+                                    ['value' => 4, 'label' => '4월'],
+                                    ['value' => 5, 'label' => '5월'],
+                                    ['value' => 6, 'label' => '6월'],
+                                    ['value' => 7, 'label' => '7월'],
+                                    ['value' => 9, 'label' => '9월'],
+                                    ['value' => 10, 'label' => '10월'],
+                                    ['value' => 11, 'label' => '11월'],
+                                ]),
+                            ExamGridSelect::make('creation_method')
+                                ->label('문제 추가 옵션')
+                                ->cols(1)
+                                ->items([
+                                    ['value' => 'number', 'label' => '문제 번호로 추가'],
+                                    ['value' => 'category', 'label' => '단원으로 추가'],
+                                ])
+                                ->default('number')
+                                ->live(),
+                        ]),
+
+                    // 과목 선택
+                    ExamGridSelect::make('exam_subjects')
+                        ->label('과목 선택')
+                        ->multiple()
+                        ->cols(7)
+                        ->items(self::getExamSubjectItems())
                         ->columnSpanFull(),
 
-                    // === 방식 A: 문제 번호로 추가 (단일 선택) ===
-                    Grid::make(4)
-                        ->visible(fn(Get $get) => $get('creation_method') === 'number')
-                        ->schema([
-                            Select::make('exam_grade')
-                                ->label('학년')
-                                ->options([
-                                    '고1' => '고1',
-                                    '고2' => '고2',
-                                    '고3' => '고3',
-                                ])
-                                ->required(),
-                            Select::make('exam_year')
-                                ->label('년도')
-                                ->options(array_combine(
-                                    range(date('Y'), 2010, -1),
-                                    range(date('Y'), 2010, -1)
-                                ))
-                                ->required()
-                                ->searchable(),
-                            Select::make('exam_month')
-                                ->label('월')
-                                ->options([
-                                    3 => '3월', 4 => '4월', 6 => '6월',
-                                    7 => '7월', 9 => '9월', 10 => '10월',
-                                    11 => '11월 (수능)',
-                                ])
-                                ->required(),
-                            Select::make('exam_subject')
-                                ->label('과목')
-                                ->options([
-                                    '공통수학' => '공통수학',
-                                    '대수' => '대수',
-                                    '미적분' => '미적분',
-                                    '미적분2' => '미적분2',
-                                    '확통' => '확률과 통계',
-                                    '기하' => '기하',
-                                ]),
-                        ]),
+                    // 문제 번호로 추가 시: 문제 번호 선택
+                    ExamGridSelect::make('question_numbers')
+                        ->label('문제 번호 선택')
+                        ->multiple()
+                        ->cols(10)
+                        ->items(
+                            collect(range(1, 30))->map(fn($n) => ['value' => $n, 'label' => $n . '번'])->toArray()
+                        )
+                        ->columnSpanFull()
+                        ->visible(fn(Get $get) => $get('creation_method') !== 'category'),
 
-                    // === 방식 B: 단원으로 추가 (복수 선택 가능) ===
-                    Grid::make(3)
-                        ->visible(fn(Get $get) => $get('creation_method') === 'category')
-                        ->schema([
-                            Select::make('exam_grades')
-                                ->label('학년')
-                                ->multiple()
-                                ->options([
-                                    '고1' => '고1',
-                                    '고2' => '고2',
-                                    '고3' => '고3',
-                                ]),
-                            Select::make('exam_years')
-                                ->label('년도')
-                                ->multiple()
-                                ->options(array_combine(
-                                    range(date('Y'), 2010, -1),
-                                    range(date('Y'), 2010, -1)
-                                ))
-                                ->searchable(),
-                            Select::make('exam_months')
-                                ->label('월')
-                                ->multiple()
-                                ->options([
-                                    3 => '3월', 4 => '4월', 6 => '6월',
-                                    7 => '7월', 9 => '9월', 10 => '10월',
-                                    11 => '11월 (수능)',
-                                ]),
-                        ]),
-
-                    // 공통: 과목, 배점 (단원 방식)
-                    Grid::make(3)
-                        ->visible(fn(Get $get) => $get('creation_method') === 'category')
-                        ->schema([
-                            Select::make('exam_subjects')
-                                ->label('과목')
-                                ->multiple()
-                                ->options([
-                                    '공통수학' => '공통수학',
-                                    '대수' => '대수',
-                                    '미적분' => '미적분',
-                                    '미적분2' => '미적분2',
-                                    '확통' => '확률과 통계',
-                                    '기하' => '기하',
-                                ]),
-                            Select::make('exam_scores')
-                                ->label('배점')
-                                ->multiple()
-                                ->options([
-                                    2 => '2점', 3 => '3점', 4 => '4점',
-                                ]),
-                        ]),
-
-                    // 공통: 문제 유형 선택
+                    // 단원으로 추가 시: 문제 유형 선택
                     ViewField::make('question_type_ids')
                         ->label('문제 유형')
                         ->view('filament.components.forms.question-type', [
                             'multiple' => true,
                         ])
                         ->live()
-                        ->required()
-                        ->columnSpanFull(),
+                        ->required(fn(Get $get) => $get('creation_method') === 'category')
+                        ->columnSpanFull()
+                        ->visible(fn(Get $get) => $get('creation_method') === 'category'),
 
-                    // 공통: 문제 수, 레벨
+                    // 단원으로 추가 시: 문제 수, 레벨
                     Grid::make(7)
                         ->schema([
                             ToggleButtons::make('question_count_choice')
@@ -543,7 +535,8 @@ class ListTestSheets extends ListRecords
                                     }
                                 })
                                 ->live(),
-                        ])->columnSpanFull(),
+                        ])->columnSpanFull()
+                        ->visible(fn(Get $get) => $get('creation_method') === 'category'),
                     Grid::make(3)
                         ->schema([
                             Select::make('levels')
@@ -557,7 +550,24 @@ class ListTestSheets extends ListRecords
                                 ->default(true)
                                 ->live()
                                 ->label('레벨별 문제 균등 분배'),
-                        ]),
+                            Grid::make(5)
+                                ->schema(function (Get $get) {
+                                    $textInput = [];
+                                    $levels = $get('levels');
+                                    for ($i = 0; $i < count($levels); $i++) {
+                                        $textInput[] = TextInput::make('level.' . $levels[$i])
+                                            ->label('레벨 ' . $levels[$i] . ' (가중치)')
+                                            ->required()
+                                            ->integer()
+                                            ->default(0);
+                                    }
+                                    return $textInput;
+                                })
+                                ->visible(function (Get $get) {
+                                    return !$get('is_even_distribution');
+                                })
+                        ])
+                        ->visible(fn(Get $get) => $get('creation_method') === 'category'),
                     Hidden::make('target_group')->default(null),
                     Hidden::make('source_type')->default('mock_exam'),
                 ])
@@ -565,146 +575,114 @@ class ListTestSheets extends ListRecords
                     $tempData = TempData::create(['value' => $data]);
                     redirect('/admin/test-sheets/create/' . $tempData->id);
                 })
-                ->modalSubmitActionLabel('문제 선택'),
+                ->modalSubmitActionLabel('문제 선택')
+                ->visible(fn() => in_array(auth()->user()->role, ['root_admin', 'admin'])),
 
             // === 학교 기출 문제지 ===
             Actions\CreateAction::make('create-school-exam')
                 ->icon('heroicon-m-building-library')
                 ->modalHeading('학교 기출 문제지 추가')
-                ->modalWidth('3xl')
+                ->modalWidth('5xl')
                 ->createAnother(false)
                 ->label('학교 기출')
                 ->color('success')
                 ->form([
-                    ToggleButtons::make('creation_method')
-                        ->label('추가 방식')
-                        ->inline()
-                        ->options([
-                            'number' => '문제 번호로 추가',
-                            'category' => '단원으로 추가',
-                        ])
-                        ->default('number')
-                        ->live()
-                        ->required()
+                    Select::make('school_id')
+                        ->label('학교 검색 (여러 학교 선택 가능)')
+                        ->multiple()
+                        ->searchable()
+                        ->getSearchResultsUsing(fn(string $search): array =>
+                            \App\Models\School::where('name', 'like', "%{$search}%")
+                                ->limit(50)
+                                ->pluck('name', 'id')
+                                ->toArray()
+                        )
+                        ->getOptionLabelUsing(fn($value): ?string =>
+                            \App\Models\School::find($value)?->name
+                        )
                         ->columnSpanFull(),
 
-                    // === 방식 A: 문제 번호로 추가 (단일 선택) ===
-                    Grid::make(3)
-                        ->visible(fn(Get $get) => $get('creation_method') === 'number')
+                    Grid::make(5)
                         ->schema([
-                            Select::make('school_id')
-                                ->label('학교')
-                                ->searchable()
-                                ->getSearchResultsUsing(fn(string $search): array =>
-                                    \App\Models\School::where('name', 'like', "%{$search}%")
-                                        ->limit(50)
-                                        ->pluck('name', 'id')
-                                        ->toArray()
-                                )
-                                ->getOptionLabelUsing(fn($value): ?string =>
-                                    \App\Models\School::find($value)?->name
-                                )
-                                ->required()
-                                ->columnSpan(2),
-                            Select::make('exam_grade')
-                                ->label('학년')
-                                ->options([
-                                    '고1' => '고1', '고2' => '고2', '고3' => '고3',
-                                ])
-                                ->required(),
-                            Select::make('exam_year')
-                                ->label('년도')
-                                ->options(array_combine(
-                                    range(date('Y'), 2010, -1),
-                                    range(date('Y'), 2010, -1)
-                                ))
-                                ->required()
-                                ->searchable(),
-                            Select::make('exam_semester')
-                                ->label('학기')
-                                ->options([1 => '1학기', 2 => '2학기'])
-                                ->required(),
-                            Select::make('exam_type')
-                                ->label('시험 유형')
-                                ->options([
-                                    'midterm' => '중간고사',
-                                    'final' => '기말고사',
-                                ])
-                                ->required(),
-                        ]),
-
-                    // === 방식 B: 단원으로 추가 (복수 선택 가능) ===
-                    Grid::make(3)
-                        ->visible(fn(Get $get) => $get('creation_method') === 'category')
-                        ->schema([
-                            Select::make('school_id')
-                                ->label('학교')
-                                ->searchable()
-                                ->getSearchResultsUsing(fn(string $search): array =>
-                                    \App\Models\School::where('name', 'like', "%{$search}%")
-                                        ->limit(50)
-                                        ->pluck('name', 'id')
-                                        ->toArray()
-                                )
-                                ->getOptionLabelUsing(fn($value): ?string =>
-                                    \App\Models\School::find($value)?->name
-                                )
-                                ->columnSpan(2),
-                            Select::make('exam_grades')
-                                ->label('학년')
+                            ExamGridSelect::make('exam_grades')
+                                ->label('학년 선택')
                                 ->multiple()
-                                ->options([
-                                    '고1' => '고1', '고2' => '고2', '고3' => '고3',
+                                ->cols(2)
+                                ->maxHeight(240)
+                                ->items(
+                                    \App\Models\GradeSystem::orderBy('sequential_order')
+                                        ->get()
+                                        ->map(fn($g) => ['value' => $g->display_name, 'label' => $g->display_name])
+                                        ->toArray()
+                                ),
+                            ExamGridSelect::make('exam_years')
+                                ->label('년도 선택')
+                                ->multiple()
+                                ->cols(2)
+                                ->maxHeight(240)
+                                ->items(
+                                    collect(range(date('Y'), 1994, -1))
+                                        ->map(fn($y) => ['value' => $y, 'label' => $y . '년'])
+                                        ->toArray()
+                                ),
+                            ExamGridSelect::make('exam_semesters')
+                                ->label('학기 선택')
+                                ->multiple()
+                                ->cols(2)
+                                ->items([
+                                    ['value' => 1, 'label' => '1학기'],
+                                    ['value' => 2, 'label' => '2학기'],
                                 ]),
-                            Select::make('exam_years')
-                                ->label('년도')
-                                ->multiple()
-                                ->options(array_combine(
-                                    range(date('Y'), 2010, -1),
-                                    range(date('Y'), 2010, -1)
-                                ))
-                                ->searchable(),
-                            Select::make('exam_semesters')
-                                ->label('학기')
-                                ->multiple()
-                                ->options([1 => '1학기', 2 => '2학기']),
-                            Select::make('exam_types')
+                            ExamGridSelect::make('exam_types')
                                 ->label('시험 유형')
                                 ->multiple()
-                                ->options([
-                                    'midterm' => '중간고사',
-                                    'final' => '기말고사',
+                                ->cols(2)
+                                ->items([
+                                    ['value' => 'midterm', 'label' => '중간고사'],
+                                    ['value' => 'final', 'label' => '기말고사'],
                                 ]),
+                            ExamGridSelect::make('creation_method')
+                                ->label('문제 추가 옵션')
+                                ->cols(1)
+                                ->items([
+                                    ['value' => 'number', 'label' => '문제 번호로 추가'],
+                                    ['value' => 'category', 'label' => '단원으로 추가'],
+                                ])
+                                ->default('number')
+                                ->live(),
                         ]),
 
-                    // 공통: 과목 (단원 방식)
-                    Grid::make(3)
-                        ->visible(fn(Get $get) => $get('creation_method') === 'category')
-                        ->schema([
-                            Select::make('exam_subjects')
-                                ->label('과목')
-                                ->multiple()
-                                ->options([
-                                    '공통수학' => '공통수학',
-                                    '대수' => '대수',
-                                    '미적분' => '미적분',
-                                    '미적분2' => '미적분2',
-                                    '확통' => '확률과 통계',
-                                    '기하' => '기하',
-                                ]),
-                        ]),
+                    // 과목 선택
+                    ExamGridSelect::make('exam_subjects')
+                        ->label('과목 선택')
+                        ->multiple()
+                        ->cols(7)
+                        ->items(self::getExamSubjectItems())
+                        ->columnSpanFull(),
 
-                    // 공통: 문제 유형 선택
+                    // 문제 번호로 추가 시: 문제 번호 선택
+                    ExamGridSelect::make('question_numbers')
+                        ->label('문제 번호 선택')
+                        ->multiple()
+                        ->cols(10)
+                        ->items(
+                            collect(range(1, 30))->map(fn($n) => ['value' => $n, 'label' => $n . '번'])->toArray()
+                        )
+                        ->columnSpanFull()
+                        ->visible(fn(Get $get) => $get('creation_method') !== 'category'),
+
+                    // 단원으로 추가 시: 문제 유형 선택
                     ViewField::make('question_type_ids')
                         ->label('문제 유형')
                         ->view('filament.components.forms.question-type', [
                             'multiple' => true,
                         ])
                         ->live()
-                        ->required()
-                        ->columnSpanFull(),
+                        ->required(fn(Get $get) => $get('creation_method') === 'category')
+                        ->columnSpanFull()
+                        ->visible(fn(Get $get) => $get('creation_method') === 'category'),
 
-                    // 공통: 문제 수, 레벨
+                    // 단원으로 추가 시: 문제 수, 레벨
                     Grid::make(7)
                         ->schema([
                             ToggleButtons::make('question_count_choice')
@@ -730,7 +708,8 @@ class ListTestSheets extends ListRecords
                                     }
                                 })
                                 ->live(),
-                        ])->columnSpanFull(),
+                        ])->columnSpanFull()
+                        ->visible(fn(Get $get) => $get('creation_method') === 'category'),
                     Grid::make(3)
                         ->schema([
                             Select::make('levels')
@@ -744,7 +723,24 @@ class ListTestSheets extends ListRecords
                                 ->default(true)
                                 ->live()
                                 ->label('레벨별 문제 균등 분배'),
-                        ]),
+                            Grid::make(5)
+                                ->schema(function (Get $get) {
+                                    $textInput = [];
+                                    $levels = $get('levels');
+                                    for ($i = 0; $i < count($levels); $i++) {
+                                        $textInput[] = TextInput::make('level.' . $levels[$i])
+                                            ->label('레벨 ' . $levels[$i] . ' (가중치)')
+                                            ->required()
+                                            ->integer()
+                                            ->default(0);
+                                    }
+                                    return $textInput;
+                                })
+                                ->visible(function (Get $get) {
+                                    return !$get('is_even_distribution');
+                                })
+                        ])
+                        ->visible(fn(Get $get) => $get('creation_method') === 'category'),
                     Hidden::make('target_group')->default(null),
                     Hidden::make('source_type')->default('school_exam'),
                 ])
@@ -752,7 +748,8 @@ class ListTestSheets extends ListRecords
                     $tempData = TempData::create(['value' => $data]);
                     redirect('/admin/test-sheets/create/' . $tempData->id);
                 })
-                ->modalSubmitActionLabel('문제 선택'),
+                ->modalSubmitActionLabel('문제 선택')
+                ->visible(fn() => in_array(auth()->user()->role, ['root_admin', 'admin'])),
         ];
     }
 }

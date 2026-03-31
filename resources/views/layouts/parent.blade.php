@@ -299,26 +299,36 @@
        {{ $slot }}
 
        {{-- 푸터 --}}
+       @if(isset($currentAcademy))
        <footer class="w-full px-5 py-6" style="background-color: #f3f4f6;">
            <div class="flex flex-col md:flex-row gap-6 md:gap-16">
                <div class="flex-shrink-0">
-                   <img src="/logo.png" class="w-32 md:w-40" alt="퍼펙트스터디" />
+                   <img src="{{ $currentAcademy->logo_path ? Storage::url($currentAcademy->logo_path) : '/logo.png' }}" class="w-32 md:w-40" alt="{{ $currentAcademy->name }}" />
                </div>
                <div class="text-sm text-gray-600 flex-1">
                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                        <div class="space-y-1">
-                           <p><span class="font-semibold">상호:</span> 퍼펙트스터디</p>
-                           <p><span class="font-semibold">대표자명:</span> 류성문</p>
-                           <p><span class="font-semibold">사업자등록번호:</span> 598-06-02832</p>
+                           <p><span class="font-semibold">상호:</span> {{ $currentAcademy->name }}</p>
+                           @if($currentAcademy->representative_name)
+                           <p><span class="font-semibold">대표자명:</span> {{ $currentAcademy->representative_name }}</p>
+                           @endif
+                           @if($currentAcademy->business_number)
+                           <p><span class="font-semibold">사업자등록번호:</span> {{ $currentAcademy->business_number }}</p>
+                           @endif
                        </div>
                        <div class="space-y-1">
-                           <p><span class="font-semibold">사업장주소:</span> 서울시 양천구 신목로 12길 22, 104동 504호(롯데캐슬)</p>
-                           <p><span class="font-semibold">유선전화번호:</span> 010-9313-1786</p>
+                           @if($currentAcademy->address)
+                           <p><span class="font-semibold">사업장주소:</span> {{ $currentAcademy->address }}</p>
+                           @endif
+                           @if($currentAcademy->phone)
+                           <p><span class="font-semibold">유선전화번호:</span> {{ $currentAcademy->phone }}</p>
+                           @endif
                        </div>
                    </div>
                </div>
            </div>
        </footer>
+       @endif
     </main>
 
     <!-- Livewire Scripts -->

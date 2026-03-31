@@ -641,7 +641,44 @@ class QuestionResource extends Resource
     {
         return $table
             ->modifyQueryUsing(function ($query) {
-                return $query->where('parent_question_id', null);
+                $query->where('parent_question_id', null);
+
+                // root_admin이 아니면 기출 문제에 공유 규칙 적용
+                if (auth()->user()->role !== 'root_admin' && auth()->user()->academy_id) {
+                    $academyId = auth()->user()->academy_id;
+
+                    $query->where(function ($q) use ($academyId) {
+                        // 기출이 아닌 문제: 전체 공개
+                        $q->whereNull('source_type')
+                            // 자기 학원 기출
+                            ->orWhere(function ($sub) use ($academyId) {
+                                $sub->whereNotNull('source_type')
+                                    ->where('questions.academy_id', $academyId);
+                            })
+                            // 공유 규칙으로 허용된 다른 학원 기출
+                            ->orWhere(function ($sub) use ($academyId) {
+                                $sharingRules = \App\Models\ExamSharingRule::where('academy_id', $academyId)
+                                    ->where('is_allowed', true)
+                                    ->get();
+
+                                if ($sharingRules->isEmpty()) return;
+
+                                foreach ($sharingRules as $rule) {
+                                    $sub->orWhere(function ($r) use ($rule) {
+                                        $r->where('questions.source_type', $rule->source_type);
+                                        if ($rule->exam_year) $r->where('questions.exam_year', $rule->exam_year);
+                                        if ($rule->exam_month) $r->where('questions.exam_month', $rule->exam_month);
+                                        if ($rule->exam_semester) $r->where('questions.exam_semester', $rule->exam_semester);
+                                        if ($rule->exam_type) $r->where('questions.exam_type', $rule->exam_type);
+                                        if ($rule->exam_subject) $r->where('questions.exam_subject', $rule->exam_subject);
+                                        if ($rule->school_id) $r->where('questions.school_id', $rule->school_id);
+                                    });
+                                }
+                            });
+                    });
+                }
+
+                return $query;
             })
             ->emptyStateHeading('문제가 없습니다.')
             ->columns([

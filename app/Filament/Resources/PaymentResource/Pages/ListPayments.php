@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\PaymentResource\Pages;
 
+use App\Exports\PaymentsExport;
 use App\Filament\Resources\PaymentResource;
 use App\Models\Classroom;
 use App\Models\GradeSystem;
@@ -21,6 +22,7 @@ use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ListPayments extends ListRecords
 {
@@ -29,6 +31,29 @@ class ListPayments extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('export')
+                ->label('엑셀 다운로드')
+                ->icon('heroicon-m-arrow-down-tray')
+                ->color('success')
+                ->modalHeading('결제 목록 엑셀 다운로드')
+                ->modalSubmitActionLabel('다운로드')
+                ->modalWidth('md')
+                ->form([
+                    Grid::make(2)->schema([
+                        DatePicker::make('start_date')
+                            ->label('생성일 시작'),
+                        DatePicker::make('end_date')
+                            ->label('생성일 종료'),
+                    ]),
+                ])
+                ->action(function (array $data) {
+                    $filename = '결제목록_' . now()->format('Ymd_His') . '.xlsx';
+                    return Excel::download(
+                        new PaymentsExport($data['start_date'] ?? null, $data['end_date'] ?? null),
+                        $filename
+                    );
+                }),
+
             Actions\CreateAction::make()
                 ->label('개별 결제 생성'),
 

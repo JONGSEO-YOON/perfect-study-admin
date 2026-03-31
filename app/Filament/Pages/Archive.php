@@ -160,7 +160,26 @@ class Archive extends Page implements HasForms, HasTable
 
     public static function canAccess(): bool
     {
-        return auth()->user()->isRoleAbove('admin', true);
+        if (!auth()->user()->isRoleAbove('admin', true)) {
+            return false;
+        }
+
+        $user = auth()->user();
+
+        if ($user->role === 'root_admin') {
+            return true;
+        }
+
+        $academy = $user->academy;
+
+        if ($academy) {
+            $settings = $academy->settings ?? [];
+            if (isset($settings['resources_visible']) && $settings['resources_visible'] === false) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function mount()

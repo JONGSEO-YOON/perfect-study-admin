@@ -89,10 +89,19 @@ class WithdrawnStudentResource extends Resource
                 TextColumn::make('withdrawal_reason')
                     ->label('퇴원 사유')
                     ->formatStateUsing(function ($state, $record) {
-                        if ($state === '기타' && $record->withdrawal_reason_detail) {
+                        $labels = [
+                            'poor_performance' => '성적부진',
+                            'change_of_atmosphere' => '분위기전환',
+                            'teacher_mismatch' => '선생님맞지않음',
+                            'academy_atmosphere' => '학원분위기안좋음',
+                            'relocation' => '이사',
+                            'other' => '기타',
+                        ];
+                        $label = $labels[$state] ?? $state;
+                        if ($state === 'other' && $record->withdrawal_reason_detail) {
                             return "기타: {$record->withdrawal_reason_detail}";
                         }
-                        return $state ?? '-';
+                        return $label ?? '-';
                     }),
                 TextColumn::make('withdrawn_at')
                     ->label('퇴원 일자')
@@ -143,12 +152,12 @@ class WithdrawnStudentResource extends Resource
                 SelectFilter::make('withdrawal_reason')
                     ->label('퇴원 사유')
                     ->options([
-                        '성적부진' => '성적부진',
-                        '분위기전환' => '분위기전환',
-                        '선생님맞지않음' => '선생님맞지않음',
-                        '학원분위기안좋음' => '학원분위기안좋음',
-                        '이사' => '이사',
-                        '기타' => '기타',
+                        'poor_performance' => '성적부진',
+                        'change_of_atmosphere' => '분위기전환',
+                        'teacher_mismatch' => '선생님맞지않음',
+                        'academy_atmosphere' => '학원분위기안좋음',
+                        'relocation' => '이사',
+                        'other' => '기타',
                     ]),
             ], FiltersLayout::AboveContent)
             ->actions([
@@ -163,14 +172,14 @@ class WithdrawnStudentResource extends Resource
                         $oldStatus = $record->status;
 
                         $record->update([
-                            'status' => 'active',
+                            'status' => 'enrolled',
                         ]);
 
                         StudentStatusHistory::create([
                             'student_id' => $record->id,
                             'changed_by' => auth()->id(),
                             'from_status' => $oldStatus,
-                            'to_status' => 'active',
+                            'to_status' => 'enrolled',
                             'reason' => '재원 처리',
                         ]);
 

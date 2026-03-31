@@ -40,6 +40,8 @@ class MyPage extends Page implements HasForms
 
     protected static ?string $navigationGroup = '설정';
 
+    protected static ?string $navigationIcon = null;
+
     protected ?string $maxContentWidth = '2xl';
 
     public $data = [];

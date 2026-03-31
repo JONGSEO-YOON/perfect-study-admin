@@ -8,6 +8,7 @@ use Filament\Actions;
 use Filament\Infolists\Components\Grid;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\ViewEntry;
 use Filament\Infolists\Infolist;
 use Filament\Resources\Pages\ViewRecord;
 
@@ -93,6 +94,14 @@ class ViewClassroom extends ViewRecord
                             ->label('비고')
                             ->default('-')
                             ->columnSpanFull(),
+                    ]),
+                Section::make('학생 명단')
+                    ->schema([
+                        ViewEntry::make('students_roster')
+                            ->view('filament.components.classroom-roster')
+                            ->viewData([
+                                'record' => $this->record,
+                            ]),
                     ]),
             ]);
     }

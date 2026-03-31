@@ -63,6 +63,28 @@ Route::get('/notices', StudentNoticeList::class)->name('student.notices')->middl
 
 Route::get('/password-change', StudentPasswordChange::class)->name('student.password')->middleware('student.check');
 
+Route::get('/switch-academy/{userId}', function ($userId) {
+    $currentUser = auth()->user();
+    if (!$currentUser) return redirect('/login');
+
+    $targetUser = \App\Models\User::find($userId);
+    if (!$targetUser) return redirect('/');
+
+    // 같은 전화번호인지 확인 (보안)
+    if ($targetUser->phone !== $currentUser->phone) {
+        return redirect('/');
+    }
+
+    // 학생 계정인지 확인
+    if ($targetUser->userable_type !== \App\Models\Student::class) {
+        return redirect('/');
+    }
+
+    auth()->login($targetUser);
+    session()->regenerate();
+    return redirect('/');
+})->name('switch-academy')->middleware('auth');
+
 Route::get('/logout', function () {
     auth()->logout();
     return redirect('/');

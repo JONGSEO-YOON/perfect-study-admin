@@ -15,6 +15,7 @@
                 @foreach ($histories as $h)
                     @php
                         $statusLabel = fn($s) => match($s) {
+                            'enrolled' => '재원',
                             'active' => '재원',
                             'pending' => '승인예정',
                             'withdrawn' => '퇴원',
@@ -24,7 +25,18 @@
                     <tr>
                         <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-300">{{ $h->created_at->format('Y-m-d H:i') }}</td>
                         <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-300">{{ $statusLabel($h->from_status) }} → {{ $statusLabel($h->to_status) }}</td>
-                        <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{{ $h->reason ?? '-' }}</td>
+                        @php
+                            $reasonLabel = match($h->reason) {
+                                'poor_performance' => '성적부진',
+                                'change_of_atmosphere' => '분위기전환',
+                                'teacher_mismatch' => '선생님맞지않음',
+                                'academy_atmosphere' => '학원분위기안좋음',
+                                'relocation' => '이사',
+                                'other' => '기타',
+                                default => $h->reason,
+                            };
+                        @endphp
+                        <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{{ $reasonLabel ?? '-' }}</td>
                         <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{{ $h->changedBy?->name ?? '-' }}</td>
                     </tr>
                 @endforeach

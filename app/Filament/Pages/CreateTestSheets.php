@@ -3,9 +3,11 @@
 namespace App\Filament\Pages;
 
 use App\Models\Classroom;
+use App\Models\ExamSharingRule;
 use App\Models\GradeSystem;
 use App\Models\Question;
 use App\Models\QuestionCategory;
+use App\Models\Scopes\AcademyScope;
 use App\Models\Student;
 use App\Models\TempData;
 use App\Models\TestSheet;
@@ -507,6 +509,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             );
             //get first question
 
+            $grade = null;
             if ($query['target_group'] === 'grade' || $query['target_group'] === 'level') {
                 $grade = GradeSystem::findOrFail($query['target_grades'][0]);
             } else if ($query['target_group'] === 'classroom') {
@@ -515,9 +518,12 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             } else if ($query['target_group'] === 'student') {
                 $student = User::findOrFail($query['target_students'][0])->userable;
                 $grade = GradeSystem::findOrFail($student->grade_system_id);
+            } else if (!empty($query['exam_grades'])) {
+                // 기출 문제지: exam_grades에서 학년 정보 가져오기
+                $this->data['grade'] = $query['exam_grades'][0] ?? '';
             }
 
-            $this->data['grade'] = $grade->display_name ?? '';
+            $this->data['grade'] = $grade->display_name ?? ($this->data['grade'] ?? '');
 
             if ($query['material_id'] ?? false) {
                 $this->data['tags_toggle'] = '숙제';
@@ -529,6 +535,12 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         $this->initialPrintLayout['startingNumber'] = (int) ($query['material_range_start'] ?? 1);
         $this->data['full_page_split'] = $this->data['split'];
 
+        // 학원 로고 자동 설정
+        $academy = auth()->user()?->academy;
+        if ($academy?->logo_path && empty($this->data['custom_logo'])) {
+            $this->initialPrintLayout['customLogo'] = \Illuminate\Support\Facades\Storage::url($academy->logo_path);
+        }
+
         $this->summary = self::getDistributionSummary($this->questions);
         $this->id = $id;
         $this->query = $query;
@@ -536,8 +548,13 @@ class CreateTestSheets extends Page implements HasForms, HasActions
 
     public static function selectRandomQuestions(array $params): Collection
     {
-        $totalQuestionCount = $params['question_count'];
+        $totalQuestionCount = $params['question_count'] ?? 0;
         $excludeIds = $params['exclude_ids'] ?? [];
+
+        // 문제 번호로 추가 (기출) — 번호 선택 또는 전체
+        if (($params['creation_method'] ?? null) === 'number' && in_array($params['source_type'] ?? '', ['mock_exam', 'school_exam'])) {
+            return self::selectExamQuestionsByNumber($params);
+        }
 
         if (!empty($params['material_id'])) {
             return self::selectMaterialQuestions($params, $excludeIds);
@@ -550,7 +567,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         $result = collect();
 
         // 레벨 분포에 따른 문제 선택
-        if ($params['is_even_distribution']) {
+        if ($params['is_even_distribution'] ?? true) {
             $result = self::selectQuestionsWithEvenDistribution($params, $excludeIds);
         } else {
             $result = self::selectQuestionsWithWeightedDistribution($params, $excludeIds);
@@ -629,12 +646,27 @@ class CreateTestSheets extends Page implements HasForms, HasActions
 
     protected static function buildBaseQuery($typeId = null, array $params, array $excludeIds, ?int $level = null)
     {
-        return Question::when($typeId !== null, function ($query) use ($typeId) {
-            if (is_array($typeId)) {
-                return $query->whereIn('question_type_id', $typeId);
-            }
-            return $query->where('question_type_id', $typeId);
-        })
+        $sourceType = $params['source_type'] ?? null;
+        $isExamSource = in_array($sourceType, ['mock_exam', 'school_exam']);
+
+        // 기출문제는 AcademyScope와 material_visibility를 우회하여 전체 학원 문제 조회
+        // (기본: 전체 공개, ExamSharingRule로 학원별 차단 가능)
+        if ($isExamSource) {
+            $query = Question::withoutGlobalScopes([
+                AcademyScope::class,
+                'material_visibility',
+            ]);
+        } else {
+            $query = Question::query();
+        }
+
+        return $query
+            ->when($typeId !== null, function ($query) use ($typeId) {
+                if (is_array($typeId)) {
+                    return $query->whereIn('question_type_id', $typeId);
+                }
+                return $query->where('question_type_id', $typeId);
+            })
             ->when($level !== null, function ($query) use ($level) {
                 return $query->where('level', $level);
             })
@@ -648,33 +680,20 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                     }
                 });
             })
-            // ->when($params['material_id'] ?? null, function ($query) use ($params) {
-            //     return $query->where('material_id', $params['material_id'])
-            //         ->when($params['is_material_range'] ?? false, function ($query) use ($params) {
-            //             return $query->whereBetween('seq', [
-            //                 $params['material_range_start'],
-            //                 $params['material_range_end']
-            //             ]);
-            //         })
-            //         ->orderBy('seq');
-            // }, function ($query) {
-            //     return $query
-            // })
             // source_type 필터: null/''=교재만, 'all'=전체(교재+기출), 'mock_exam'/'school_exam'=해당 기출만
-            ->when(empty($params['source_type']), function ($query) {
+            ->when(empty($sourceType), function ($query) {
                 // 기본: 교재 문제만 (기존 동작 유지)
                 return $query->where('material_id', null)->whereNull('source_type');
             })
-            ->when(($params['source_type'] ?? null) === 'all', function ($query) {
+            ->when($sourceType === 'all', function ($query) {
                 // 전체: 교재 + 기출 모두
                 return $query;
             })
-            ->when($params['source_type'] ?? null, function ($query) use ($params) {
-                if ($params['source_type'] === 'all') return;
-                $query->where('source_type', $params['source_type']);
+            ->when($sourceType && $sourceType !== 'all', function ($query) use ($params, $sourceType) {
+                $query->where('source_type', $sourceType);
 
                 // 모의고사 기출 필터
-                if ($params['source_type'] === 'mock_exam') {
+                if ($sourceType === 'mock_exam') {
                     $query->when($params['exam_year'] ?? null, fn($q, $v) => $q->where('exam_year', $v))
                         ->when($params['exam_years'] ?? null, fn($q, $v) => $q->whereIn('exam_year', $v))
                         ->when($params['exam_month'] ?? null, fn($q, $v) => $q->where('exam_month', $v))
@@ -687,8 +706,13 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                 }
 
                 // 학교 기출 필터
-                if ($params['source_type'] === 'school_exam') {
-                    $query->when($params['school_id'] ?? null, fn($q, $v) => $q->where('school_id', $v))
+                if ($sourceType === 'school_exam') {
+                    $query->when($params['school_id'] ?? null, function($q, $v) {
+                            if (is_array($v)) {
+                                return $q->whereIn('school_id', $v);
+                            }
+                            return $q->where('school_id', $v);
+                        })
                         ->when($params['exam_year'] ?? null, fn($q, $v) => $q->where('exam_year', $v))
                         ->when($params['exam_years'] ?? null, fn($q, $v) => $q->whereIn('exam_year', $v))
                         ->when($params['exam_grade'] ?? null, fn($q, $v) => $q->where('exam_grade', $v))
@@ -700,8 +724,144 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                         ->when($params['exam_subjects'] ?? null, fn($q, $v) => $q->whereIn('exam_subject', $v));
                 }
             })
+            // 기출문제 학원별 공유 규칙 적용 (기본: 자기 학원만, 공유 규칙으로 접근 허용)
+            ->when($isExamSource && auth()->check() && auth()->user()->role !== 'root_admin', function ($query) use ($sourceType) {
+                $academyId = auth()->user()->academy_id;
+                if (!$academyId) return;
+
+                // 이 학원에 부여된 공유 규칙 조회
+                $sharingRules = ExamSharingRule::where('academy_id', $academyId)
+                    ->where('source_type', $sourceType)
+                    ->where('is_allowed', true)
+                    ->get();
+
+                if ($sharingRules->isEmpty()) {
+                    // 공유 규칙 없음: 자기 학원 문제만 조회
+                    $query->where('questions.academy_id', $academyId);
+                } else {
+                    // 자기 학원 문제 + 공유 규칙에 해당하는 다른 학원 문제 포함
+                    $query->where(function ($q) use ($academyId, $sharingRules, $sourceType) {
+                        // 자기 학원 문제는 항상 포함
+                        $q->where('questions.academy_id', $academyId);
+
+                        foreach ($sharingRules as $rule) {
+                            $q->orWhere(function ($sub) use ($rule, $sourceType) {
+                                $sub->where('questions.source_type', $sourceType);
+
+                                if ($rule->exam_year) {
+                                    $sub->where('questions.exam_year', $rule->exam_year);
+                                }
+                                if ($rule->exam_month) {
+                                    $sub->where('questions.exam_month', $rule->exam_month);
+                                }
+                                if ($rule->exam_semester) {
+                                    $sub->where('questions.exam_semester', $rule->exam_semester);
+                                }
+                                if ($rule->exam_type) {
+                                    $sub->where('questions.exam_type', $rule->exam_type);
+                                }
+                                if ($rule->exam_subject) {
+                                    $sub->where('questions.exam_subject', $rule->exam_subject);
+                                }
+                                if ($rule->school_id) {
+                                    $sub->where('questions.school_id', $rule->school_id);
+                                }
+                            });
+                        }
+                    });
+                }
+            })
             ->inRandomOrder()
             ->with('questionType', 'choices');
+    }
+
+    protected static function selectExamQuestionsByNumber(array $params): Collection
+    {
+        $questionNumbers = $params['question_numbers'] ?? [];
+        $sourceType = $params['source_type'] ?? null;
+
+        $query = Question::withoutGlobalScopes([
+            AcademyScope::class,
+            'material_visibility',
+        ])
+            ->when(!empty($questionNumbers), fn($q) => $q->whereIn('exam_question_number', $questionNumbers))
+            ->whereNull('parent_question_id')
+            ->where('source_type', $sourceType);
+
+        // 모의고사 기출 필터
+        if ($sourceType === 'mock_exam') {
+            $query->when($params['exam_year'] ?? null, fn($q, $v) => $q->where('exam_year', $v))
+                ->when($params['exam_years'] ?? null, fn($q, $v) => $q->whereIn('exam_year', $v))
+                ->when($params['exam_month'] ?? null, fn($q, $v) => $q->where('exam_month', $v))
+                ->when($params['exam_months'] ?? null, fn($q, $v) => $q->whereIn('exam_month', $v))
+                ->when($params['exam_grade'] ?? null, fn($q, $v) => $q->where('exam_grade', $v))
+                ->when($params['exam_grades'] ?? null, fn($q, $v) => $q->whereIn('exam_grade', $v))
+                ->when($params['exam_subjects'] ?? null, fn($q, $v) => $q->whereIn('exam_subject', $v));
+        }
+
+        // 학교 기출 필터
+        if ($sourceType === 'school_exam') {
+            $query->when($params['school_id'] ?? null, function ($q, $v) {
+                    return is_array($v) ? $q->whereIn('school_id', $v) : $q->where('school_id', $v);
+                })
+                ->when($params['exam_year'] ?? null, fn($q, $v) => $q->where('exam_year', $v))
+                ->when($params['exam_years'] ?? null, fn($q, $v) => $q->whereIn('exam_year', $v))
+                ->when($params['exam_grade'] ?? null, fn($q, $v) => $q->where('exam_grade', $v))
+                ->when($params['exam_grades'] ?? null, fn($q, $v) => $q->whereIn('exam_grade', $v))
+                ->when($params['exam_semester'] ?? null, fn($q, $v) => $q->where('exam_semester', $v))
+                ->when($params['exam_semesters'] ?? null, fn($q, $v) => $q->whereIn('exam_semester', $v))
+                ->when($params['exam_type'] ?? null, fn($q, $v) => $q->where('exam_type', $v))
+                ->when($params['exam_types'] ?? null, fn($q, $v) => $q->whereIn('exam_type', $v))
+                ->when($params['exam_subjects'] ?? null, fn($q, $v) => $q->whereIn('exam_subject', $v));
+        }
+
+        // 기출문제 학원별 공유 규칙 적용 (기본: 자기 학원만, 공유 규칙으로 접근 허용)
+        if ($sourceType && auth()->check() && !auth()->user()->isRoleAbove('admin')) {
+            $academyId = auth()->user()->academy_id;
+            if ($academyId) {
+                $sharingRules = ExamSharingRule::where('academy_id', $academyId)
+                    ->where('source_type', $sourceType)
+                    ->where('is_allowed', true)
+                    ->get();
+
+                if ($sharingRules->isEmpty()) {
+                    $query->where('questions.academy_id', $academyId);
+                } else {
+                    $query->where(function ($q) use ($academyId, $sharingRules, $sourceType) {
+                        $q->where('questions.academy_id', $academyId);
+
+                        foreach ($sharingRules as $rule) {
+                            $q->orWhere(function ($sub) use ($rule, $sourceType) {
+                                $sub->where('questions.source_type', $sourceType);
+
+                                if ($rule->exam_year) {
+                                    $sub->where('questions.exam_year', $rule->exam_year);
+                                }
+                                if ($rule->exam_month) {
+                                    $sub->where('questions.exam_month', $rule->exam_month);
+                                }
+                                if ($rule->exam_semester) {
+                                    $sub->where('questions.exam_semester', $rule->exam_semester);
+                                }
+                                if ($rule->exam_type) {
+                                    $sub->where('questions.exam_type', $rule->exam_type);
+                                }
+                                if ($rule->exam_subject) {
+                                    $sub->where('questions.exam_subject', $rule->exam_subject);
+                                }
+                                if ($rule->school_id) {
+                                    $sub->where('questions.school_id', $rule->school_id);
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        }
+
+        return $query->orderBy('exam_question_number')
+            ->with('questionType', 'choices')
+            ->get();
     }
 
     protected static function selectQuestionsForType($typeId, $questionCount, array $params, array $excludeIds, ?int $level = null): Collection
@@ -741,11 +901,20 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             return $result;
         }
 
-        $questionsPerLevel = (int) floor($params['question_count'] / count($levels));
-        $remainingQuestions = $params['question_count'] % count($levels);
+        $totalCount = $params['question_count'];
+        $questionsPerLevel = (int) floor($totalCount / count($levels));
+        $remainingQuestions = $totalCount % count($levels);
+
+        // 나머지 문제를 배분할 레벨 인덱스를 셔플하여 특정 레벨에 몰리지 않게 함
+        $levelIndices = range(0, count($levels) - 1);
+        shuffle($levelIndices);
+        $extraLevels = array_slice($levelIndices, 0, $remainingQuestions);
+
+        $selectedIds = $excludeIds;
+        $levelResults = []; // 레벨별 선택 결과 추적
 
         foreach ($levels as $levelIndex => $level) {
-            $levelQuestionCount = $questionsPerLevel + ($levelIndex < $remainingQuestions ? 1 : 0);
+            $levelQuestionCount = $questionsPerLevel + (in_array($levelIndex, $extraLevels) ? 1 : 0);
 
             // 유형 ID를 셔플하여 나머지 문제가 특정 유형에 몰리지 않게 함
             $shuffledTypeIds = $questionTypeIds;
@@ -754,11 +923,24 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             $questionsPerType = (int) floor($levelQuestionCount / count($shuffledTypeIds));
             $remainingTypeQuestions = $levelQuestionCount % count($shuffledTypeIds);
 
+            $levelCollected = collect();
             foreach ($shuffledTypeIds as $typeIndex => $typeId) {
                 $typeQuestionCount = $questionsPerType + ($typeIndex < $remainingTypeQuestions ? 1 : 0);
-                $questions = self::selectQuestionsForType($typeId, $typeQuestionCount, $params, $excludeIds, $level);
-                $result = $result->concat($questions);
+                $questions = self::selectQuestionsForType($typeId, $typeQuestionCount, $params, $selectedIds, $level);
+                $levelCollected = $levelCollected->concat($questions);
+                $selectedIds = array_merge($selectedIds, $questions->pluck('id')->toArray());
             }
+
+            // 레벨 내 유형별로 부족하면 레벨 전체에서 추가 선택
+            if ($levelCollected->count() < $levelQuestionCount) {
+                $needed = $levelQuestionCount - $levelCollected->count();
+                $additional = self::selectQuestionsForType($questionTypeIds, $needed, $params, $selectedIds, $level);
+                $levelCollected = $levelCollected->concat($additional);
+                $selectedIds = array_merge($selectedIds, $additional->pluck('id')->toArray());
+            }
+
+            $levelResults[$levelIndex] = ['level' => $level, 'target' => $levelQuestionCount, 'collected' => $levelCollected];
+            $result = $result->concat($levelCollected);
         }
 
         return $result;

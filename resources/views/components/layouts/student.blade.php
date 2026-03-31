@@ -57,7 +57,11 @@
            z-50
             ">
                 <div class="flex flex-row items-center justify-between">
-                    <img src="/logo.png" class="w-2/3" />
+                    @php
+                        $currentAcademy = auth()->user()?->academy;
+                        $logoUrl = $currentAcademy?->logo_path ? Storage::url($currentAcademy->logo_path) : '/logo.png';
+                    @endphp
+                    <img src="{{ $logoUrl }}" class="w-2/3" />
                     <button class="lg:hidden menu-button">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-6">
                             <path
@@ -65,7 +69,31 @@
                         </svg>
                     </button>
                 </div>
-                <div class="flex flex-col mt-8 gap-y-0.5 flex-1">
+                @php
+                    // 같은 전화번호로 등록된 다른 학원의 학생 계정 조회
+                    $otherAccounts = collect();
+                    if (auth()->check() && auth()->user()->phone) {
+                        $otherAccounts = \App\Models\User::where('phone', auth()->user()->phone)
+                            ->where('userable_type', \App\Models\Student::class)
+                            ->where('id', '!=', auth()->id())
+                            ->with('academy')
+                            ->get();
+                    }
+                @endphp
+                @if ($otherAccounts->isNotEmpty())
+                    <div class="mt-3 mb-1">
+                        <select onchange="if(this.value) window.location.href=this.value"
+                            class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:ring-2 focus:ring-[#8570C2] focus:border-[#8570C2]">
+                            <option value="">{{ auth()->user()->academy?->name ?? '학원 선택' }}</option>
+                            @foreach ($otherAccounts as $account)
+                                <option value="{{ route('switch-academy', $account->id) }}">
+                                    {{ $account->academy?->name ?? '학원 ' . $account->academy_id }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
+                <div class="flex flex-col mt-4 gap-y-0.5 flex-1">
                     <a href="/"
                         class="flex items-center gap-x-5 font-semibold p-4 transition-all hover:bg-[#F6F8FF] rounded-lg {{ request()->is('/') ? 'bg-[#F6F8FF] text-[#8570C2]' : '' }}">
                         <svg width="16" height="18" viewBox="0 0 16 18" fill="none"
@@ -154,26 +182,36 @@
             </div>
         </div>
         {{-- 푸터 --}}
+        @if(isset($currentAcademy))
         <footer class="w-full border-t px-5 py-6" style="background-color: #f3f4f6;">
             <div class="flex flex-col md:flex-row gap-6 md:gap-16">
                 <div class="flex-shrink-0">
-                    <img src="/logo.png" class="w-32 md:w-40" alt="퍼펙트스터디" />
+                    <img src="{{ $currentAcademy->logo_path ? Storage::url($currentAcademy->logo_path) : '/logo.png' }}" class="w-32 md:w-40" alt="{{ $currentAcademy->name }}" />
                 </div>
                 <div class="text-sm text-gray-600 flex-1">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                         <div class="space-y-1">
-                            <p><span class="font-semibold">상호:</span> 퍼펙트스터디</p>
-                            <p><span class="font-semibold">대표자명:</span> 류성문</p>
-                            <p><span class="font-semibold">사업자등록번호:</span> 598-06-02832</p>
+                            <p><span class="font-semibold">상호:</span> {{ $currentAcademy->name }}</p>
+                            @if($currentAcademy->representative_name)
+                            <p><span class="font-semibold">대표자명:</span> {{ $currentAcademy->representative_name }}</p>
+                            @endif
+                            @if($currentAcademy->business_number)
+                            <p><span class="font-semibold">사업자등록번호:</span> {{ $currentAcademy->business_number }}</p>
+                            @endif
                         </div>
                         <div class="space-y-1">
-                            <p><span class="font-semibold">사업장주소:</span> 서울시 양천구 신목로 12길 22, 104동 504호(롯데캐슬)</p>
-                            <p><span class="font-semibold">유선전화번호:</span> 010-9313-1786</p>
+                            @if($currentAcademy->address)
+                            <p><span class="font-semibold">사업장주소:</span> {{ $currentAcademy->address }}</p>
+                            @endif
+                            @if($currentAcademy->phone)
+                            <p><span class="font-semibold">유선전화번호:</span> {{ $currentAcademy->phone }}</p>
+                            @endif
                         </div>
                     </div>
                 </div>
             </div>
         </footer>
+        @endif
     </main>
 
     <!-- Livewire Scripts -->

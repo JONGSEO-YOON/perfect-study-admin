@@ -20,6 +20,7 @@ class Lecture extends Model
         'target_students' => 'array',
         'lecture_info' => 'array',
         'attachments' => 'array',
+        'links' => 'array',
         'scopes' => 'array',
     ];
 

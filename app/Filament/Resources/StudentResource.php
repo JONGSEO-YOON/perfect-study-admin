@@ -191,7 +191,12 @@ class StudentResource extends Resource
                                         }
 
                                         $phone = implode('-', $value);
-                                        if (User::where('phone', $phone)->where('id', '!=', $get('id'))->exists()) {
+                                        $query = User::where('phone', $phone)->where('id', '!=', $get('id'));
+                                        // 같은 학원 내에서만 중복 체크
+                                        if (auth()->user()->academy_id) {
+                                            $query->where('academy_id', auth()->user()->academy_id);
+                                        }
+                                        if ($query->exists()) {
                                             $fail('이미 존재하는 전화번호입니다.');
                                         }
                                     },
@@ -398,6 +403,22 @@ class StudentResource extends Resource
                                 });
                             });
                     }),
+                SelectFilter::make('status')
+                    ->label('상태')
+                    ->options([
+                        'enrolled' => '재원',
+                        'pending' => '승인대기',
+                    ]),
+                SelectFilter::make('grade_system_id')
+                    ->label('학년')
+                    ->options(fn () => GradeSystem::orderBy('sequential_order')->pluck('display_name', 'id')->toArray())
+                    ->searchable()
+                    ->preload(),
+                SelectFilter::make('school_id')
+                    ->label('학교')
+                    ->options(fn () => School::orderBy('name')->pluck('name', 'id')->toArray())
+                    ->searchable()
+                    ->preload(),
             ], layout: FiltersLayout::AboveContent)
             ->actions([
                 Tables\Actions\Action::make('attendance')
@@ -464,18 +485,18 @@ class StudentResource extends Resource
                         Select::make('withdrawal_reason')
                             ->label('퇴원 사유')
                             ->options([
-                                '성적부진' => '성적부진',
-                                '분위기전환' => '분위기전환',
-                                '선생님맞지않음' => '선생님맞지않음',
-                                '학원분위기안좋음' => '학원분위기안좋음',
-                                '이사' => '이사',
-                                '기타' => '기타',
+                                'poor_performance' => '성적부진',
+                                'change_of_atmosphere' => '분위기전환',
+                                'teacher_mismatch' => '선생님맞지않음',
+                                'academy_atmosphere' => '학원분위기안좋음',
+                                'relocation' => '이사',
+                                'other' => '기타',
                             ])
                             ->required()
                             ->reactive(),
                         TextInput::make('withdrawal_reason_detail')
                             ->label('기타 사유')
-                            ->visible(fn(\Filament\Forms\Get $get) => $get('withdrawal_reason') === '기타'),
+                            ->visible(fn(\Filament\Forms\Get $get) => $get('withdrawal_reason') === 'other'),
                         DatePicker::make('withdrawn_at')
                             ->label('퇴원 일자')
                             ->required()
@@ -496,9 +517,15 @@ class StudentResource extends Resource
                             'changed_by' => auth()->id(),
                             'from_status' => $oldStatus,
                             'to_status' => 'withdrawn',
-                            'reason' => $data['withdrawal_reason'] === '기타'
+                            'reason' => $data['withdrawal_reason'] === 'other'
                                 ? '기타: ' . ($data['withdrawal_reason_detail'] ?? '')
-                                : $data['withdrawal_reason'],
+                                : [
+                                    'poor_performance' => '성적부진',
+                                    'change_of_atmosphere' => '분위기전환',
+                                    'teacher_mismatch' => '선생님맞지않음',
+                                    'academy_atmosphere' => '학원분위기안좋음',
+                                    'relocation' => '이사',
+                                ][$data['withdrawal_reason']] ?? $data['withdrawal_reason'],
                         ]);
 
                         Notification::make()->title('퇴원 처리되었습니다.')->success()->send();
@@ -783,11 +810,17 @@ class StudentResource extends Resource
                                 'is_active' => $data['is_active'],
                             ]);
 
+                            // 승인 상태에 따라 학생 status 변경
+                            if ($data['is_active'] && $record->status === 'pending') {
+                                $record->update(['status' => 'enrolled']);
+                            } elseif (!$data['is_active'] && $record->status === 'enrolled') {
+                                $record->update(['status' => 'pending']);
+                            }
+
                             if ($data['password'] ?? false) {
                                 $record->user->update([
                                     'password' => $data['password'],
                                 ]);
-                                // dd($data['password']);
                             }
                             Notification::make()
                                 ->title('계정이 성공적으로 업데이트되었습니다.')

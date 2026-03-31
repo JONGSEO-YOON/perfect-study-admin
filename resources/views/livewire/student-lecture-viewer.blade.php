@@ -56,6 +56,23 @@
                 {!! $lecture->description !!}
             </div>
         </div>
+        @if (!empty($lecture->links))
+            <div class="mt-4 pb-4 border-b">
+                <h3 class="text-sm font-semibold text-gray-700 mb-2">자료 링크</h3>
+                <div class="flex flex-col gap-y-2">
+                    @foreach ($lecture->links as $link)
+                        <a href="{{ $link['url'] }}" target="_blank" rel="noopener noreferrer"
+                            class="flex items-center gap-x-2 text-sm text-blue-600 hover:text-blue-800 hover:underline">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 shrink-0">
+                                <path d="M12.232 4.232a2.5 2.5 0 0 1 3.536 3.536l-1.225 1.224a.75.75 0 0 0 1.061 1.06l1.224-1.224a4 4 0 0 0-5.656-5.656l-3 3a4 4 0 0 0 .225 5.865.75.75 0 0 0 .977-1.138 2.5 2.5 0 0 1-.142-3.667l3-3Z" />
+                                <path d="M11.603 7.963a.75.75 0 0 0-.977 1.138 2.5 2.5 0 0 1 .142 3.667l-3 3a2.5 2.5 0 0 1-3.536-3.536l1.225-1.224a.75.75 0 0 0-1.061-1.06l-1.224 1.224a4 4 0 1 0 5.656 5.656l3-3a4 4 0 0 0-.225-5.865Z" />
+                            </svg>
+                            {{ $link['title'] ?? $link['url'] }}
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        @endif
         <div class="w-full flex flex-col mt-6">
             @livewire(\App\Livewire\StudentLectureVideoList::class, [
                 'id' => $lecture->id,

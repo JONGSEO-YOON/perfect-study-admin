@@ -172,7 +172,7 @@ class StudentHistoryResource extends Resource
                         . ($history->memo ? ' - ' . $history->memo : '')
                         . ($history->changedBy ? ' (처리: ' . $history->changedBy->name . ')' : ''),
                 ];
-            } elseif ($history->to_status === 'active' && $history->from_status === 'withdrawn') {
+            } elseif (in_array($history->to_status, ['active', 'enrolled']) && $history->from_status === 'withdrawn') {
                 $events[] = [
                     'date' => $history->created_at,
                     'type' => 're_register',

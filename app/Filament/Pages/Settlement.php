@@ -97,7 +97,16 @@ class Settlement extends Page
         ];
 
         try {
-            $secretKey = config('services.toss.secret_key');
+            // 학원별 토스 키 사용 (없으면 글로벌 설정 fallback)
+            $academy = auth()->user()->academy;
+            $secretKey = $academy?->toss_secret_key ?: config('services.toss.secret_key');
+
+            if (empty($secretKey)) {
+                $this->errorMessage = '토스 페이먼츠 시크릿 키가 설정되어 있지 않습니다. 학원 관리에서 설정해주세요.';
+                $this->isLoading = false;
+                return;
+            }
+
             $startDateTime = $this->startDate . 'T00:00:00';
             $endDateTime = $this->endDate . 'T23:59:59';
 
@@ -144,10 +153,13 @@ class Settlement extends Page
 
             // orderId로 DB Payment 매칭하여 학생 정보 추가
             $orderIds = array_filter(array_column($allTransactions, 'orderId'));
-            $payments = Payment::with('student.user')
-                ->whereIn('order_id', $orderIds)
-                ->get()
-                ->keyBy('order_id');
+            $paymentsQuery = Payment::with('student.user')
+                ->whereIn('order_id', $orderIds);
+            // root_admin이 아니면 자기 학원 결제만
+            if (auth()->user()->role !== 'root_admin' && auth()->user()->academy_id) {
+                $paymentsQuery->where('academy_id', auth()->user()->academy_id);
+            }
+            $payments = $paymentsQuery->get()->keyBy('order_id');
 
             foreach ($allTransactions as &$tx) {
                 $orderId = $tx['orderId'] ?? null;

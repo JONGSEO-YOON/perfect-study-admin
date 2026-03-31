@@ -29,10 +29,7 @@ class Home extends Component
         // AttendanceLog 모델의 메서드 사용
         $this->attendances = AttendanceLog::getTodayAttendanceForStudent($this->student->id);
 
-        $this->notices = Notice::whereJsonContains('target_groups', '학부모')
-            ->orWhereJsonContains('target_groups', '"학부모"')
-            ->orderBy('pinned_at', 'desc')
-            ->get();
+        $this->loadNotices();
 
         $this->loadStudentNotices();
 
@@ -46,15 +43,29 @@ class Home extends Component
         $this->student = Student::find($id);
         $this->attendances = AttendanceLog::getTodayAttendanceForStudent($this->student->id);
 
-        $this->notices = Notice::whereJsonContains('target_groups', '학부모')
-            ->orWhereJsonContains('target_groups', '"학부모"')
-            ->orderBy('pinned_at', 'desc')
-            ->get();
+        $this->loadNotices();
 
         $this->loadStudentNotices();
 
         // 학생 변경 시 성적표도 다시 로드
         $this->loadWeeklyReport();
+    }
+
+    protected function loadNotices()
+    {
+        // 학생의 학원에 맞는 공지만 조회
+        $academyId = $this->student?->academy_id;
+
+        $query = Notice::where(function ($q) {
+            $q->whereJsonContains('target_groups', '학부모')
+                ->orWhereJsonContains('target_groups', '"학부모"');
+        });
+
+        if ($academyId) {
+            $query->where('academy_id', $academyId);
+        }
+
+        $this->notices = $query->orderBy('pinned_at', 'desc')->get();
     }
 
     protected function loadStudentNotices()

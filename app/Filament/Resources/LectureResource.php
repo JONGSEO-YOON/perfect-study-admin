@@ -47,7 +47,26 @@ class LectureResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()->userable instanceof \App\Models\Teacher;
+        if (!(auth()->user()->userable instanceof \App\Models\Teacher)) {
+            return false;
+        }
+
+        $user = auth()->user();
+
+        if ($user->role === 'root_admin') {
+            return true;
+        }
+
+        $academy = $user->academy;
+
+        if ($academy) {
+            $settings = $academy->settings ?? [];
+            if (isset($settings['lectures_visible']) && $settings['lectures_visible'] === false) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public static function getBreadcrumb(): string
@@ -204,6 +223,24 @@ class LectureResource extends Resource
                             ->placeholder('클릭하거나 파일을 드래그하여 업로드')
                             ->previewable(false)
                             ->downloadable(true)
+                            ->columnSpanFull(),
+                        \Filament\Forms\Components\Repeater::make('links')
+                            ->label('외부 링크')
+                            ->schema([
+                                \Filament\Forms\Components\TextInput::make('title')
+                                    ->label('제목')
+                                    ->required()
+                                    ->placeholder('예: 1강 자료'),
+                                \Filament\Forms\Components\TextInput::make('url')
+                                    ->label('링크 URL')
+                                    ->required()
+                                    ->url()
+                                    ->placeholder('https://naver.me/... 또는 구글 드라이브 링크'),
+                            ])
+                            ->columns(2)
+                            ->addActionLabel('링크 추가')
+                            ->collapsible()
+                            ->defaultItems(0)
                             ->columnSpanFull()
 
                     ]),
