@@ -41,7 +41,7 @@
                             <div class="flex items-center justify-center gap-2">
                                 <button
                                     type="button"
-                                    wire:click="mountAction('edit_schedule', { schedule_id: {{ $schedule->id }} })"
+                                    x-on:click="$wire.unmountAction(); $nextTick(() => $wire.mountAction('edit_schedule', @js(['schedule_id' => $schedule->id])))"
                                     class="text-xs text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
                                 >
                                     수정
@@ -50,7 +50,8 @@
                                 @if ($schedule->is_active)
                                     <button
                                         type="button"
-                                        wire:click="mountAction('toggle_schedule', { schedule_id: {{ $schedule->id }} })"
+                                        wire:click="togglePaymentSchedule({{ $schedule->id }})"
+                                        wire:confirm="이 예약 알림을 비활성화하시겠습니까?"
                                         class="text-xs text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300 font-medium"
                                     >
                                         비활성
@@ -58,7 +59,8 @@
                                 @else
                                     <button
                                         type="button"
-                                        wire:click="mountAction('toggle_schedule', { schedule_id: {{ $schedule->id }} })"
+                                        wire:click="togglePaymentSchedule({{ $schedule->id }})"
+                                        wire:confirm="이 예약 알림을 다시 활성화하시겠습니까?"
                                         class="text-xs text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 font-medium"
                                     >
                                         활성
@@ -67,7 +69,8 @@
                                 <span class="text-gray-300 dark:text-gray-600">|</span>
                                 <button
                                     type="button"
-                                    wire:click="mountAction('delete_schedule', { schedule_id: {{ $schedule->id }} })"
+                                    wire:click="deletePaymentSchedule({{ $schedule->id }})"
+                                    wire:confirm="이 예약 알림을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
                                     class="text-xs text-danger-600 hover:text-danger-800 dark:text-danger-400 dark:hover:text-danger-300 font-medium"
                                 >
                                     삭제

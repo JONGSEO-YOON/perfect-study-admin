@@ -245,45 +245,6 @@ class ListPayments extends ListRecords
                         ->send();
                 }),
 
-            Actions\Action::make('toggle_schedule')
-                ->hidden()
-                ->requiresConfirmation()
-                ->modalHeading(fn(array $arguments) =>
-                    PaymentSchedule::find($arguments['schedule_id'])?->is_active
-                        ? '예약 비활성화'
-                        : '예약 활성화'
-                )
-                ->modalDescription(fn(array $arguments) =>
-                    PaymentSchedule::find($arguments['schedule_id'])?->is_active
-                        ? '이 예약 알림을 비활성화하시겠습니까?'
-                        : '이 예약 알림을 다시 활성화하시겠습니까?'
-                )
-                ->action(function (array $arguments) {
-                    $schedule = PaymentSchedule::find($arguments['schedule_id']);
-                    $schedule->update(['is_active' => !$schedule->is_active]);
-
-                    $label = $schedule->is_active ? '활성화' : '비활성화';
-                    Notification::make()
-                        ->title("예약 알림이 {$label}되었습니다.")
-                        ->success()
-                        ->send();
-                }),
-
-            Actions\Action::make('delete_schedule')
-                ->hidden()
-                ->requiresConfirmation()
-                ->modalHeading('예약 삭제')
-                ->modalDescription('이 예약 알림을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')
-                ->color('danger')
-                ->action(function (array $arguments) {
-                    PaymentSchedule::find($arguments['schedule_id'])?->delete();
-
-                    Notification::make()
-                        ->title('예약 알림이 삭제되었습니다.')
-                        ->success()
-                        ->send();
-                }),
-
             Actions\Action::make('create_schedule')
                 ->label('예약 추가')
                 ->icon('heroicon-m-plus-circle')
@@ -362,6 +323,45 @@ class ListPayments extends ListRecords
                         ->send();
                 }),
         ];
+    }
+
+    public function deletePaymentSchedule(int $scheduleId): void
+    {
+        $schedule = PaymentSchedule::find($scheduleId);
+        if (!$schedule) {
+            Notification::make()
+                ->title('예약 알림을 찾을 수 없습니다.')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        $schedule->delete();
+
+        Notification::make()
+            ->title('예약 알림이 삭제되었습니다.')
+            ->success()
+            ->send();
+    }
+
+    public function togglePaymentSchedule(int $scheduleId): void
+    {
+        $schedule = PaymentSchedule::find($scheduleId);
+        if (!$schedule) {
+            Notification::make()
+                ->title('예약 알림을 찾을 수 없습니다.')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        $schedule->update(['is_active' => !$schedule->is_active]);
+
+        $label = $schedule->is_active ? '활성화' : '비활성화';
+        Notification::make()
+            ->title("예약 알림이 {$label}되었습니다.")
+            ->success()
+            ->send();
     }
 
     protected function resolveStudentIds(string $type, array $ids): array
