@@ -43,6 +43,9 @@ class WithdrawnStudentResource extends Resource
 
     public static function canViewAny(): bool
     {
+        if (!\App\Models\Academy::isMenuGroupVisibleForCurrentUser('classroom')) {
+            return false;
+        }
         // 관리자와 상담실만
         $user = auth()->user();
         return $user && (

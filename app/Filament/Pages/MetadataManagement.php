@@ -19,4 +19,9 @@ class MetadataManagement extends Page
     protected static ?string $navigationGroup = '문제 관리';
 
     protected static ?int $navigationSort = 2;
+
+    public static function canAccess(): bool
+    {
+        return \App\Models\Academy::isMenuGroupVisibleForCurrentUser('tests');
+    }
 }

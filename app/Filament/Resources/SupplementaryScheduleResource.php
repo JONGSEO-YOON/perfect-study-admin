@@ -38,6 +38,11 @@ class SupplementaryScheduleResource extends Resource
 
     protected static ?int $navigationSort = 6;
 
+    public static function canViewAny(): bool
+    {
+        return \App\Models\Academy::isMenuGroupVisibleForCurrentUser('classroom');
+    }
+
     public static function getBreadcrumb(): string
     {
         return '';

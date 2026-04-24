@@ -37,6 +37,9 @@ class QuestionCategoryResource extends Resource
 
     public static function canViewAny(): bool
     {
+        if (!\App\Models\Academy::isMenuGroupVisibleForCurrentUser('tests')) {
+            return false;
+        }
         return auth()->user()->role == 'root_admin';
     }
 

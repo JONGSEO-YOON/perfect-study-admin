@@ -56,6 +56,9 @@ class QuestionResource extends Resource
 
     public static function canViewAny(): bool
     {
+        if (!\App\Models\Academy::isMenuGroupVisibleForCurrentUser('tests')) {
+            return false;
+        }
         return auth()->user()->userable instanceof \App\Models\Teacher;
     }
 

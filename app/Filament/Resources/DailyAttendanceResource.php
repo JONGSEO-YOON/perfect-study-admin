@@ -37,6 +37,11 @@ class DailyAttendanceResource extends Resource
 
     protected static ?int $navigationSort = 1;
 
+    public static function canViewAny(): bool
+    {
+        return \App\Models\Academy::isMenuGroupVisibleForCurrentUser('attendance');
+    }
+
     public static function getBreadcrumb(): string
     {
         return '일별출결 현황';

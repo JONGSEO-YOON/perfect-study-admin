@@ -33,6 +33,11 @@ class MonthlyAttendance extends Page
 
     protected static string $view = 'filament.pages.monthly-attendance';
 
+    public static function canAccess(): bool
+    {
+        return \App\Models\Academy::isMenuGroupVisibleForCurrentUser('attendance');
+    }
+
     public $selectedYear;
     public $selectedMonth;
     public $selectedClassroom;

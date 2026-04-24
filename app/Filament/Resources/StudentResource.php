@@ -59,6 +59,11 @@ class StudentResource extends Resource
 
     protected static ?string $navigationLabel = '학생 관리';
 
+    public static function canViewAny(): bool
+    {
+        return \App\Models\Academy::isMenuGroupVisibleForCurrentUser('classroom');
+    }
+
     public static function getBreadcrumb(): string
     {
         return '';
