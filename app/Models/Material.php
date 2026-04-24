@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Traits\BelongsToAcademy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -11,11 +10,45 @@ use Illuminate\Support\Facades\DB;
 
 class Material extends Model
 {
-    use HasFactory, SoftDeletes, BelongsToAcademy;
+    use HasFactory, SoftDeletes;
+
+    public function academy()
+    {
+        return $this->belongsTo(Academy::class);
+    }
 
     protected static function boot()
     {
         parent::boot();
+
+        // 학원별 필터링 (자기 학원 + 공유받은 학원의 교재)
+        static::addGlobalScope('academy_with_sharing', function (Builder $builder) {
+            if (!auth()->check()) return;
+
+            $user = auth()->user();
+
+            // root_admin은 전체 조회
+            if ($user->role === 'root_admin') return;
+
+            $academyId = $user->academy_id;
+            if (!$academyId) return;
+
+            $builder->where(function ($q) use ($academyId) {
+                // 자기 학원 교재
+                $q->where('materials.academy_id', $academyId)
+                    // 다른 학원이 공유해준 교재
+                    ->orWhereHas('visibleAcademies', function ($sub) use ($academyId) {
+                        $sub->where('academy_id', $academyId);
+                    });
+            });
+        });
+
+        // 생성 시 자동으로 academy_id 설정
+        static::creating(function ($model) {
+            if (!$model->academy_id && auth()->check()) {
+                $model->academy_id = auth()->user()->academy_id;
+            }
+        });
 
         // deleting 이벤트 등록
         static::deleting(function ($material) {
@@ -82,6 +115,15 @@ class Material extends Model
     public function visibleUsers()
     {
         return $this->belongsToMany(User::class, 'material_user_visibility')
+            ->withTimestamps();
+    }
+
+    /**
+     * 교재를 공유받은 학원들과의 관계
+     */
+    public function visibleAcademies()
+    {
+        return $this->belongsToMany(Academy::class, 'material_academy_visibility')
             ->withTimestamps();
     }
 

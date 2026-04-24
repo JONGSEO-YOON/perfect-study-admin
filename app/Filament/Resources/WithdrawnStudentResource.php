@@ -136,8 +136,16 @@ class WithdrawnStudentResource extends Resource
                     ->preload(),
                 SelectFilter::make('teacher')
                     ->label('강사')
-                    ->options(fn() => User::where('userable_type', Teacher::class)->with('userable')->get()
-                        ->mapWithKeys(fn($u) => [$u->userable->id => $u->name])->toArray())
+                    ->options(function () {
+                        $query = User::where('userable_type', Teacher::class)->with('userable');
+                        if (auth()->user()->academy_id) {
+                            $query->where('academy_id', auth()->user()->academy_id);
+                        }
+                        return $query->get()
+                            ->filter(fn($u) => $u->userable !== null)
+                            ->mapWithKeys(fn($u) => [$u->userable->id => $u->name])
+                            ->toArray();
+                    })
                     ->query(fn(Builder $query, array $data) => $query->when(
                         $data['value'] ?? null,
                         fn($q, $v) => $q->whereHas('classrooms', fn($sq) => $sq->where('teacher_id', $v))
@@ -178,6 +186,7 @@ class WithdrawnStudentResource extends Resource
                         StudentStatusHistory::create([
                             'student_id' => $record->id,
                             'changed_by' => auth()->id(),
+                            'event_type' => 're_register',
                             'from_status' => $oldStatus,
                             'to_status' => 'enrolled',
                             'reason' => '재원 처리',

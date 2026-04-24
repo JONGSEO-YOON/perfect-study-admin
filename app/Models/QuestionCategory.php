@@ -7,6 +7,48 @@ use Illuminate\Support\Facades\DB;
 
 class QuestionCategory extends Model
 {
+    /**
+     * 카테고리 이름이 변경되면 같은 이름의 questions.exam_subject도 함께 업데이트
+     * (기출 문제는 exam_subject에 텍스트로 저장되어 있어 동기화가 필요함)
+     */
+    protected static function booted(): void
+    {
+        static::updating(function (QuestionCategory $category) {
+            if (!$category->isDirty('name')) {
+                return;
+            }
+
+            // 이름의 HTML 태그 제거 + (2025개정) 같은 suffix 제거 (form에서 사용하는 정규화와 동일)
+            $oldName = self::normalizeName($category->getOriginal('name'));
+            $newName = self::normalizeName($category->name);
+
+            if ($oldName === $newName || empty($oldName) || empty($newName)) {
+                return;
+            }
+
+            // 같은 이름의 exam_subject를 가진 모든 기출 문제 업데이트 (학원 무관 전체)
+            $updated = DB::table('questions')
+                ->where('exam_subject', $oldName)
+                ->update(['exam_subject' => $newName, 'updated_at' => now()]);
+
+            if ($updated > 0) {
+                \Illuminate\Support\Facades\Log::info("QuestionCategory 이름 변경에 따른 exam_subject 동기화", [
+                    'old' => $oldName,
+                    'new' => $newName,
+                    'updated_questions' => $updated,
+                ]);
+            }
+        });
+    }
+
+    /**
+     * 카테고리 이름 정규화: HTML 태그 제거 + (2025개정) 등 suffix 제거
+     */
+    public static function normalizeName(?string $name): string
+    {
+        if (!$name) return '';
+        return trim(str_replace('(2025개정)', '', strip_tags(trim($name))));
+    }
 
     // 직계 자식 카테고리들
     public function children()

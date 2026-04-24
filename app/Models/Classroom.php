@@ -36,7 +36,15 @@ class Classroom extends Model
     public function students(): BelongsToMany
     {
         return $this->belongsToMany(Student::class)
+            ->wherePivotNull('deleted_at')
             ->withTimestamps();
+    }
+
+    public function allStudentsIncludingRemoved(): BelongsToMany
+    {
+        return $this->belongsToMany(Student::class)
+            ->withTimestamps()
+            ->withPivot('deleted_at');
     }
 
     protected static function booted()

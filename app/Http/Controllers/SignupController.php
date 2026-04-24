@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 class SignupController extends Controller
@@ -15,10 +16,23 @@ class SignupController extends Controller
   public function signup(Request $request)
   {
 
+    // 현재 학원 ID (서브도메인 미들웨어에서 설정)
+    $currentAcademyId = (app()->has('current_academy') && app('current_academy'))
+      ? app('current_academy')->id
+      : null;
+
     $validator = Validator::make($request->all(), [
       'name' => ['required', 'string', 'max:255'],
       'birthday' => ['required', 'string', 'size:6', 'regex:/^[0-9]{6}$/'],
-      'username' => ['required', 'string', 'max:255', 'unique:users'],
+      'username' => [
+        'required', 'string', 'max:255',
+        // 학원별로 username 중복 체크 (멀티테넌시)
+        Rule::unique('users', 'username')->where(function ($query) use ($currentAcademyId) {
+          if ($currentAcademyId) {
+            $query->where('academy_id', $currentAcademyId);
+          }
+        }),
+      ],
       'password' => ['required', 'confirmed'],
     ]);
 

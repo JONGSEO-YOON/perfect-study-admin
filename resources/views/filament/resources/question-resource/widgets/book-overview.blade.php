@@ -10,11 +10,15 @@
                 @endphp
                 {{ collect($path)->pluck('name')->join(' > ') }}
             </div>
-            @if ($selectedMaterialId && $selectedMaterial?->is_editable)
+            @if ($selectedMaterialId && $selectedMaterial)
                 <div class="flex flex-row gap-x-2">
-                    {{-- {{ $this->deleteMaterialAction }} --}}
-                    {{ $this->editMaterialAction }}
-                    {{ $this->deleteMaterialAction }}
+                    @if ($selectedMaterial->is_editable)
+                        {{ $this->editMaterialAction }}
+                        {{ $this->deleteMaterialAction }}
+                        {{ $this->resequenceQuestionsAction }}
+                    @endif
+                    {{-- 다른 학원 공유 받은 교재면 "내 학원으로 복사" 노출 --}}
+                    {{ $this->copyMaterialAction }}
                 </div>
             @endif
         </div>

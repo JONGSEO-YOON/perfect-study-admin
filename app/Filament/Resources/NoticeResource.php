@@ -118,6 +118,9 @@ class NoticeResource extends Resource
                     })
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('academy.name')
+                    ->label('소속 학원')
+                    ->visible(fn () => auth()->user()->role === 'root_admin'),
                 TextColumn::make('target_groups')
                     ->label('공지 대상'),
                 TextColumn::make('author.name')

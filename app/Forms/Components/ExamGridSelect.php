@@ -8,12 +8,15 @@ class ExamGridSelect extends Field
 {
     protected string $view = 'filament.components.forms.exam-grid-select';
 
-    protected array $items = [];
+    protected array | \Closure $items = [];
     protected bool $multiple = false;
     protected int $cols = 2;
     protected int $maxHeight = 0;
 
-    public function items(array $items): static
+    /**
+     * @param array|\Closure $items 정적 배열 또는 클로저 (form Get 등 활용 가능)
+     */
+    public function items(array | \Closure $items): static
     {
         $this->items = $items;
         return $this;
@@ -21,7 +24,7 @@ class ExamGridSelect extends Field
 
     public function getItems(): array
     {
-        return $this->items;
+        return (array) $this->evaluate($this->items);
     }
 
     public function multiple(bool $multiple = true): static

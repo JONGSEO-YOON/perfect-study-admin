@@ -138,6 +138,9 @@ class SupplementaryScheduleResource extends Resource
                     ->label('보충 날짜')
                     ->date('Y-m-d')
                     ->sortable(),
+                TextColumn::make('academy.name')
+                    ->label('소속 학원')
+                    ->visible(fn () => auth()->user()->role === 'root_admin'),
                 TextColumn::make('start_time')
                     ->label('시작')
                     ->time('H:i'),

@@ -544,6 +544,32 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         $this->summary = self::getDistributionSummary($this->questions);
         $this->id = $id;
         $this->query = $query;
+
+        // 기출 문제지 + 결과 부족 시 사용자에게 알림
+        $isExamSheet = in_array($query['source_type'] ?? '', ['mock_exam', 'school_exam']);
+        if ($isExamSheet) {
+            $foundCount = $this->questions->count();
+            $requestedCount = (int) ($query['question_count'] ?? 0);
+            $creationMethod = $query['creation_method'] ?? 'number';
+
+            if ($foundCount === 0) {
+                $msg = $creationMethod === 'number'
+                    ? '선택한 학년/년도/월/번호에 해당하는 기출 문제가 DB에 없습니다. 문제 등록 여부를 확인해주세요.'
+                    : '선택한 학년/년도/단원에 해당하는 기출 문제가 DB에 없습니다. 조건을 완화해보세요.';
+                Notification::make()
+                    ->title('해당 조건에 등록된 기출 문제가 없습니다')
+                    ->body($msg)
+                    ->warning()
+                    ->persistent()
+                    ->send();
+            } elseif ($requestedCount > 0 && $foundCount < $requestedCount && $creationMethod === 'category') {
+                Notification::make()
+                    ->title("요청한 {$requestedCount}개 중 {$foundCount}개만 매치되었습니다")
+                    ->body('선택한 단원/조건에 해당하는 기출 문제가 부족합니다. 단원을 더 선택하거나 조건을 완화해보세요.')
+                    ->warning()
+                    ->send();
+            }
+        }
     }
 
     public static function selectRandomQuestions(array $params): Collection
@@ -1298,11 +1324,17 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             $parsed_score_table = self::parseScoreTable($formData['score_table'], count($questionsData));
         }
 
+        // 학원 ID는 현재 접속한 학원(서브도메인) 우선, fallback으로 사용자 학원
+        $academyId = (app()->has('current_academy') && app('current_academy'))
+            ? app('current_academy')->id
+            : auth()->user()->academy_id;
+
         $upsertData = [
             'name' => $formData['name'],
             'tags' => $tags,
             'status' => 'pending',
             'user_id' => auth()->id(),
+            'academy_id' => $academyId,
             'target_group' => $formData['target_group'],
             'target_grades' => $formData['target_grades'],
             'target_levels' => $formData['target_levels'],
@@ -1331,7 +1363,7 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             'exam_grades' => $this->query['exam_grades'] ?? (($this->query['exam_grade'] ?? null) ? [$this->query['exam_grade']] : null),
             'exam_subjects' => $this->query['exam_subjects'] ?? (($this->query['exam_subject'] ?? null) ? [$this->query['exam_subject']] : null),
             'exam_scores' => $this->query['exam_scores'] ?? null,
-            'school_id' => $this->query['school_id'] ?? null,
+            'school_id' => is_array($this->query['school_id'] ?? null) ? ($this->query['school_id'][0] ?? null) : ($this->query['school_id'] ?? null),
             'exam_semesters' => $this->query['exam_semesters'] ?? (($this->query['exam_semester'] ?? null) ? [$this->query['exam_semester']] : null),
             'exam_types' => $this->query['exam_types'] ?? (($this->query['exam_type'] ?? null) ? [$this->query['exam_type']] : null),
             // 기출 문제지는 기본적으로 내 학원만 (share_scope = null)

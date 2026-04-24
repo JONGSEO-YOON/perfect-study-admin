@@ -19,8 +19,8 @@ class MyReportCard extends Component
   public function mount()
   {
     $this->student = auth()->user()->userable;
-    $this->classroomId = $this->student->classrooms->first()->id;
     $this->classrooms = $this->student->classrooms;
+    $this->classroomId = $this->classrooms->first()?->id;
 
     $now = now();
     $startOfWeek = $now->startOfWeek(1)->format('Y-m-d');

@@ -19,21 +19,31 @@ class DailyPaymentWidget extends BaseWidget
     protected function getStats(): array
     {
         $today = Carbon::today('Asia/Seoul');
+        $academyId = self::currentAcademyId();
 
         // 오늘 수납 (결제 완료)
         $todayPaid = Payment::where('payment_status', 'paid')
             ->whereDate('approved_at', $today);
+        if ($academyId) {
+            $todayPaid->where('payments.academy_id', $academyId);
+        }
         $paidCount = (clone $todayPaid)->count();
         $paidAmount = (clone $todayPaid)->sum('amount');
 
         // 오늘 환불 (취소)
         $todayCancelled = Payment::where('payment_status', 'cancelled')
             ->whereDate('cancelled_at', $today);
+        if ($academyId) {
+            $todayCancelled->where('payments.academy_id', $academyId);
+        }
         $cancelledCount = (clone $todayCancelled)->count();
         $cancelledAmount = (clone $todayCancelled)->sum('amount');
 
         // 미납 (pending 상태)
         $unpaid = Payment::where('payment_status', 'pending');
+        if ($academyId) {
+            $unpaid->where('payments.academy_id', $academyId);
+        }
         $unpaidCount = (clone $unpaid)->count();
         $unpaidAmount = (clone $unpaid)->sum('amount');
 
@@ -51,5 +61,13 @@ class DailyPaymentWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-exclamation-triangle')
                 ->color($unpaidCount > 0 ? 'danger' : 'success'),
         ];
+    }
+
+    private static function currentAcademyId(): ?int
+    {
+        if (app()->has('current_academy') && app('current_academy')) {
+            return app('current_academy')->id;
+        }
+        return auth()->check() ? auth()->user()->academy_id : null;
     }
 }

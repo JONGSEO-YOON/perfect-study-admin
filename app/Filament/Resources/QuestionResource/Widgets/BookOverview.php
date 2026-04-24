@@ -207,6 +207,147 @@ class BookOverview extends Widget implements HasForms, HasActions
             });
     }
 
+    /**
+     * 교재 내 문제들의 번호(seq)를 등록 순서(id 기준)로 재정렬
+     */
+    public function resequenceQuestionsAction()
+    {
+        return Action::make('resequenceQuestions')
+            ->label('문제 번호 재정렬')
+            ->icon('heroicon-m-bars-arrow-down')
+            ->color('gray')
+            ->size('sm')
+            ->requiresConfirmation()
+            ->modalHeading('문제 번호 재정렬')
+            ->modalDescription('이 책의 모든 문제 번호를 등록 순서(id 기준)대로 1, 2, 3... 으로 다시 매깁니다.')
+            ->visible(function () {
+                if (!$this->selectedMaterial) return false;
+                if ($this->selectedMaterial->type !== 'book') return false;
+                return auth()->user()->isRoleAbove('manager', true);
+            })
+            ->action(function () {
+                $material = $this->selectedMaterial;
+                if (!$material) return;
+
+                $questions = \App\Models\Question::withoutGlobalScopes()
+                    ->where('material_id', $material->id)
+                    ->whereNull('parent_question_id')
+                    ->orderBy('id')
+                    ->get();
+
+                $count = 0;
+                foreach ($questions as $index => $q) {
+                    $newSeq = $index + 1;
+                    if ($q->seq !== $newSeq) {
+                        \DB::table('questions')->where('id', $q->id)->update(['seq' => $newSeq]);
+                        $count++;
+                    }
+                }
+
+                Notification::make()
+                    ->title("문제 번호가 재정렬되었습니다 (총 {$questions->count()}문제, {$count}개 변경)")
+                    ->success()
+                    ->send();
+
+                redirect('/admin/questions?' . http_build_query([
+                    'parent_id' => $material->id,
+                ]));
+            });
+    }
+
+    /**
+     * 공유받은 교재(또는 폴더)를 내 학원으로 복사 (cascade: 하위 + 문제까지 모두)
+     */
+    public function copyMaterialAction()
+    {
+        return Action::make('copyMaterial')
+            ->label('내 학원으로 복사')
+            ->icon('heroicon-m-document-duplicate')
+            ->color('warning')
+            ->size('sm')
+            ->requiresConfirmation()
+            ->modalHeading('내 학원으로 복사')
+            ->modalDescription(function () {
+                if (!$this->selectedMaterial) return '';
+                $type = $this->selectedMaterial->type === 'folder' ? '폴더(하위 모두)' : '교재';
+                return "선택한 {$type}와 모든 문제를 내 학원으로 복사합니다.";
+            })
+            ->visible(function () {
+                if (!$this->selectedMaterial) return false;
+                // 다른 학원 공유 받은 교재일 때만 표시
+                $myAcademyId = auth()->user()->academy_id;
+                return $this->selectedMaterial->academy_id !== $myAcademyId
+                    && auth()->user()->isRoleAbove('manager', true);
+            })
+            ->action(function () {
+                $source = $this->selectedMaterial;
+                if (!$source) return;
+
+                $copied = $this->deepCopyMaterial($source, $this->folderId);
+
+                Notification::make()
+                    ->title("내 학원으로 복사되었습니다: {$copied['name']} (교재 {$copied['materials']}개, 문제 {$copied['questions']}개)")
+                    ->success()
+                    ->send();
+
+                redirect('/admin/questions?' . http_build_query([
+                    'parent_id' => $this->folderId,
+                ]));
+            });
+    }
+
+    /**
+     * Material을 내 학원으로 깊은 복사 (children + questions 포함)
+     * @return array ['name' => string, 'materials' => int, 'questions' => int]
+     */
+    protected function deepCopyMaterial(Material $source, ?int $newParentId): array
+    {
+        $myAcademyId = auth()->user()->academy_id;
+        $stats = ['name' => $source->name, 'materials' => 0, 'questions' => 0];
+
+        // 1. Material 자체 복사
+        $newMaterial = Material::create([
+            'name' => $source->name,
+            'type' => $source->type,
+            'parent_id' => $newParentId,
+            'image_path' => $source->image_path,
+            'academy_id' => $myAcademyId,
+            'user_id' => auth()->id(),
+        ]);
+        $stats['materials']++;
+
+        // 2. 책이면 questions 복사
+        if ($source->type === 'book') {
+            foreach ($source->questions as $q) {
+                $newQ = $q->replicate(['material_id', 'academy_id', 'user_id']);
+                $newQ->material_id = $newMaterial->id;
+                $newQ->academy_id = $myAcademyId;
+                $newQ->user_id = auth()->id();
+                $newQ->save();
+
+                // 문제의 choices도 복사
+                foreach ($q->choices as $choice) {
+                    $newChoice = $choice->replicate(['question_id']);
+                    $newChoice->question_id = $newQ->id;
+                    $newChoice->save();
+                }
+
+                $stats['questions']++;
+            }
+        }
+
+        // 3. 폴더면 children 재귀 복사
+        if ($source->type === 'folder') {
+            foreach ($source->children as $child) {
+                $childStats = $this->deepCopyMaterial($child, $newMaterial->id);
+                $stats['materials'] += $childStats['materials'];
+                $stats['questions'] += $childStats['questions'];
+            }
+        }
+
+        return $stats;
+    }
+
 
 
     public function redirectTo($url, $parentId)

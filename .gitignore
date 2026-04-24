@@ -1,13 +1,17 @@
+# Laravel
 /.phpunit.cache
+/bootstrap/ssr
 /node_modules
 /public/build
 /public/hot
 /public/storage
 /storage/*.key
+/storage/pail
 /vendor
 .env
 .env.backup
 .env.production
+.env.*.local
 .phpactor.json
 .phpunit.result.cache
 Homestead.json
@@ -15,11 +19,70 @@ Homestead.yaml
 auth.json
 npm-debug.log
 yarn-error.log
+
+# Storage & Logs
+/storage/logs/*.log
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/framework/testing/*
+!/storage/logs/.gitignore
+!/storage/framework/cache/data/.gitignore
+!/storage/framework/sessions/.gitignore
+!/storage/framework/views/.gitignore
+!/storage/framework/testing/.gitignore
+
+# IDE / Editor
 /.fleet
 /.idea
 /.vscode
+/.zed
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude
 *.CLAUDE.md
 *.claude
 /.claude
+CLAUDE.md
+
+# Database / Backups
+*.sql
 *.sql.gz
+*.sqlite
+*.sqlite-journal
+backup_*.sql*
+
+# Credentials / Secrets
+firebase-credentials.json
+*firebase*.json
+google-services.json
+GoogleService-Info.plist
+/storage/app/firebase/
+*.pem
+*.key
+*.crt
+oauth-*.json
+
+# Build / Generated files
 *.pdf
+*.log
+/public/js/manifest.json
+/public/css/manifest.json
+
+# Temp / Test output
+*.tmp
+*.cache
+/tests/coverage
+/coverage
+/.nyc_output
+
+# Lock files (keep composer.lock and package-lock.json, ignore others)
+yarn.lock
+pnpm-lock.yaml

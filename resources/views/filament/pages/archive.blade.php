@@ -2,6 +2,7 @@
     <div class="flex flex-row gap-x-6">
         <div class="w-[200px]">
             <div class="bg-white border rounded-lg w-full flex flex-col divide-y  pb-[80px]">
+                @if (\App\Filament\Pages\Archive::canManageResources())
                 <div class="flex justify-end mb-2 pt-2 px-2">
                     <a href="/admin/resource-categories"
                         class="fi-btn relative grid-flow-col items-center justify-center font-semibold outline-none transition duration-75 focus-visible:ring-2 rounded-lg fi-btn-color-gray fi-color-gray fi-size-xs fi-btn-size-xs gap-1 px-2 py-1.5 text-xs inline-grid shadow-sm bg-white text-gray-950 hover:bg-gray-50 dark:bg-white/5 dark:text-white dark:ring-white/20 ring-1 ring-gray-950/10">
@@ -16,6 +17,7 @@
                         </span>
                     </a>
                 </div>
+                @endif
                 @foreach ($resourceCategories as $category)
                     <div class="flex flex-col px-4 py-4 pb-6">
                         <h1 class="font-bold text-base">{{ $category->name }}</h1>

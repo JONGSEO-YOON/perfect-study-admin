@@ -223,7 +223,8 @@ class LectureResource extends Resource
                             ->placeholder('클릭하거나 파일을 드래그하여 업로드')
                             ->previewable(false)
                             ->downloadable(true)
-                            ->columnSpanFull(),
+                            ->columnSpanFull()
+                            ->visible(fn() => self::canUploadFiles()),
                         \Filament\Forms\Components\Repeater::make('links')
                             ->label('외부 링크')
                             ->schema([
@@ -347,5 +348,28 @@ class LectureResource extends Resource
             // 'create' => Pages\CreateLecture::route('/create'),
             // 'edit' => Pages\EditLecture::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * 강의실 파일 업로드 허용 여부
+     * - 퍼펙트 스터디(academy_id=1)만 파일 업로드 가능
+     * - 그 외 학원은 외부 링크(URL)만 사용
+     */
+    public static function canUploadFiles(): bool
+    {
+        if (!auth()->check()) {
+            return false;
+        }
+
+        // root_admin은 학원 컨텍스트와 무관하게 항상 가능
+        if (auth()->user()->role === 'root_admin') {
+            return true;
+        }
+
+        $academyId = app()->has('current_academy') && app('current_academy')
+            ? app('current_academy')->id
+            : auth()->user()->academy_id;
+
+        return $academyId === 1;
     }
 }

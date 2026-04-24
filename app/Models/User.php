@@ -18,9 +18,14 @@ class User extends Authenticatable implements FilamentUser
 
     protected static function booted(): void
     {
+        // 우선순위: 1) 명시적으로 set된 값, 2) 현재 접속 학원(서브도메인), 3) 인증된 사용자의 academy_id
         static::creating(function (User $user) {
-            if (!$user->academy_id && auth()->check()) {
-                $user->academy_id = auth()->user()->academy_id;
+            if (!$user->academy_id) {
+                if (app()->has('current_academy') && app('current_academy')) {
+                    $user->academy_id = app('current_academy')->id;
+                } elseif (auth()->check()) {
+                    $user->academy_id = auth()->user()->academy_id;
+                }
             }
         });
     }

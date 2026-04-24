@@ -134,6 +134,9 @@ class ClassroomResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->url(fn($record) => ClassroomResource::getUrl('view', ['record' => $record])),
+                TextColumn::make('academy.name')
+                    ->label('소속 학원')
+                    ->visible(fn () => auth()->user()->role === 'root_admin'),
                 TextColumn::make('teacher.user.name')
                     ->label('강사')
                     ->searchable()

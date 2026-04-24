@@ -65,6 +65,8 @@ class RegisterLectureVideo extends Page
 
   public function addNewItemInternalAction(): Action
   {
+    $canUpload = LectureResource::canUploadFiles();
+
     return Action::make('addNewItemInternal')
       ->label('추가')
       ->modalWidth('lg')
@@ -78,23 +80,44 @@ class RegisterLectureVideo extends Page
             Hidden::make('type'),
             TextInput::make('name')
               ->label('이름'),
+
+            // 퍼펙트 스터디(academy_id=1): 비디오 파일 업로드
             FileUpload::make('video')
-              ->visible(fn(Get $get) => $get('type') === 'video')
+              ->visible(fn(Get $get) => $get('type') === 'video' && $canUpload)
               ->label('강의 영상')
-              // ->acceptedFileTypes(['video/*, video/mp4'])
               ->placeholder('클릭하거나 파일을 드래그하여 업로드')
               ->previewable(true)
               ->downloadable(true)
               ->columnSpanFull(),
             FileUpload::make('attachments')
-              ->visible(fn(Get $get) => $get('type') === 'video')
+              ->visible(fn(Get $get) => $get('type') === 'video' && $canUpload)
               ->label('강의 추가 자료')
               ->multiple(true)
               ->placeholder('클릭하거나 파일을 드래그하여 업로드')
               ->preserveFilenames()
               ->previewable(false)
               ->downloadable(true)
-              ->columnSpanFull()
+              ->columnSpanFull(),
+
+            // 그 외 학원: 영상 URL + 자료 링크
+            TextInput::make('video_url')
+              ->visible(fn(Get $get) => $get('type') === 'video' && !$canUpload)
+              ->label('강의 영상 링크')
+              ->url()
+              ->placeholder('https://youtube.com/... 또는 구글 드라이브 영상 링크')
+              ->columnSpanFull(),
+            \Filament\Forms\Components\Repeater::make('attachment_links')
+              ->visible(fn(Get $get) => $get('type') === 'video' && !$canUpload)
+              ->label('강의 추가 자료 링크')
+              ->schema([
+                TextInput::make('title')->label('제목')->required(),
+                TextInput::make('url')->label('URL')->url()->required()
+                  ->placeholder('https://...'),
+              ])
+              ->columns(2)
+              ->addActionLabel('자료 링크 추가')
+              ->defaultItems(0)
+              ->columnSpanFull(),
           ]),
       ])
       ->action(function ($arguments, $data) {
@@ -115,6 +138,8 @@ class RegisterLectureVideo extends Page
 
   public function editItemInternalAction(): Action
   {
+    $canUpload = LectureResource::canUploadFiles();
+
     return Action::make('editItemInternal')
       ->label('수정')
       ->modalWidth('md')
@@ -125,6 +150,8 @@ class RegisterLectureVideo extends Page
         'type' => $this->arguments['type'],
         'video' => $this->arguments['video'] ?? null,
         'attachments' => $this->arguments['attachments'] ?? [],
+        'video_url' => $this->arguments['video_url'] ?? null,
+        'attachment_links' => $this->arguments['attachment_links'] ?? [],
       ])
       ->form([
         Grid::make(3)
@@ -132,21 +159,21 @@ class RegisterLectureVideo extends Page
             Hidden::make('type'),
             Select::make('order')
               ->label('순서')
-              //options is 1 to 30
               ->options(fn() => collect(range(1, 30))->mapWithKeys(fn($value) => [$value => $value])),
             TextInput::make('name')
               ->label('이름')
               ->columnSpan(2),
+
+            // 퍼펙트 스터디(academy_id=1): 비디오 파일 업로드
             FileUpload::make('video')
-              ->visible(fn(Get $get) => $get('type') === 'video')
+              ->visible(fn(Get $get) => $get('type') === 'video' && $canUpload)
               ->label('강의 영상')
-              // ->acceptedFileTypes(['video/mp4', 'video/*',  'video/aac', 'video/ogg', 'video/webm'])
               ->placeholder('클릭하거나 파일을 드래그하여 업로드')
               ->previewable(true)
               ->downloadable(true)
               ->columnSpanFull(),
             FileUpload::make('attachments')
-              ->visible(fn(Get $get) => $get('type') === 'video')
+              ->visible(fn(Get $get) => $get('type') === 'video' && $canUpload)
               ->label('강의 추가 자료')
               ->multiple(true)
               ->placeholder('클릭하거나 파일을 드래그하여 업로드')
@@ -155,6 +182,25 @@ class RegisterLectureVideo extends Page
               ->downloadable(true)
               ->columnSpanFull(),
 
+            // 그 외 학원: 영상 URL + 자료 링크
+            TextInput::make('video_url')
+              ->visible(fn(Get $get) => $get('type') === 'video' && !$canUpload)
+              ->label('강의 영상 링크')
+              ->url()
+              ->placeholder('https://youtube.com/... 또는 구글 드라이브 영상 링크')
+              ->columnSpanFull(),
+            \Filament\Forms\Components\Repeater::make('attachment_links')
+              ->visible(fn(Get $get) => $get('type') === 'video' && !$canUpload)
+              ->label('강의 추가 자료 링크')
+              ->schema([
+                TextInput::make('title')->label('제목')->required(),
+                TextInput::make('url')->label('URL')->url()->required()
+                  ->placeholder('https://...'),
+              ])
+              ->columns(2)
+              ->addActionLabel('자료 링크 추가')
+              ->defaultItems(0)
+              ->columnSpanFull(),
           ]),
       ])
       ->extraModalFooterActions(fn(Action $action): array => [

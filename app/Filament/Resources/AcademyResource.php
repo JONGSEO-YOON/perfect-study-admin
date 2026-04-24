@@ -61,6 +61,22 @@ class AcademyResource extends Resource
                     Toggle::make('is_active')
                         ->label('활성화')
                         ->default(true),
+                    Forms\Components\Select::make('student_limit')
+                        ->label('승인 인원 제한')
+                        ->options([
+                            null => '무제한',
+                            50 => '50명',
+                            100 => '100명',
+                            150 => '150명',
+                            200 => '200명',
+                            250 => '250명',
+                            300 => '300명',
+                            350 => '350명',
+                            400 => '400명',
+                            450 => '450명',
+                            500 => '500명',
+                        ])
+                        ->helperText('재원생(승인된 학생) 수 제한. 초과 시 승인이 제한됩니다.'),
                 ])->columns(2),
 
             Section::make('사업자 정보')
@@ -109,7 +125,7 @@ class AcademyResource extends Resource
                 ])->columns(2),
 
             Section::make('메뉴 공개 설정')
-                ->description('학원별로 자료실/강의실 메뉴의 공개 여부를 설정합니다.')
+                ->description('학원별로 자료실/강의실/결제 메뉴의 공개 여부를 설정합니다.')
                 ->schema([
                     Toggle::make('settings.resources_visible')
                         ->label('자료실 공개')
@@ -119,7 +135,11 @@ class AcademyResource extends Resource
                         ->label('강의실 공개')
                         ->default(true)
                         ->helperText('비활성화 시 해당 학원 사용자에게 강의실 메뉴가 표시되지 않습니다.'),
-                ])->columns(2),
+                    Toggle::make('settings.payments_visible')
+                        ->label('결제 공개')
+                        ->default(true)
+                        ->helperText('비활성화 시 해당 학원 admin에게 결제 메뉴가 표시되지 않습니다.'),
+                ])->columns(3),
 
             Section::make('토스 페이먼츠 설정')
                 ->description('학원별 결제 가맹점 키를 설정합니다.')
@@ -153,8 +173,17 @@ class AcademyResource extends Resource
                     ->label('사용자 수')
                     ->counts('users'),
                 TextColumn::make('students_count')
-                    ->label('학생 수')
+                    ->label('전체 학생')
                     ->counts('students'),
+                TextColumn::make('enrolled_students_count')
+                    ->label('재원생')
+                    ->getStateUsing(fn ($record) => $record->students()->where('status', 'enrolled')->count())
+                    ->color('success')
+                    ->badge(),
+                TextColumn::make('student_limit')
+                    ->label('인원 제한')
+                    ->formatStateUsing(fn ($state) => $state ? $state . '명' : '무제한')
+                    ->color(fn ($record) => $record->student_limit && $record->students()->where('status', 'enrolled')->count() >= $record->student_limit ? 'danger' : 'gray'),
                 TextColumn::make('created_at')
                     ->label('생성일')
                     ->date('Y-m-d'),

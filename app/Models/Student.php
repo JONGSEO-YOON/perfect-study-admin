@@ -12,6 +12,15 @@ class Student extends Model
 {
     use HasFactory, HasUser, BelongsToAcademy;
 
+    protected static function booted(): void
+    {
+        static::creating(function ($student) {
+            if (!$student->status) {
+                $student->status = 'pending';
+            }
+        });
+    }
+
     /**
      * Get the attributes that should be cast.
      *
@@ -43,7 +52,18 @@ class Student extends Model
     public function classrooms(): BelongsToMany
     {
         return $this->belongsToMany(Classroom::class)
+            ->wherePivotNull('deleted_at')
             ->withTimestamps();
+    }
+
+    /**
+     * 삭제된 배정 포함 전체 반 이력 (이력 조회용)
+     */
+    public function allClassroomsIncludingRemoved(): BelongsToMany
+    {
+        return $this->belongsToMany(Classroom::class)
+            ->withTimestamps()
+            ->withPivot('deleted_at');
     }
 
     public function attendanceLogs()

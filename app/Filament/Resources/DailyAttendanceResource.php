@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\DailyAttendanceResource\Pages;
+use App\Models\Academy;
 use App\Models\AttendanceLog;
 use App\Models\Student;
 use App\Models\Classroom;
@@ -52,6 +53,12 @@ class DailyAttendanceResource extends Resource
             ->modifyQueryUsing(function (Builder $query) {
                 $query = $query->with(['classrooms', 'user', 'school', 'gradeSystem', 'latestCheckIn', 'latestCheckOut']);
 
+                // 현재 접속 학원 기준 필터 (root_admin도 적용)
+                $academyId = self::currentAcademyId();
+                if ($academyId) {
+                    $query->where('students.academy_id', $academyId);
+                }
+
                 if (!auth()->user()->isRoleAbove('manager', true)) {
                     $query->whereHas('classrooms', function ($q) {
                         $q->where('classrooms.teacher_id', auth()->user()->userable->id);
@@ -72,9 +79,15 @@ class DailyAttendanceResource extends Resource
                     ->sortable()
                     ->width('120px'),
                 TextColumn::make('user.phone')
-                    ->label('전화번호')
+                    ->label('본인')
                     ->searchable()
-                    ->width('130px'),
+                    ->width('120px'),
+                TextColumn::make('phone_father')
+                    ->label('부')
+                    ->width('120px'),
+                TextColumn::make('phone_mother')
+                    ->label('모')
+                    ->width('120px'),
                 TextColumn::make('gradeSystem.display_name')
                     ->label('학년')
                     ->sortable()
@@ -297,6 +310,17 @@ class DailyAttendanceResource extends Resource
                                 $q->where('classrooms.id', $classroomId);
                             });
                         });
+                    }),
+                SelectFilter::make('academy_id')
+                    ->label('학원')
+                    ->visible(fn() => auth()->user()->isRoleAbove('root_admin', true))
+                    ->options(fn() => Academy::where('is_active', true)->pluck('name', 'id'))
+                    ->default(self::currentAcademyId())
+                    ->query(function (Builder $query, $data) {
+                        $academyId = $data['value'] ?? null;
+                        if ($academyId) {
+                            $query->where('students.academy_id', $academyId);
+                        }
                     }),
             ], FiltersLayout::AboveContent)
             ->defaultSort('id')
@@ -737,5 +761,16 @@ class DailyAttendanceResource extends Resource
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * 현재 접속 학원 ID
+     */
+    private static function currentAcademyId(): ?int
+    {
+        if (app()->has('current_academy') && app('current_academy')) {
+            return app('current_academy')->id;
+        }
+        return auth()->check() ? auth()->user()->academy_id : null;
     }
 }

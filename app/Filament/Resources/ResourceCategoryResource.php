@@ -32,6 +32,29 @@ class ResourceCategoryResource extends Resource
         return '';
     }
 
+    /**
+     * 자료실 분류 관리는 root_admin 또는 퍼펙트 스터디(academy_id=1)만 가능
+     */
+    public static function canViewAny(): bool
+    {
+        return \App\Filament\Pages\Archive::canManageResources();
+    }
+
+    public static function canCreate(): bool
+    {
+        return \App\Filament\Pages\Archive::canManageResources();
+    }
+
+    public static function canEdit($record): bool
+    {
+        return \App\Filament\Pages\Archive::canManageResources();
+    }
+
+    public static function canDelete($record): bool
+    {
+        return \App\Filament\Pages\Archive::canManageResources();
+    }
+
     public static function form(Form $form): Form
     {
         return $form

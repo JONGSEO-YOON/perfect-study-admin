@@ -22,11 +22,17 @@ class DailyAttendanceWidget extends BaseWidget
     {
         $today = Carbon::today('Asia/Seoul');
         $currentDay = strtolower($today->format('D'));
+        $academyId = self::currentAcademyId();
 
         // 오늘 수업이 있는 학생 수 (정규)
-        $classroomsWithClassToday = Classroom::whereNull('ended_at')
-            ->orWhere('ended_at', '>=', $today)
-            ->get()
+        $classroomsQuery = Classroom::whereNull('ended_at')
+            ->orWhere('ended_at', '>=', $today);
+
+        if ($academyId) {
+            $classroomsQuery->where('classrooms.academy_id', $academyId);
+        }
+
+        $classroomsWithClassToday = $classroomsQuery->get()
             ->filter(fn($c) => isset($c->timetable[$currentDay]));
 
         $totalStudentsToday = 0;
@@ -38,6 +44,9 @@ class DailyAttendanceWidget extends BaseWidget
 
         // 오늘 출석 기록
         $todayLogs = AttendanceLog::whereDate('created_at', $today);
+        if ($academyId) {
+            $todayLogs->where('attendance_logs.academy_id', $academyId);
+        }
         $attendedCount = (clone $todayLogs)->whereNotNull('check_in_time')->count();
         $lateCount = (clone $todayLogs)->where('is_late', true)->count();
         $absentCount = max(0, $totalStudentsToday - $attendedCount);
@@ -60,5 +69,13 @@ class DailyAttendanceWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-x-circle')
                 ->color('danger'),
         ];
+    }
+
+    private static function currentAcademyId(): ?int
+    {
+        if (app()->has('current_academy') && app('current_academy')) {
+            return app('current_academy')->id;
+        }
+        return auth()->check() ? auth()->user()->academy_id : null;
     }
 }

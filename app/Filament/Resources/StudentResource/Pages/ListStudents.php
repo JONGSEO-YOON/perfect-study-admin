@@ -41,17 +41,27 @@ class ListStudents extends ListRecords
                 ->modalSubmitActionLabel('다운로드')
                 ->modalWidth('md')
                 ->form([
+                    \Filament\Forms\Components\Radio::make('export_type')
+                        ->label('다운로드 기준')
+                        ->options([
+                            'all' => '현재 재원생 전체',
+                            'date_range' => '등록일 기간 지정',
+                        ])
+                        ->default('all')
+                        ->live(),
                     Grid::make(2)->schema([
                         DatePicker::make('start_date')
                             ->label('등록일 시작'),
                         DatePicker::make('end_date')
                             ->label('등록일 종료'),
-                    ]),
+                    ])->visible(fn (\Filament\Forms\Get $get) => $get('export_type') === 'date_range'),
                 ])
                 ->action(function (array $data) {
+                    $startDate = ($data['export_type'] ?? 'all') === 'date_range' ? ($data['start_date'] ?? null) : null;
+                    $endDate = ($data['export_type'] ?? 'all') === 'date_range' ? ($data['end_date'] ?? null) : null;
                     $filename = '학생목록_' . now()->format('Ymd_His') . '.xlsx';
                     return Excel::download(
-                        new StudentsExport($data['start_date'] ?? null, $data['end_date'] ?? null),
+                        new StudentsExport($startDate, $endDate),
                         $filename
                     );
                 }),

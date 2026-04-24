@@ -18,6 +18,7 @@ use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class UsersRelationManager extends RelationManager
 {
@@ -82,7 +83,8 @@ class UsersRelationManager extends RelationManager
                         TextInput::make('username')
                             ->label('계정 (로그인 ID)')
                             ->required()
-                            ->unique('users', 'username'),
+                            ->rule(fn () => Rule::unique('users', 'username')
+                                ->where('academy_id', $this->getOwnerRecord()->id)),
                         TextInput::make('phone')
                             ->label('전화번호'),
                         ToggleButtons::make('role')
@@ -137,7 +139,8 @@ class UsersRelationManager extends RelationManager
                         TextInput::make('username')
                             ->label('계정 (로그인 ID)')
                             ->required()
-                            ->unique('users', 'username'),
+                            ->rule(fn () => Rule::unique('users', 'username')
+                                ->where('academy_id', $this->getOwnerRecord()->id)),
                         TextInput::make('phone')
                             ->label('전화번호'),
                         TextInput::make('password')

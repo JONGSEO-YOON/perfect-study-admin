@@ -27,11 +27,15 @@ class Attendance extends Component
         $phoneNumbers = preg_replace('/[^0-9]/', '', $this->phone);
         $user = User::where('phone', $this->phone)->first();
 
+        // 현재 학원 확인
+        $currentAcademy = app()->has('current_academy') ? app('current_academy') : null;
+
         if (
             strlen($phoneNumbers) === 11
             && substr($phoneNumbers, 0, 3) === '010'
             && $user !== null
             && $user->isStudent()
+            && (!$currentAcademy || $user->academy_id === $currentAcademy->id)
         ) {
             // 정규 수업 여부 확인
             $currentTime = now();

@@ -192,9 +192,12 @@ class StudentResource extends Resource
 
                                         $phone = implode('-', $value);
                                         $query = User::where('phone', $phone)->where('id', '!=', $get('id'));
-                                        // 같은 학원 내에서만 중복 체크
-                                        if (auth()->user()->academy_id) {
-                                            $query->where('academy_id', auth()->user()->academy_id);
+                                        // 현재 접속한 학원 기준으로 중복 체크
+                                        $academyId = (app()->has('current_academy') && app('current_academy'))
+                                            ? app('current_academy')->id
+                                            : auth()->user()->academy_id;
+                                        if ($academyId) {
+                                            $query->where('academy_id', $academyId);
                                         }
                                         if ($query->exists()) {
                                             $fail('이미 존재하는 전화번호입니다.');
@@ -332,6 +335,9 @@ class StudentResource extends Resource
                     ->label('학교')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('academy.name')
+                    ->label('소속 학원')
+                    ->visible(fn () => auth()->user()->role === 'root_admin'),
                 TextColumn::make('gradeSystem.sequential_order')
                     ->label('학년')
                     ->formatStateUsing(function ($record) {
@@ -419,6 +425,10 @@ class StudentResource extends Resource
                     ->options(fn () => School::orderBy('name')->pluck('name', 'id')->toArray())
                     ->searchable()
                     ->preload(),
+                SelectFilter::make('academy_id')
+                    ->label('소속 학원')
+                    ->options(fn () => \App\Models\Academy::pluck('name', 'id')->toArray())
+                    ->visible(fn () => auth()->user()->role === 'root_admin'),
             ], layout: FiltersLayout::AboveContent)
             ->actions([
                 Tables\Actions\Action::make('attendance')
@@ -471,6 +481,56 @@ class StudentResource extends Resource
                             return false;
                         }
                     })
+                    ->before(function ($record) {
+                        // 수정 전 원본 데이터 스냅샷 보관 (변경사항 추적용)
+                        $record->_originalData = $record->getOriginal();
+                        $record->_originalUserName = $record->user?->name;
+                        $record->_originalSchoolId = $record->school_id;
+                        $record->_originalGradeSystemId = $record->grade_system_id;
+                    })
+                    ->after(function ($record, array $data) {
+                        // 변경된 필드 감지
+                        $changes = [];
+                        $fieldLabels = [
+                            'user.name' => '이름',
+                            'user.phone' => '본인 전화번호',
+                            'school_id' => '학교',
+                            'grade_system_id' => '학년',
+                            'phone_father' => '부 전화번호',
+                            'phone_mother' => '모 전화번호',
+                            'initially_attended_at' => '최초 등원일',
+                            'sms_agree' => 'SMS 동의',
+                            'remark' => '비고',
+                        ];
+
+                        $original = $record->_originalData ?? [];
+                        foreach ($fieldLabels as $key => $label) {
+                            if (str_starts_with($key, 'user.')) continue; // user 필드는 별도 처리
+                            $oldValue = $original[$key] ?? null;
+                            $newValue = $record->fresh()->$key ?? null;
+                            if ((string)$oldValue !== (string)$newValue) {
+                                $changes[] = "{$label}: '" . ($oldValue ?: '-') . "' → '" . ($newValue ?: '-') . "'";
+                            }
+                        }
+
+                        // user 이름 변경 감지
+                        $newUserName = $record->fresh()->user?->name;
+                        if (($record->_originalUserName ?? null) !== $newUserName && $newUserName) {
+                            $changes[] = "이름: '" . ($record->_originalUserName ?: '-') . "' → '{$newUserName}'";
+                        }
+
+                        if (!empty($changes)) {
+                            \App\Models\StudentStatusHistory::create([
+                                'student_id' => $record->id,
+                                'changed_by' => auth()->id(),
+                                'event_type' => 'updated',
+                                'from_status' => $record->status,
+                                'to_status' => $record->status,
+                                'reason' => '정보 수정',
+                                'memo' => implode(', ', $changes),
+                            ]);
+                        }
+                    })
                     ->modalWidth('xl'),
 
                 Tables\Actions\Action::make('withdraw')
@@ -505,6 +565,13 @@ class StudentResource extends Resource
                     ->action(function ($record, array $data) {
                         $oldStatus = $record->status;
 
+                        // 퇴원 전 소속 반+담임 정보를 히스토리에 기록
+                        $classroomInfo = $record->classrooms()
+                            ->with('teacher.user')
+                            ->get()
+                            ->map(fn($c) => $c->name . ' (담임: ' . ($c->teacher?->user?->name ?? '-') . ')')
+                            ->join(', ');
+
                         $record->update([
                             'status' => 'withdrawn',
                             'withdrawal_reason' => $data['withdrawal_reason'],
@@ -515,6 +582,7 @@ class StudentResource extends Resource
                         \App\Models\StudentStatusHistory::create([
                             'student_id' => $record->id,
                             'changed_by' => auth()->id(),
+                            'event_type' => 'withdrawn',
                             'from_status' => $oldStatus,
                             'to_status' => 'withdrawn',
                             'reason' => $data['withdrawal_reason'] === 'other'
@@ -526,6 +594,7 @@ class StudentResource extends Resource
                                     'academy_atmosphere' => '학원분위기안좋음',
                                     'relocation' => '이사',
                                 ][$data['withdrawal_reason']] ?? $data['withdrawal_reason'],
+                            'memo' => $classroomInfo ? "소속 반: {$classroomInfo}" : null,
                         ]);
 
                         Notification::make()->title('퇴원 처리되었습니다.')->success()->send();
@@ -779,8 +848,22 @@ class StudentResource extends Resource
                         ->form([
                             TextInput::make('username')
                                 ->label('계정')
-                                // ->readOnly()
-                                ->required(),
+                                ->required()
+                                ->rules([
+                                    fn ($record) => function (string $attribute, $value, \Closure $fail) use ($record) {
+                                        // 현재 접속한 학원 기준으로 username 중복 체크
+                                        $academyId = (app()->has('current_academy') && app('current_academy'))
+                                            ? app('current_academy')->id
+                                            : auth()->user()->academy_id;
+                                        $exists = \App\Models\User::where('username', $value)
+                                            ->where('academy_id', $academyId)
+                                            ->where('id', '!=', $record->user->id)
+                                            ->exists();
+                                        if ($exists) {
+                                            $fail('이미 사용 중인 계정입니다.');
+                                        }
+                                    },
+                                ]),
                             TextInput::make('password')
                                 ->confirmed()
                                 ->password()
@@ -812,9 +895,46 @@ class StudentResource extends Resource
 
                             // 승인 상태에 따라 학생 status 변경
                             if ($data['is_active'] && $record->status === 'pending') {
+                                // 인원 제한 체크 - 학생이 속한 학원 기준
+                                $academy = $record->academy;
+                                if ($academy && $academy->student_limit) {
+                                    $enrolledCount = \App\Models\Student::withoutGlobalScopes()
+                                        ->where('academy_id', $academy->id)
+                                        ->where('status', 'enrolled')
+                                        ->count();
+                                    if ($enrolledCount >= $academy->student_limit) {
+                                        Notification::make()
+                                            ->title("승인 인원 제한 초과 (현재 {$enrolledCount}명 / 제한 {$academy->student_limit}명)")
+                                            ->danger()
+                                            ->send();
+                                        return;
+                                    }
+                                }
                                 $record->update(['status' => 'enrolled']);
+
+                                // 이력 기록: 승인
+                                \App\Models\StudentStatusHistory::create([
+                                    'student_id' => $record->id,
+                                    'changed_by' => auth()->id(),
+                                    'event_type' => 'approved',
+                                    'from_status' => 'pending',
+                                    'to_status' => 'enrolled',
+                                    'reason' => '계정 승인',
+                                    'memo' => "계정: {$data['username']}",
+                                ]);
                             } elseif (!$data['is_active'] && $record->status === 'enrolled') {
                                 $record->update(['status' => 'pending']);
+
+                                // 이력 기록: 승인 취소
+                                \App\Models\StudentStatusHistory::create([
+                                    'student_id' => $record->id,
+                                    'changed_by' => auth()->id(),
+                                    'event_type' => 'approval_revoked',
+                                    'from_status' => 'enrolled',
+                                    'to_status' => 'pending',
+                                    'reason' => '계정 비활성화',
+                                    'memo' => "계정: {$data['username']}",
+                                ]);
                             }
 
                             if ($data['password'] ?? false) {
@@ -836,6 +956,35 @@ class StudentResource extends Resource
                     DeleteAction::make()
                         ->visible(fn($record) => $record->canEdit(auth()->user()))
                         ->modalHeading('학생 삭제')
+                        ->before(function ($record) {
+                            // 삭제 전 스냅샷을 이력에 기록
+                            $classroomInfo = $record->classrooms()
+                                ->with('teacher.user')
+                                ->get()
+                                ->map(fn($c) => $c->name . ' (담임: ' . ($c->teacher?->user?->name ?? '-') . ')')
+                                ->join(', ');
+
+                            $snapshot = [
+                                "학생명: " . ($record->user?->name ?? '-'),
+                                "학교: " . ($record->school?->name ?? '-'),
+                                "학년: " . ($record->gradeSystem?->display_name ?? '-'),
+                                "상태: " . ($record->status ?? '-'),
+                            ];
+
+                            if ($classroomInfo) {
+                                $snapshot[] = "소속 반: {$classroomInfo}";
+                            }
+
+                            \App\Models\StudentStatusHistory::create([
+                                'student_id' => $record->id,
+                                'changed_by' => auth()->id(),
+                                'event_type' => 'deleted',
+                                'from_status' => $record->status,
+                                'to_status' => null,
+                                'reason' => '학생 삭제',
+                                'memo' => implode(' | ', $snapshot),
+                            ]);
+                        })
                 ]),
             ])
             ->hiddenFilterIndicators(true)

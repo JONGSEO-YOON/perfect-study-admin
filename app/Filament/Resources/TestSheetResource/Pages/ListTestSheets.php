@@ -12,6 +12,7 @@ use Filament\Actions;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
@@ -58,6 +59,90 @@ class ListTestSheets extends ListRecords
                 'label' => $name,
             ])
             ->values()
+            ->toArray();
+    }
+
+    /**
+     * 현재 모달 form의 조건에 매치되는 기출 문제 총 개수 반환
+     * (모달에서 사용자에게 미리 보여주기 위한 카운트)
+     */
+    protected static function countAvailableExamQuestions(
+        string $sourceType,
+        array $grades = [],
+        array $years = [],
+        array $months = [],
+        array $subjects = [],
+        ?int $schoolId = null,
+        array $semesters = [],
+        array $types = [],
+        array $questionNumbers = [],
+        array $questionTypeIds = [],
+        ?string $creationMethod = 'number'
+    ): int {
+        $query = \App\Models\Question::withoutGlobalScopes()
+            ->where('source_type', $sourceType)
+            ->whereNull('parent_question_id');
+
+        if (!empty($grades)) $query->whereIn('exam_grade', $grades);
+        if (!empty($years)) $query->whereIn('exam_year', $years);
+        if (!empty($months)) $query->whereIn('exam_month', $months);
+        if (!empty($subjects)) $query->whereIn('exam_subject', $subjects);
+        if ($schoolId) $query->where('school_id', $schoolId);
+        if (!empty($semesters)) $query->whereIn('exam_semester', $semesters);
+        if (!empty($types)) $query->whereIn('exam_type', $types);
+
+        if ($creationMethod === 'number' && !empty($questionNumbers)) {
+            $query->whereIn('exam_question_number', $questionNumbers);
+        }
+
+        if ($creationMethod === 'category' && !empty($questionTypeIds)) {
+            $query->whereIn('question_type_id', $questionTypeIds);
+        }
+
+        return $query->count();
+    }
+
+    /**
+     * 선택된 학년/년도/월(/학교/학기/시험유형/과목) 조건에 따라
+     * DB에 실제로 등록된 문제 번호만 반환.
+     * 등록된 번호가 없으면 fallback으로 1~30 표시.
+     */
+    protected static function getAvailableQuestionNumbers(
+        string $sourceType,
+        array $grades = [],
+        array $years = [],
+        array $months = [],
+        array $subjects = [],
+        ?int $schoolId = null,
+        array $semesters = [],
+        array $types = []
+    ): array {
+        $query = \App\Models\Question::withoutGlobalScopes()
+            ->where('source_type', $sourceType)
+            ->whereNotNull('exam_question_number');
+
+        if (!empty($grades)) $query->whereIn('exam_grade', $grades);
+        if (!empty($years)) $query->whereIn('exam_year', $years);
+        if (!empty($months)) $query->whereIn('exam_month', $months);
+        if (!empty($subjects)) $query->whereIn('exam_subject', $subjects);
+        if ($schoolId) $query->where('school_id', $schoolId);
+        if (!empty($semesters)) $query->whereIn('exam_semester', $semesters);
+        if (!empty($types)) $query->whereIn('exam_type', $types);
+
+        $numbers = $query->distinct()
+            ->orderBy('exam_question_number')
+            ->pluck('exam_question_number')
+            ->filter()
+            ->values()
+            ->toArray();
+
+        // 등록된 번호가 있으면 그것만, 없으면 (학년/년도/월 미지정 등) 1~30 fallback
+        if (empty($numbers)) {
+            $numbers = range(1, 30);
+        }
+
+        return collect($numbers)
+            ->map(fn($n) => ['value' => (int)$n, 'label' => $n . '번'])
             ->toArray();
     }
 
@@ -437,6 +522,7 @@ class ListTestSheets extends ListRecords
                                 ->multiple()
                                 ->cols(2)
                                 ->maxHeight(240)
+                                ->live()
                                 ->items(
                                     \App\Models\GradeSystem::orderBy('sequential_order')
                                         ->get()
@@ -448,6 +534,7 @@ class ListTestSheets extends ListRecords
                                 ->multiple()
                                 ->cols(2)
                                 ->maxHeight(240)
+                                ->live()
                                 ->items(
                                     collect(range(date('Y'), 1994, -1))
                                         ->map(fn($y) => ['value' => $y, 'label' => $y . '년'])
@@ -458,6 +545,7 @@ class ListTestSheets extends ListRecords
                                 ->multiple()
                                 ->cols(2)
                                 ->maxHeight(240)
+                                ->live()
                                 ->items([
                                     ['value' => 3, 'label' => '3월'],
                                     ['value' => 4, 'label' => '4월'],
@@ -479,22 +567,73 @@ class ListTestSheets extends ListRecords
                                 ->live(),
                         ]),
 
-                    // 과목 선택
+                    // 과목 선택 (학년/년도/월에 따라 동적으로 옵션 변경)
                     ExamGridSelect::make('exam_subjects')
                         ->label('과목 선택')
                         ->multiple()
-                        ->cols(7)
-                        ->items(self::getExamSubjectItems())
+                        ->cols(5)
+                        ->live()
+                        ->items(function (Get $get) {
+                            $grades = (array) ($get('exam_grades') ?? []);
+                            $years = (array) ($get('exam_years') ?? []);
+                            $months = (array) ($get('exam_months') ?? []);
+
+                            // 학년/년도가 비어있으면 기본 과목 옵션
+                            if (empty($grades) || empty($years)) {
+                                return self::getExamSubjectItems();
+                            }
+
+                            // 회차별 사용 가능한 과목들의 합집합
+                            return \App\Services\ExamSubjectResolver::getSubjectsForCombinations(
+                                $grades, $years, $months
+                            );
+                        })
                         ->columnSpanFull(),
 
-                    // 문제 번호로 추가 시: 문제 번호 선택
+                    // 매치 가능 문제 개수 미리보기
+                    Placeholder::make('available_count_preview')
+                        ->label('')
+                        ->content(function (Get $get) {
+                            $count = self::countAvailableExamQuestions(
+                                sourceType: 'mock_exam',
+                                grades: (array) ($get('exam_grades') ?? []),
+                                years: (array) ($get('exam_years') ?? []),
+                                months: (array) ($get('exam_months') ?? []),
+                                subjects: (array) ($get('exam_subjects') ?? []),
+                                questionNumbers: (array) ($get('question_numbers') ?? []),
+                                questionTypeIds: (array) ($get('question_type_ids') ?? []),
+                                creationMethod: $get('creation_method') ?? 'number'
+                            );
+
+                            $color = $count === 0 ? '#dc2626' : ($count < 10 ? '#d97706' : '#059669');
+                            $msg = $count === 0
+                                ? '⚠️ 선택 조건에 매치되는 모의고사 기출 문제가 없습니다. 학년/년도/단원/번호를 다시 확인하세요.'
+                                : "✓ 현재 조건에 매치되는 모의고사 기출 문제: <strong>{$count}개</strong>";
+                            return new \Illuminate\Support\HtmlString(
+                                "<div style='color: {$color}; font-size: 13px; padding: 8px 12px; background: " .
+                                ($count === 0 ? '#fef2f2' : ($count < 10 ? '#fffbeb' : '#f0fdf4')) .
+                                "; border-radius: 6px; border: 1px solid " .
+                                ($count === 0 ? '#fecaca' : ($count < 10 ? '#fde68a' : '#bbf7d0')) .
+                                ";'>{$msg}</div>"
+                            );
+                        })
+                        ->columnSpanFull(),
+
+                    // 문제 번호로 추가 시: 등록된 문제 개수만큼만 동적으로 표시
                     ExamGridSelect::make('question_numbers')
                         ->label('문제 번호 선택')
                         ->multiple()
                         ->cols(10)
-                        ->items(
-                            collect(range(1, 30))->map(fn($n) => ['value' => $n, 'label' => $n . '번'])->toArray()
-                        )
+                        ->live()
+                        ->items(function (Get $get) {
+                            return self::getAvailableQuestionNumbers(
+                                sourceType: 'mock_exam',
+                                grades: (array) ($get('exam_grades') ?? []),
+                                years: (array) ($get('exam_years') ?? []),
+                                months: (array) ($get('exam_months') ?? []),
+                                subjects: (array) ($get('exam_subjects') ?? [])
+                            );
+                        })
                         ->columnSpanFull()
                         ->visible(fn(Get $get) => $get('creation_method') !== 'category'),
 
@@ -609,6 +748,7 @@ class ListTestSheets extends ListRecords
                                 ->multiple()
                                 ->cols(2)
                                 ->maxHeight(240)
+                                ->live()
                                 ->items(
                                     \App\Models\GradeSystem::orderBy('sequential_order')
                                         ->get()
@@ -620,6 +760,7 @@ class ListTestSheets extends ListRecords
                                 ->multiple()
                                 ->cols(2)
                                 ->maxHeight(240)
+                                ->live()
                                 ->items(
                                     collect(range(date('Y'), 1994, -1))
                                         ->map(fn($y) => ['value' => $y, 'label' => $y . '년'])
@@ -629,6 +770,7 @@ class ListTestSheets extends ListRecords
                                 ->label('학기 선택')
                                 ->multiple()
                                 ->cols(2)
+                                ->live()
                                 ->items([
                                     ['value' => 1, 'label' => '1학기'],
                                     ['value' => 2, 'label' => '2학기'],
@@ -637,6 +779,7 @@ class ListTestSheets extends ListRecords
                                 ->label('시험 유형')
                                 ->multiple()
                                 ->cols(2)
+                                ->live()
                                 ->items([
                                     ['value' => 'midterm', 'label' => '중간고사'],
                                     ['value' => 'final', 'label' => '기말고사'],
@@ -657,17 +800,65 @@ class ListTestSheets extends ListRecords
                         ->label('과목 선택')
                         ->multiple()
                         ->cols(7)
+                        ->live()
                         ->items(self::getExamSubjectItems())
                         ->columnSpanFull(),
 
-                    // 문제 번호로 추가 시: 문제 번호 선택
+                    // 매치 가능 문제 개수 미리보기 (학교 기출)
+                    Placeholder::make('available_count_preview_school')
+                        ->label('')
+                        ->content(function (Get $get) {
+                            $schoolIds = (array) ($get('school_id') ?? []);
+                            $schoolId = !empty($schoolIds) ? (int)($schoolIds[0]) : null;
+
+                            $count = self::countAvailableExamQuestions(
+                                sourceType: 'school_exam',
+                                grades: (array) ($get('exam_grades') ?? []),
+                                years: (array) ($get('exam_years') ?? []),
+                                subjects: (array) ($get('exam_subjects') ?? []),
+                                schoolId: $schoolId,
+                                semesters: (array) ($get('exam_semesters') ?? []),
+                                types: (array) ($get('exam_types') ?? []),
+                                questionNumbers: (array) ($get('question_numbers') ?? []),
+                                questionTypeIds: (array) ($get('question_type_ids') ?? []),
+                                creationMethod: $get('creation_method') ?? 'number'
+                            );
+
+                            $color = $count === 0 ? '#dc2626' : ($count < 10 ? '#d97706' : '#059669');
+                            $msg = $count === 0
+                                ? '⚠️ 선택 조건에 매치되는 학교 기출 문제가 없습니다.'
+                                : "✓ 현재 조건에 매치되는 학교 기출 문제: <strong>{$count}개</strong>";
+                            return new \Illuminate\Support\HtmlString(
+                                "<div style='color: {$color}; font-size: 13px; padding: 8px 12px; background: " .
+                                ($count === 0 ? '#fef2f2' : ($count < 10 ? '#fffbeb' : '#f0fdf4')) .
+                                "; border-radius: 6px; border: 1px solid " .
+                                ($count === 0 ? '#fecaca' : ($count < 10 ? '#fde68a' : '#bbf7d0')) .
+                                ";'>{$msg}</div>"
+                            );
+                        })
+                        ->columnSpanFull(),
+
+                    // 문제 번호로 추가 시: 등록된 문제 개수만큼만 동적 표시
                     ExamGridSelect::make('question_numbers')
                         ->label('문제 번호 선택')
                         ->multiple()
                         ->cols(10)
-                        ->items(
-                            collect(range(1, 30))->map(fn($n) => ['value' => $n, 'label' => $n . '번'])->toArray()
-                        )
+                        ->live()
+                        ->items(function (Get $get) {
+                            $schoolIds = (array) ($get('school_id') ?? []);
+                            // 학교 검색 필드는 multiple이라서 배열로 옴 → 첫 번째 사용 (단일 학교 기준 fallback)
+                            $schoolId = !empty($schoolIds) ? (int)($schoolIds[0]) : null;
+
+                            return self::getAvailableQuestionNumbers(
+                                sourceType: 'school_exam',
+                                grades: (array) ($get('exam_grades') ?? []),
+                                years: (array) ($get('exam_years') ?? []),
+                                subjects: (array) ($get('exam_subjects') ?? []),
+                                schoolId: $schoolId,
+                                semesters: (array) ($get('exam_semesters') ?? []),
+                                types: (array) ($get('exam_types') ?? [])
+                            );
+                        })
                         ->columnSpanFull()
                         ->visible(fn(Get $get) => $get('creation_method') !== 'category'),
 

@@ -42,10 +42,37 @@ const lastSelectedVideo = ref(null);
 // watch lastSelectedVideo
 watch(lastSelectedVideo, (newVal) => {
     destroyPlayer();
+    // video_url(외부 링크)가 있으면 iframe/링크로, 없고 video(파일)가 있으면 player로
     if (newVal?.video) {
         nextTick(() => initializePlayer(newVal.video));
     }
 });
+
+// 외부 영상 링크를 임베드 가능한 형태로 변환 (YouTube, Vimeo 등)
+const toEmbedUrl = (url) => {
+    if (!url) return null;
+    try {
+        // YouTube
+        const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]+)/);
+        if (ytMatch) {
+            return `https://www.youtube.com/embed/${ytMatch[1]}`;
+        }
+        // Vimeo
+        const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+        if (vimeoMatch) {
+            return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+        }
+        // 구글 드라이브 (file/d/{id}/view → preview)
+        const driveMatch = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
+        if (driveMatch) {
+            return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+        }
+        // 기본: 그대로 반환 (iframe에 embed 가능한 URL 가정)
+        return url;
+    } catch (e) {
+        return url;
+    }
+};
 
 const createVideoElement = () => {
     // 기존 video-container 찾기
@@ -86,7 +113,8 @@ const initializePlayer = (videoSrc) => {
 const setSelectedItem = (item) => {
     selectedItem.value = item;
     if (item?.type === "video") {
-        lastSelectedVideo.value = item;
+        // ref reactivity 보장 위해 새 객체로 할당
+        lastSelectedVideo.value = { ...item };
     }
 };
 
@@ -196,6 +224,17 @@ const editItem = (item) => {
             }
             if (newItem.attachments) {
                 item.attachments = newItem.attachments;
+            }
+            // 외부 링크 모드 (퍼펙트 스터디 외 학원)
+            if (newItem.video_url !== undefined) {
+                item.video_url = newItem.video_url;
+                if (item.id === selectedItem.value?.id) {
+                    lastSelectedVideo.value = null;
+                    nextTick(() => setSelectedItem(item));
+                }
+            }
+            if (newItem.attachment_links !== undefined) {
+                item.attachment_links = newItem.attachment_links;
             }
 
             // Get siblings
@@ -385,18 +424,40 @@ onBeforeUnmount(() => {
                     <div
                         class="flex-1 flex items-center justify-center w-full h-[calc(100%-4rem)] relative"
                     >
+                        <!-- 1. 업로드된 비디오 파일 (퍼펙트 스터디) -->
                         <div
                             class="flex flex-col items-center justify-center w-full h-full"
                             v-if="lastSelectedVideo?.video"
                         >
                             <div class="video-container w-full h-full"></div>
                         </div>
+                        <!-- 2. 외부 영상 링크 (그 외 학원) -->
+                        <div
+                            class="flex flex-col w-full h-full"
+                            v-else-if="lastSelectedVideo?.video_url"
+                        >
+                            <iframe
+                                :src="toEmbedUrl(lastSelectedVideo.video_url)"
+                                class="w-full flex-1"
+                                frameborder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowfullscreen
+                            ></iframe>
+                            <a
+                                :href="lastSelectedVideo.video_url"
+                                target="_blank"
+                                class="text-xs text-primary-500 mt-1 hover:underline truncate"
+                            >
+                                새 창에서 열기 ↗
+                            </a>
+                        </div>
+                        <!-- 3. 영상 없음 -->
                         <div
                             class="flex flex-col items-center text-lg font-medium justify-center"
                             v-else
                         >
                             <div class="text-gray-600">
-                                영상을 업로드해주세요.
+                                영상을 업로드하거나 링크를 등록해주세요.
                             </div>
                             <button
                                 @click="editItem(lastSelectedVideo)"
@@ -415,7 +476,7 @@ onBeforeUnmount(() => {
                                         d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"
                                     />
                                 </svg>
-                                영상 업로드
+                                등록하기
                             </button>
                         </div>
                     </div>

@@ -120,32 +120,40 @@ class QuestionResource extends Resource
                 ]);
             }
         }
-        // 교재 문제인 경우 seq 값 확인 후 처리
-        if ($question->material_id) {
-            // seq가 자동 생성된 값인지 확인 (기존 최대값 + 1인지)
-            $maxSeq = Question::where('material_id', $question->material_id)->where('id', '!=', $question->id)->max('seq') ?? 0;
-
-            // 자동 생성된 값이거나 null인 경우 전체 재정렬
-            if (!$question->seq || $question->seq == ($maxSeq + 1)) {
-                self::reorderQuestionSequences($question->material_id);
-            }
+        // 교재 문제인 경우 seq 처리
+        // - 호출자가 명시적으로 seq를 넘겼으면(예: PDF 스캔) 그대로 보존하고 재정렬 안 함
+        // - seq가 비었으면 boot creating에서 max+1로 자동 채워진 상태 → 재정렬 불필요
+        // 기존 reorder 로직은 같은 초에 insert된 문제들의 created_at 동일성으로 인해
+        // 순서가 무작위로 섞이는 부작용이 있어 제거.
+        if ($question->material_id && !isset($data['seq']) && !$question->seq) {
+            // 안전망: seq가 정말로 빠진 경우만 재정렬
+            self::reorderQuestionSequences($question->material_id);
         }
 
         return $question;
     }
 
     /**
-     * 교재의 문제 번호를 생성된 순서대로 재정렬
+     * 교재의 문제 번호를 재정렬
+     * - 1순위: 기존 seq (이미 부여된 순서 보존)
+     * - 2순위: id (insert 순서)
+     * - created_at은 같은 초에 다수 insert되면 순서가 보장되지 않으므로 사용하지 않음
      */
     private static function reorderQuestionSequences($materialId)
     {
         $questions = Question::where('material_id', $materialId)
             ->whereNull('parent_question_id')
-            ->orderBy('created_at')
+            ->orderByRaw('COALESCE(seq, 999999) ASC')
+            ->orderBy('id')
             ->get();
 
         foreach ($questions as $index => $question) {
-            $question->update(['seq' => $index + 1]);
+            $newSeq = $index + 1;
+            if ($question->seq !== $newSeq) {
+                $question->timestamps = false;
+                $question->update(['seq' => $newSeq]);
+                $question->timestamps = true;
+            }
         }
     }
 

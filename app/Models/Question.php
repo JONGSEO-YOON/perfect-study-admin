@@ -19,9 +19,14 @@ class Question extends Model
     protected static function booted(): void
     {
         // 생성 시 자동으로 academy_id 설정
+        // 우선순위: 1) 명시적으로 set된 값, 2) 현재 접속 학원, 3) 인증된 사용자의 academy_id
         static::creating(function ($model) {
-            if (!$model->academy_id && auth()->check()) {
-                $model->academy_id = auth()->user()->academy_id;
+            if (!$model->academy_id) {
+                if (app()->has('current_academy') && app('current_academy')) {
+                    $model->academy_id = app('current_academy')->id;
+                } elseif (auth()->check()) {
+                    $model->academy_id = auth()->user()->academy_id;
+                }
             }
         });
     }
@@ -103,8 +108,11 @@ class Question extends Model
             }
 
             // material_id가 있고 seq가 설정되지 않은 경우에만 seq 설정
+            // GlobalScope를 우회하여 같은 교재의 모든 문제 중 max(seq) 조회
             if ($model->material_id && !$model->seq) {
-                $maxSeq = static::where('material_id', $model->material_id)->max('seq') ?? 0;
+                $maxSeq = static::withoutGlobalScopes()
+                    ->where('material_id', $model->material_id)
+                    ->max('seq') ?? 0;
                 $model->seq = $maxSeq + 1;
             }
         });

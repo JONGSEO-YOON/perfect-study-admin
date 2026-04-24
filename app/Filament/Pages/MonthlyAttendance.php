@@ -15,6 +15,8 @@ use Filament\Forms\Form;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use App\Services\FcmService;
+use App\Exports\MonthlyAttendanceExport;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Log;
 
 class MonthlyAttendance extends Page
@@ -87,6 +89,17 @@ class MonthlyAttendance extends Page
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('downloadExcel')
+                ->label('엑셀 다운로드')
+                ->icon('heroicon-m-arrow-down-tray')
+                ->color('success')
+                ->action(function () {
+                    $filename = "월별출결현황_{$this->selectedYear}년{$this->selectedMonth}월.xlsx";
+                    return Excel::download(
+                        new MonthlyAttendanceExport($this->selectedYear, $this->selectedMonth, $this->selectedClassroom),
+                        $filename
+                    );
+                }),
             Action::make('editAttendance')
                 ->label('출결 등록')
                 ->modalHeading(fn() => $this->modalStudentName . ' - ' . $this->modalDate . ' 출결 기록')
@@ -313,6 +326,12 @@ class MonthlyAttendance extends Page
     {
         $query = Student::with('user');
 
+        // 현재 접속 학원 기준 필터 (root_admin도 적용)
+        $academyId = $this->currentAcademyId();
+        if ($academyId) {
+            $query->where('students.academy_id', $academyId);
+        }
+
         // 반 선택에 따른 필터링
         if ($this->selectedClassroom) {
             $query->whereHas('classrooms', function ($q) {
@@ -328,6 +347,14 @@ class MonthlyAttendance extends Page
         }
 
         return $query->orderBy('id')->get();
+    }
+
+    private function currentAcademyId(): ?int
+    {
+        if (app()->has('current_academy') && app('current_academy')) {
+            return app('current_academy')->id;
+        }
+        return auth()->check() ? auth()->user()->academy_id : null;
     }
 
     private function getAttendanceData($students)

@@ -44,7 +44,7 @@ class StudentsExport implements FromCollection, WithHeadings, WithMapping
 
     public function headings(): array
     {
-        return ['이름', '전화번호', '학년', '학교', '상태', '등록일'];
+        return ['이름', '전화번호(본인)', '전화번호(부)', '전화번호(모)', '학년', '학교', '상태', '등록일'];
     }
 
     public function map($student): array
@@ -58,6 +58,8 @@ class StudentsExport implements FromCollection, WithHeadings, WithMapping
         return [
             $student->user?->name ?? '-',
             $student->user?->phone ?? '-',
+            $student->phone_father ?? '-',
+            $student->phone_mother ?? '-',
             $student->gradeSystem?->display_name ?? '-',
             $student->school?->name ?? '-',
             $statusMap[$student->status] ?? $student->status,

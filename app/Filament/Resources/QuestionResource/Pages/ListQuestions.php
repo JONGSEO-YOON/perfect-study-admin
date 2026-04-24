@@ -189,7 +189,84 @@ class ListQuestions extends ListRecords
                 ->using(function ($data) {
                     return QuestionResource::handleCreate($data);
                 }),
+
+            Actions\Action::make('share-material')
+                ->label(function () {
+                    $material = $this->parent_id ? Material::find($this->parent_id) : null;
+                    return $material?->type === 'folder' ? '폴더 학원 공유 (하위 모두)' : '교재 학원 공유';
+                })
+                ->icon('heroicon-m-share')
+                ->color('info')
+                ->modalHeading(function () {
+                    $material = $this->parent_id ? Material::find($this->parent_id) : null;
+                    return $material?->type === 'folder' ? '폴더 학원 공유 설정 (하위 교재 모두 cascade)' : '교재 학원 공유 설정';
+                })
+                ->modalWidth('md')
+                ->modalSubmitActionLabel('저장')
+                ->visible(function () {
+                    if (!$this->parent_id) return false;
+                    $material = Material::find($this->parent_id);
+                    if (!$material) return false;
+                    // root_admin 또는 자기 학원 교재의 manager 이상만
+                    return auth()->user()->role === 'root_admin'
+                        || ($material->academy_id === auth()->user()->academy_id && auth()->user()->isRoleAbove('manager', true));
+                })
+                ->fillForm(function () {
+                    $material = Material::find($this->parent_id);
+                    return [
+                        'academy_ids' => $material?->visibleAcademies()->pluck('academies.id')->toArray() ?? [],
+                    ];
+                })
+                ->form([
+                    \Filament\Forms\Components\CheckboxList::make('academy_ids')
+                        ->label('공유할 학원 선택')
+                        ->options(function () {
+                            return \App\Models\Academy::where('id', '!=', auth()->user()->academy_id)
+                                ->pluck('name', 'id')
+                                ->toArray();
+                        })
+                        ->columns(1),
+                ])
+                ->action(function (array $data) {
+                    $material = Material::find($this->parent_id);
+                    if (!$material) return;
+
+                    $academyIds = $data['academy_ids'] ?? [];
+
+                    // 본인 (폴더 또는 책) 공유
+                    $material->visibleAcademies()->sync($academyIds);
+
+                    // 폴더면 하위 모두 cascade로 동일하게 sync
+                    if ($material->type === 'folder') {
+                        $count = self::syncDescendantMaterials($material, $academyIds);
+                        \Filament\Notifications\Notification::make()
+                            ->title("폴더 공유 설정이 저장되었습니다 (하위 교재 {$count}개 포함)")
+                            ->success()
+                            ->send();
+                    } else {
+                        \Filament\Notifications\Notification::make()
+                            ->title('교재 공유 설정이 저장되었습니다.')
+                            ->success()
+                            ->send();
+                    }
+                }),
         ];
+    }
+
+    /**
+     * 폴더의 모든 후손(폴더+책)에 동일한 학원 공유 설정을 적용 (cascade)
+     */
+    protected static function syncDescendantMaterials(Material $folder, array $academyIds): int
+    {
+        $count = 0;
+        foreach ($folder->children as $child) {
+            $child->visibleAcademies()->sync($academyIds);
+            $count++;
+            if ($child->type === 'folder') {
+                $count += self::syncDescendantMaterials($child, $academyIds);
+            }
+        }
+        return $count;
     }
 
     protected function getHeaderWidgets(): array

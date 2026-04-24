@@ -33,7 +33,30 @@ class PaymentResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()->role == 'root_admin';
+        $user = auth()->user();
+
+        if (!$user) {
+            return false;
+        }
+
+        // root_admin은 모든 학원의 결제 조회 가능
+        // admin은 자기 학원 결제만 조회 가능 (BelongsToAcademy로 자동 필터링됨)
+        if (!in_array($user->role, ['root_admin', 'admin'])) {
+            return false;
+        }
+
+        // 학원별 settings로 결제 메뉴 숨김 가능
+        if ($user->role !== 'root_admin') {
+            $academy = $user->academy;
+            if ($academy) {
+                $settings = $academy->settings ?? [];
+                if (isset($settings['payments_visible']) && $settings['payments_visible'] === false) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     public static function form(Form $form): Form

@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToAcademy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AttendanceLog extends Model
 {
+    use BelongsToAcademy;
+
     protected $fillable = [
         'student_id',
         'classroom_id',
@@ -16,6 +19,7 @@ class AttendanceLog extends Model
         'is_supplementary',
         'check_in_time',
         'check_out_time',
+        'academy_id',
     ];
 
     protected $casts = [

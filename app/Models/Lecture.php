@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToAcademy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 
 class Lecture extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToAcademy;
 
     protected $casts = [
         'display' => 'boolean',

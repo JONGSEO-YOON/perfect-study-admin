@@ -19,20 +19,27 @@ class CounselingWidget extends BaseWidget
     protected function getStats(): array
     {
         $now = Carbon::now('Asia/Seoul');
+        $academyId = self::currentAcademyId();
 
-        $requested = Counseling::where('status', '상담 요청')->count();
-        $inProgress = Counseling::where('status', '상담 진행')->count();
-
-        // 이번 달 완료된 상담
-        $completedThisMonth = Counseling::where('status', '상담 완료')
+        $requestedQuery = Counseling::where('status', '상담 요청');
+        $inProgressQuery = Counseling::where('status', '상담 진행');
+        $completedQuery = Counseling::where('status', '상담 완료')
             ->whereYear('updated_at', $now->year)
-            ->whereMonth('updated_at', $now->month)
-            ->count();
+            ->whereMonth('updated_at', $now->month);
+        $unconfirmedQuery = Counseling::where('confirmed', false)
+            ->where('status', '상담 완료');
 
-        // 미확인 상담 (원장/관리자 확인 안 된 것)
-        $unconfirmed = Counseling::where('confirmed', false)
-            ->where('status', '상담 완료')
-            ->count();
+        if ($academyId) {
+            $requestedQuery->where('counselings.academy_id', $academyId);
+            $inProgressQuery->where('counselings.academy_id', $academyId);
+            $completedQuery->where('counselings.academy_id', $academyId);
+            $unconfirmedQuery->where('counselings.academy_id', $academyId);
+        }
+
+        $requested = $requestedQuery->count();
+        $inProgress = $inProgressQuery->count();
+        $completedThisMonth = $completedQuery->count();
+        $unconfirmed = $unconfirmedQuery->count();
 
         return [
             Stat::make('상담 요청', $requested . '건')
@@ -52,5 +59,13 @@ class CounselingWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-bell-alert')
                 ->color($unconfirmed > 0 ? 'danger' : 'success'),
         ];
+    }
+
+    private static function currentAcademyId(): ?int
+    {
+        if (app()->has('current_academy') && app('current_academy')) {
+            return app('current_academy')->id;
+        }
+        return auth()->check() ? auth()->user()->academy_id : null;
     }
 }

@@ -327,6 +327,54 @@ class TestSheetResource extends Resource
                     ->modalHeading('문제지 마감')
                     ->requiresConfirmation()
                     ->action(fn($record) => $record->complete()),
+                Tables\Actions\Action::make('submission-status')
+                    ->label('제출 현황')
+                    ->icon('heroicon-m-clipboard-document-check')
+                    ->color('info')
+                    ->visible(fn($record) => in_array($record->status, ['progress', 'completed']))
+                    ->modalHeading(fn($record) => $record->name . ' - 제출 현황')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('닫기')
+                    ->modalWidth('3xl')
+                    ->modalContent(function ($record) {
+                        // 출제 대상 학생들 조회
+                        $targetStudents = $record->getTargetStudents();
+                        $totalCount = $targetStudents->count();
+
+                        // 제출한 답안들 조회
+                        $answers = \App\Models\TestSheetAnswer::where('test_sheet_id', $record->id)
+                            ->where('status', 'completed')
+                            ->with('user')
+                            ->get()
+                            ->keyBy('user_id');
+
+                        // 학생 목록 + 제출 정보 매핑
+                        $rows = $targetStudents->map(function ($student) use ($answers) {
+                            $userId = $student->user?->id;
+                            $answer = $userId ? ($answers[$userId] ?? null) : null;
+
+                            return [
+                                'student_name' => $student->user?->name ?? '-',
+                                'classroom' => $student->classrooms->first()?->name ?? '-',
+                                'submitted' => (bool) $answer,
+                                'correct_count' => $answer?->correct_count ?? null,
+                                'total_questions' => is_array($student) ? 0 : (count($answer?->answers ?? []) ?: count((array)($answer?->test_sheet?->questions ?? []))),
+                                'time' => $answer?->time ?? null,
+                                'submitted_at' => $answer?->updated_at,
+                            ];
+                        })->sortByDesc('submitted')->values();
+
+                        $submittedCount = $rows->where('submitted', true)->count();
+                        $notSubmittedCount = $totalCount - $submittedCount;
+
+                        return view('filament.components.modals.test-sheet-submission-status', [
+                            'rows' => $rows,
+                            'totalCount' => $totalCount,
+                            'submittedCount' => $submittedCount,
+                            'notSubmittedCount' => $notSubmittedCount,
+                            'testSheet' => $record,
+                        ]);
+                    }),
                 Tables\Actions\Action::make('end-retry-test-sheets')
                     ->label('오답테스트 마감')
                     ->color('danger')

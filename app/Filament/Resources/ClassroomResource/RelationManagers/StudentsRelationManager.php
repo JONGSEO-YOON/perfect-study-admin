@@ -80,19 +80,55 @@ class StudentsRelationManager extends RelationManager
                                 User::getAvailableStudentsByClassRoomId($search, $this->ownerRecord->id)
                             )
                     ])
+                    ->after(function (array $data) {
+                        // 반 배정 이력 기록
+                        $classroom = $this->ownerRecord;
+                        $teacherName = $classroom->teacher?->user?->name ?? '-';
+                        $studentIds = (array) ($data['recordId'] ?? []);
+
+                        foreach ($studentIds as $studentId) {
+                            \App\Models\StudentStatusHistory::create([
+                                'student_id' => $studentId,
+                                'changed_by' => auth()->id(),
+                                'event_type' => 'classroom_assigned',
+                                'from_status' => null,
+                                'to_status' => null,
+                                'reason' => '반 배정',
+                                'memo' => "{$classroom->name} (담임: {$teacherName})",
+                            ]);
+                        }
+                    })
                     ->attachAnother(false),
             ])
             ->actions([
-                Tables\Actions\DetachAction::make()
+                Tables\Actions\Action::make('remove')
+                    ->label('삭제')
                     ->modalHeading('학생 삭제')
-                    ->label('삭제'),
+                    ->icon('heroicon-m-x-mark')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
+                        \Illuminate\Support\Facades\DB::table('classroom_student')
+                            ->where('classroom_id', $this->ownerRecord->id)
+                            ->where('student_id', $record->id)
+                            ->whereNull('deleted_at')
+                            ->update(['deleted_at' => now()]);
+
+                        // 반 해제 이력 기록
+                        $classroom = $this->ownerRecord;
+                        $teacherName = $classroom->teacher?->user?->name ?? '-';
+                        \App\Models\StudentStatusHistory::create([
+                            'student_id' => $record->id,
+                            'changed_by' => auth()->id(),
+                            'event_type' => 'classroom_removed',
+                            'from_status' => null,
+                            'to_status' => null,
+                            'reason' => '반 해제',
+                            'memo' => "{$classroom->name} (담임: {$teacherName})",
+                        ]);
+                    }),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DetachBulkAction::make()
-                        ->label('삭제')
-                        ->modalHeading('학생 삭제'),
-                ]),
             ])
             ->emptyStateHeading('학생이 없습니다.')
             ->queryStringIdentifier('classroom-student');

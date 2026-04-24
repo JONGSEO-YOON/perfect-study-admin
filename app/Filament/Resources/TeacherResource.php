@@ -170,6 +170,9 @@ class TeacherResource extends Resource
                     ->label('이름')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('academy.name')
+                    ->label('소속 학원')
+                    ->visible(fn () => auth()->user()->role === 'root_admin'),
                 TextColumn::make('user.username')
                     ->label('계정')
                     ->searchable()

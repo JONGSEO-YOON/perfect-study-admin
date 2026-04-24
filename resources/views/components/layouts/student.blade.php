@@ -174,7 +174,7 @@
                                 stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                     </a>
-                    <img src="/logo.png" class="h-[40px] ml-4" />
+                    <img src="{{ isset($currentAcademy) && $currentAcademy->logo_path ? \Illuminate\Support\Facades\Storage::url($currentAcademy->logo_path) : '/logo.png' }}" class="h-[40px] ml-4" alt="{{ $currentAcademy->name ?? '' }}" />
                 </div>
                 <div class="flex-1 flex flex-col h-0">
                     {{ $slot }}

@@ -147,6 +147,9 @@ class StudentNoticeResource extends Resource
                     })
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('academy.name')
+                    ->label('소속 학원')
+                    ->visible(fn () => auth()->user()->role === 'root_admin'),
                 TextColumn::make('target_type')
                     ->label('대상')
                     ->badge()

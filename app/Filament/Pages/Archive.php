@@ -91,11 +91,13 @@ class Archive extends Page implements HasForms, HasTable
 
     public function table(Table $table): Table
     {
+        $canManage = self::canManageResources();
+
         return $table
-            ->recordAction('edit')
+            ->recordAction($canManage ? 'edit' : null)
             ->query(Resource::query()->with('author'))
             ->emptyStateHeading('자료가 없습니다.')
-            ->emptyStateDescription('자료를 등록해주세요.')
+            ->emptyStateDescription($canManage ? '자료를 등록해주세요.' : '아직 공유된 자료가 없습니다.')
             ->modifyQueryUsing(function (Builder $query) {
                 $query->orderBy('pinned_at', 'desc');
             })
@@ -141,21 +143,54 @@ class Archive extends Page implements HasForms, HasTable
                     ->fillForm([
                         'resource_sub_category_id' => $this->currentSubCategoryId,
                     ])
-                    ->modalSubmitActionLabel('저장'),
+                    ->modalSubmitActionLabel('저장')
+                    ->visible(fn() => $canManage),
             ])
             ->actions([
+                // 자료 다운로드 (모든 학원 사용 가능)
+                \Filament\Tables\Actions\Action::make('download')
+                    ->label('다운로드')
+                    ->icon('heroicon-m-arrow-down-tray')
+                    ->color('success')
+                    ->visible(fn($record) => !empty($record->attachments))
+                    ->modalHeading(fn($record) => $record->title . ' - 첨부 파일')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('닫기')
+                    ->modalContent(fn($record) => view('filament.components.modals.resource-downloads', [
+                        'record' => $record,
+                    ])),
+                // 수정 (퍼펙트 스터디만)
                 EditAction::make()
                     ->form(self::_form())
                     ->modalHeading('수정하기')
-                    ->modalWidth('4xl'),
+                    ->modalWidth('4xl')
+                    ->visible(fn() => $canManage),
             ])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make()
-                        ->modalHeading('자료 삭제'),
-                ]),
-            ])
+            ->bulkActions(
+                $canManage ? [
+                    BulkActionGroup::make([
+                        DeleteBulkAction::make()
+                            ->modalHeading('자료 삭제'),
+                    ]),
+                ] : []
+            )
             ->defaultSort('created_at', 'desc');
+    }
+
+    /**
+     * 자료 등록/수정/삭제/분류관리 가능 여부
+     * - root_admin: 항상 가능
+     * - 퍼펙트 스터디 (academy_id=1): 가능
+     * - 그 외 학원: 불가 (다운로드만 가능)
+     */
+    public static function canManageResources(): bool
+    {
+        if (!auth()->check()) return false;
+
+        $user = auth()->user();
+        if ($user->role === 'root_admin') return true;
+
+        return $user->academy_id === 1;
     }
 
     public static function canAccess(): bool

@@ -182,19 +182,32 @@ class TestSheet extends Model
      */
     public function scopeAvailableFor(Builder $query, Student $student): Builder
     {
-        $teacherIds = $student->classrooms()
-            ->with('teacher.user')
-            ->get()
-            ->pluck('teacher.user.id')
+        // 학생의 반 담임/부담임 user id 수집
+        $classrooms = $student->classrooms()
+            ->with(['teacher.user', 'subTeacher.user'])
+            ->get();
+
+        $teacherIds = $classrooms
+            ->flatMap(fn($c) => [$c->teacher?->user?->id, $c->subTeacher?->user?->id])
+            ->filter()
             ->unique()
             ->values()
             ->all();
 
         return $query->where(function ($query) use ($student, $teacherIds) {
-            // 출제자가 학생의 강사인 경우만
-            $query->whereIn('user_id', $teacherIds);
+            // 출제자/강사 매칭 (멀티 학원 친화):
+            // 1. 출제자(user_id)가 학생의 담임/부담임이거나
+            // 2. 시험지에 attach된 강사(teachers pivot) 중 학생의 담임/부담임이 있거나
+            // 3. 시험지가 학생과 같은 학원에 속한 경우 (admin/root_admin 출제 케이스 포함)
+            $query->where(function ($q) use ($teacherIds, $student) {
+                $q->whereIn('user_id', $teacherIds)
+                    ->orWhereHas('teachers.user', function ($t) use ($teacherIds) {
+                        $t->whereIn('users.id', $teacherIds);
+                    })
+                    ->orWhere('test_sheets.academy_id', $student->academy_id);
+            });
 
-            // target_group별 조건 체크
+            // target_group별 조건 체크 (학년/반/학생/레벨 매칭은 반드시 통과)
             $query->where(function ($q) use ($student) {
                 $this->addTargetGroupConditions($q, $student);
             });
@@ -346,7 +359,7 @@ class TestSheet extends Model
 
     public function submitAnswer(array $answers, array $dontKnowAnswers, int $userId, int $elapsedTime = 0): bool
     {
-        return DB::transaction(function () use ($answers, $dontKnowAnswers, $userId, $elapsedTime) {
+        $success = DB::transaction(function () use ($answers, $dontKnowAnswers, $userId, $elapsedTime) {
             // 1. 채점 및 리포트 생성
             $result = $this->grade($answers, $dontKnowAnswers, $userId);
 
@@ -373,6 +386,29 @@ class TestSheet extends Model
 
             return true;
         });
+
+        // 4. 답안 제출 후 즉시 리포트(반/학년 평균 포함) + 주간 성적표 재계산
+        //    선생님이 "문제지 마감"을 누르지 않아도 학생별 성적표가 즉시 보임
+        if ($success && $this->isOriginal()) {
+            try {
+                $this->generateReport();
+                $this->generateWeeklyReport();
+
+                // '숙제' 태그가 있을 때만 숙제 주간 리포트도 갱신
+                if (in_array('숙제', (array) ($this->tags ?? []))) {
+                    $this->generateHomeworkWeeklyReport();
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('답안 제출 시 리포트 자동 갱신 실패', [
+                    'test_sheet_id' => $this->id,
+                    'user_id' => $userId,
+                    'error' => $e->getMessage(),
+                ]);
+                // 답안 저장 자체는 성공했으므로 true 반환 유지
+            }
+        }
+
+        return $success;
     }
 
     protected function grade(array $answers, array  $dontKnowAnswers, $userId): array
