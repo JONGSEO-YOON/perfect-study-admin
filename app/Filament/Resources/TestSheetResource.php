@@ -335,43 +335,79 @@ class TestSheetResource extends Resource
                     ->modalHeading(fn($record) => $record->name . ' - 제출 현황')
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('닫기')
-                    ->modalWidth('3xl')
+                    ->modalWidth('5xl')
                     ->modalContent(function ($record) {
                         // 출제 대상 학생들 조회
                         $targetStudents = $record->getTargetStudents();
                         $totalCount = $targetStudents->count();
 
-                        // 제출한 답안들 조회
+                        // 본문제 제출한 답안들
                         $answers = \App\Models\TestSheetAnswer::where('test_sheet_id', $record->id)
                             ->where('status', 'completed')
                             ->with('user')
                             ->get()
                             ->keyBy('user_id');
 
+                        // 오답유사유형 (wrong-answer retry) 매핑
+                        // user_id별 첫 번째 오답 시트 (retry_count=1) 정보
+                        $wrongAnswerSheets = \App\Models\WrongAnswerTestSheet::where('original_test_sheet_id', $record->id)
+                            ->where('retry_count', 1)
+                            ->with('testSheet')
+                            ->get()
+                            ->keyBy('user_id');
+
+                        $wrongAnswerSheetIds = $wrongAnswerSheets->pluck('test_sheet_id')->filter()->all();
+                        $wrongAnswerAnswers = empty($wrongAnswerSheetIds)
+                            ? collect()
+                            : \App\Models\TestSheetAnswer::whereIn('test_sheet_id', $wrongAnswerSheetIds)
+                                ->where('status', 'completed')
+                                ->get()
+                                ->groupBy(fn($a) => $a->user_id . '|' . $a->test_sheet_id);
+
                         // 학생 목록 + 제출 정보 매핑
-                        $rows = $targetStudents->map(function ($student) use ($answers) {
+                        $rows = $targetStudents->map(function ($student) use ($answers, $wrongAnswerSheets, $wrongAnswerAnswers) {
                             $userId = $student->user?->id;
                             $answer = $userId ? ($answers[$userId] ?? null) : null;
+                            $wrongSheet = $userId ? ($wrongAnswerSheets[$userId] ?? null) : null;
+                            $wrongAnswerKey = $wrongSheet && $userId ? ($userId . '|' . $wrongSheet->test_sheet_id) : null;
+                            $wrongAnswer = $wrongAnswerKey && $wrongAnswerAnswers->has($wrongAnswerKey)
+                                ? $wrongAnswerAnswers[$wrongAnswerKey]->first()
+                                : null;
 
                             return [
                                 'student_name' => $student->user?->name ?? '-',
                                 'classroom' => $student->classrooms->first()?->name ?? '-',
-                                'submitted' => (bool) $answer,
-                                'correct_count' => $answer?->correct_count ?? null,
-                                'total_questions' => is_array($student) ? 0 : (count($answer?->answers ?? []) ?: count((array)($answer?->test_sheet?->questions ?? []))),
-                                'time' => $answer?->time ?? null,
-                                'submitted_at' => $answer?->updated_at,
+                                // 본문제
+                                'main_submitted' => (bool) $answer,
+                                'main_correct_count' => $answer?->correct_count,
+                                'main_time' => $answer?->time,
+                                'main_submitted_at' => $answer?->updated_at,
+                                // 오답유사유형
+                                'wrong_assigned' => (bool) $wrongSheet,
+                                'wrong_submitted' => (bool) $wrongAnswer,
+                                'wrong_correct_count' => $wrongAnswer?->correct_count,
+                                'wrong_time' => $wrongAnswer?->time,
+                                'wrong_submitted_at' => $wrongAnswer?->updated_at,
                             ];
-                        })->sortByDesc('submitted')->values();
+                        })->sortBy([
+                            ['main_submitted', 'desc'],
+                            ['student_name', 'asc'],
+                        ])->values();
 
-                        $submittedCount = $rows->where('submitted', true)->count();
-                        $notSubmittedCount = $totalCount - $submittedCount;
+                        $mainSubmittedCount = $rows->where('main_submitted', true)->count();
+                        $mainNotSubmittedCount = $totalCount - $mainSubmittedCount;
+                        $wrongAssignedCount = $rows->where('wrong_assigned', true)->count();
+                        $wrongSubmittedCount = $rows->where('wrong_submitted', true)->count();
+                        $wrongNotSubmittedCount = $wrongAssignedCount - $wrongSubmittedCount;
 
                         return view('filament.components.modals.test-sheet-submission-status', [
                             'rows' => $rows,
                             'totalCount' => $totalCount,
-                            'submittedCount' => $submittedCount,
-                            'notSubmittedCount' => $notSubmittedCount,
+                            'mainSubmittedCount' => $mainSubmittedCount,
+                            'mainNotSubmittedCount' => $mainNotSubmittedCount,
+                            'wrongAssignedCount' => $wrongAssignedCount,
+                            'wrongSubmittedCount' => $wrongSubmittedCount,
+                            'wrongNotSubmittedCount' => $wrongNotSubmittedCount,
                             'testSheet' => $record,
                         ]);
                     }),
