@@ -176,14 +176,24 @@ class AcademyResource extends Resource
                     ->label('전체 학생')
                     ->counts('students'),
                 TextColumn::make('enrolled_students_count')
-                    ->label('재원생')
-                    ->getStateUsing(fn ($record) => $record->students()->where('status', 'enrolled')->count())
+                    ->label('재원생(승인)')
+                    ->getStateUsing(fn ($record) => $record->students()->whereIn('status', ['enrolled', 'active'])->count())
                     ->color('success')
+                    ->badge(),
+                TextColumn::make('pending_students_count')
+                    ->label('승인 대기')
+                    ->getStateUsing(fn ($record) => $record->students()->where('status', 'pending')->count())
+                    ->color('warning')
+                    ->badge(),
+                TextColumn::make('withdrawn_students_count')
+                    ->label('퇴원생')
+                    ->getStateUsing(fn ($record) => $record->students()->where('status', 'withdrawn')->count())
+                    ->color('danger')
                     ->badge(),
                 TextColumn::make('student_limit')
                     ->label('인원 제한')
                     ->formatStateUsing(fn ($state) => $state ? $state . '명' : '무제한')
-                    ->color(fn ($record) => $record->student_limit && $record->students()->where('status', 'enrolled')->count() >= $record->student_limit ? 'danger' : 'gray'),
+                    ->color(fn ($record) => $record->student_limit && $record->students()->whereIn('status', ['enrolled', 'active'])->count() >= $record->student_limit ? 'danger' : 'gray'),
                 TextColumn::make('created_at')
                     ->label('생성일')
                     ->date('Y-m-d'),
