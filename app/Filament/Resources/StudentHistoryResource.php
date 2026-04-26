@@ -157,8 +157,8 @@ class StudentHistoryResource extends Resource
             ->with(['teacher.user', 'subTeacher.user'])
             ->get();
 
-        // 이미 classroom_assigned/removed 이벤트 기록이 있는지 확인 (pivot과 중복 방지)
-        $hasClassroomEvents = $statusHistories->whereIn('event_type', ['classroom_assigned', 'classroom_removed'])->isNotEmpty();
+        // 이미 classroom_assigned/removed/transferred 이벤트 기록이 있는지 확인 (pivot과 중복 방지)
+        $hasClassroomEvents = $statusHistories->whereIn('event_type', ['classroom_assigned', 'classroom_removed', 'classroom_transferred'])->isNotEmpty();
 
         if (!$hasClassroomEvents) {
             // 레거시: pivot에서 반 배정/해제 이력 재구성
@@ -277,6 +277,20 @@ class StudentHistoryResource extends Resource
                         'title' => '반 해제',
                         'description' => $history->memo ?: '',
                         'details' => array_filter([
+                            '처리자' => $changedBy,
+                        ]),
+                    ];
+                    break;
+
+                case 'classroom_transferred':
+                    $events[] = [
+                        'date' => $history->created_at,
+                        'type' => 'classroom_transferred',
+                        'color' => 'amber',
+                        'title' => '전반',
+                        'description' => $history->memo ?: '',
+                        'details' => array_filter([
+                            '사유' => $history->reason !== '전반' ? $history->reason : null,
                             '처리자' => $changedBy,
                         ]),
                     ];

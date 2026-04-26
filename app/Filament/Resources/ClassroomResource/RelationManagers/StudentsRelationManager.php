@@ -2,15 +2,19 @@
 
 namespace App\Filament\Resources\ClassroomResource\RelationManagers;
 
+use App\Models\Classroom;
 use App\Models\Student;
 use App\Models\User;
 use Filament\Forms;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\DB;
 
 class StudentsRelationManager extends RelationManager
 {
@@ -101,6 +105,85 @@ class StudentsRelationManager extends RelationManager
                     ->attachAnother(false),
             ])
             ->actions([
+                Tables\Actions\Action::make('transfer')
+                    ->label('전반')
+                    ->modalHeading('전반')
+                    ->modalDescription(fn($record) => "{$record->user?->name} 학생을 다른 반으로 이동합니다.")
+                    ->icon('heroicon-m-arrows-right-left')
+                    ->color('warning')
+                    ->visible(fn() => auth()->user()->isRoleAbove('admin', true))
+                    ->form([
+                        Select::make('target_classroom_id')
+                            ->label('이동할 반')
+                            ->options(function () {
+                                $query = Classroom::query()
+                                    ->where('id', '!=', $this->ownerRecord->id)
+                                    ->orderBy('name');
+                                if (auth()->user()->academy_id) {
+                                    $query->where('academy_id', auth()->user()->academy_id);
+                                }
+                                return $query->pluck('name', 'id');
+                            })
+                            ->required()
+                            ->searchable()
+                            ->preload(),
+                        Forms\Components\Textarea::make('reason')
+                            ->label('전반 사유')
+                            ->rows(2)
+                            ->placeholder('예: 학생 요청, 레벨 조정 등'),
+                    ])
+                    ->action(function (array $data, $record) {
+                        $fromClassroom = $this->ownerRecord;
+                        $toClassroom = Classroom::find($data['target_classroom_id']);
+
+                        if (!$toClassroom) {
+                            Notification::make()->title('대상 반을 찾을 수 없습니다.')->danger()->send();
+                            return;
+                        }
+
+                        DB::transaction(function () use ($record, $fromClassroom, $toClassroom, $data) {
+                            // 기존 반 제거 (soft delete)
+                            DB::table('classroom_student')
+                                ->where('classroom_id', $fromClassroom->id)
+                                ->where('student_id', $record->id)
+                                ->whereNull('deleted_at')
+                                ->update(['deleted_at' => now()]);
+
+                            // 새 반에 이미 활성 상태로 있으면 skip, 없으면 attach
+                            $exists = DB::table('classroom_student')
+                                ->where('classroom_id', $toClassroom->id)
+                                ->where('student_id', $record->id)
+                                ->whereNull('deleted_at')
+                                ->exists();
+
+                            if (!$exists) {
+                                DB::table('classroom_student')->insert([
+                                    'classroom_id' => $toClassroom->id,
+                                    'student_id' => $record->id,
+                                    'created_at' => now(),
+                                    'updated_at' => now(),
+                                ]);
+                            }
+
+                            // 전반 이력 기록 (단일 이벤트)
+                            $fromTeacher = $fromClassroom->teacher?->user?->name ?? '-';
+                            $toTeacher = $toClassroom->teacher?->user?->name ?? '-';
+                            \App\Models\StudentStatusHistory::create([
+                                'student_id' => $record->id,
+                                'changed_by' => auth()->id(),
+                                'event_type' => 'classroom_transferred',
+                                'from_status' => null,
+                                'to_status' => null,
+                                'reason' => $data['reason'] ?? '전반',
+                                'memo' => "{$fromClassroom->name} (담임: {$fromTeacher}) → {$toClassroom->name} (담임: {$toTeacher})",
+                            ]);
+                        });
+
+                        Notification::make()
+                            ->title("'{$toClassroom->name}' 반으로 이동되었습니다.")
+                            ->success()
+                            ->send();
+                    }),
                 Tables\Actions\Action::make('remove')
                     ->label('삭제')
                     ->modalHeading('학생 삭제')
@@ -108,7 +191,7 @@ class StudentsRelationManager extends RelationManager
                     ->color('danger')
                     ->requiresConfirmation()
                     ->action(function ($record) {
-                        \Illuminate\Support\Facades\DB::table('classroom_student')
+                        DB::table('classroom_student')
                             ->where('classroom_id', $this->ownerRecord->id)
                             ->where('student_id', $record->id)
                             ->whereNull('deleted_at')
