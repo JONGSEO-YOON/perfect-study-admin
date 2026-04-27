@@ -25,14 +25,14 @@ class Dashboard extends BaseDashboard
     public static function canAccess(): bool
     {
         $user = Auth::user();
-
-        // 일반 강사(general)는 접근 불가
-        if ($user && $user->role === 'general') {
+        if (!$user) {
             return false;
         }
 
-        // 관리자, 매니저 등은 접근 가능
-        return $user && in_array($user->role, ['root_admin', 'admin', 'manager']);
+        // Filament 패널에 로그인 가능한 모든 강사(Teacher) 역할 접근 허용
+        // (students 미들웨어에서 Student는 이미 차단됨)
+        // 역할별 위젯 노출은 위젯 단에서 별도 제어
+        return $user->userable_type === \App\Models\Teacher::class;
     }
 
     public function getWidgets(): array

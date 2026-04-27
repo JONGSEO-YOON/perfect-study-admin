@@ -62,9 +62,14 @@ class Login extends BaseLogin
   {
     $user = Auth::user();
 
-    // 일반 강사는 다른 페이지로 리다이렉트 (예: 학생 목록)
+    // 일반 강사는 학생 목록으로
     if ($user && $user->role === 'general') {
       return '/admin/students';
+    }
+
+    // 상담실은 상담 관리로
+    if ($user && $user->role === 'counselor') {
+      return '/admin/counselings';
     }
 
     // 관리자, 매니저는 대시보드로
@@ -72,8 +77,8 @@ class Login extends BaseLogin
       return '/admin/dashboard';
     }
 
-    // 기본값
-    return '/admin';
+    // 기본값: 학생 목록 (Dashboard 권한 없는 역할이어도 안전)
+    return '/admin/students';
   }
 
   public function getHeading(): string
