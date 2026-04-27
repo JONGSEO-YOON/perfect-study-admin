@@ -33,25 +33,37 @@ class Attendance extends Component
             return;
         }
 
-        // 2. DB에 저장된 번호 형식이 다양할 수 있으므로(010-1234-5678, 01012345678 등)
-        //    숫자만 추출하여 비교
-        $user = User::whereRaw("REPLACE(REPLACE(REPLACE(phone, '-', ''), ' ', ''), '.', '') = ?", [$phoneNumbers])
-            ->first();
+        // 2. 같은 번호로 여러 학원(스터디/수학학원 등)에 등록된 학생도 모두 조회
+        //    DB에 저장된 번호 형식이 다양할 수 있어(010-1234-5678, 01012345678) 숫자만 추출하여 비교
+        $users = User::whereRaw("REPLACE(REPLACE(REPLACE(phone, '-', ''), ' ', ''), '.', '') = ?", [$phoneNumbers])
+            ->get();
 
-        // 3. 학생 존재 여부
-        if (!$user || !$user->isStudent()) {
+        // 3. 학생만 필터
+        $students = $users->filter(fn($u) => $u->isStudent());
+
+        if ($students->isEmpty()) {
             $this->message = '등록된 학생을 찾을 수 없습니다. 휴대전화번호를 확인해주세요.';
             $this->messageType = 'error';
             return;
         }
 
-        // 4. 학원 일치 여부
+        // 4. 현재 학원에 소속된 학생 우선 선택
+        //    한 번호가 여러 학원에 등록되어 있으면 현재 페이지의 학원 학생을 정확히 매칭
         $currentAcademy = app()->has('current_academy') ? app('current_academy') : null;
-        if ($currentAcademy && $user->academy_id !== $currentAcademy->id) {
-            $userAcademyName = $user->academy?->name ?? '본인';
-            $this->message = "소속이 다른 학원입니다 ({$userAcademyName}). 본인 학원의 출결 페이지로 접속해주세요.";
-            $this->messageType = 'error';
-            return;
+        $user = null;
+        if ($currentAcademy) {
+            $user = $students->firstWhere('academy_id', $currentAcademy->id);
+            if (!$user) {
+                $registeredAcademyNames = $students->map(fn($s) => $s->academy?->name)
+                    ->filter()->unique()->implode(', ');
+                $this->message = $registeredAcademyNames
+                    ? "이 번호의 학생은 {$registeredAcademyNames} 소속이며 현재 페이지({$currentAcademy->name})에는 등록되어 있지 않습니다."
+                    : '현재 학원에 등록된 학생이 아닙니다.';
+                $this->messageType = 'error';
+                return;
+            }
+        } else {
+            $user = $students->first();
         }
 
         // 5. 출석 처리 (위 모든 검증 통과)
