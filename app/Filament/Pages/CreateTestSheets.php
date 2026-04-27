@@ -728,6 +728,8 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                         ->when($params['exam_grades'] ?? null, fn($q, $v) => $q->whereIn('exam_grade', $v))
                         ->when($params['exam_subject'] ?? null, fn($q, $v) => $q->where('exam_subject', $v))
                         ->when($params['exam_subjects'] ?? null, fn($q, $v) => $q->whereIn('exam_subject', $v))
+                        ->when($params['exam_series'] ?? null, fn($q, $v) => $q->where('exam_series', $v))
+                        ->when($params['exam_series_list'] ?? null, fn($q, $v) => $q->whereIn('exam_series', $v))
                         ->when($params['exam_scores'] ?? null, fn($q, $v) => $q->whereIn('exam_score', $v));
                 }
 
@@ -822,7 +824,9 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                 ->when($params['exam_months'] ?? null, fn($q, $v) => $q->whereIn('exam_month', $v))
                 ->when($params['exam_grade'] ?? null, fn($q, $v) => $q->where('exam_grade', $v))
                 ->when($params['exam_grades'] ?? null, fn($q, $v) => $q->whereIn('exam_grade', $v))
-                ->when($params['exam_subjects'] ?? null, fn($q, $v) => $q->whereIn('exam_subject', $v));
+                ->when($params['exam_subjects'] ?? null, fn($q, $v) => $q->whereIn('exam_subject', $v))
+                ->when($params['exam_series'] ?? null, fn($q, $v) => $q->where('exam_series', $v))
+                ->when($params['exam_series_list'] ?? null, fn($q, $v) => $q->whereIn('exam_series', $v));
         }
 
         // 학교 기출 필터
@@ -920,10 +924,44 @@ class CreateTestSheets extends Page implements HasForms, HasActions
     protected static function selectQuestionsWithEvenDistribution(array $params, array $excludeIds): Collection
     {
         $result = collect();
-        $levels = $params['levels'];
-        $questionTypeIds = $params['question_type_ids'];
+        $levels = $params['levels'] ?? [];
+        $questionTypeIds = $params['question_type_ids'] ?? [];
+        $sourceType = $params['source_type'] ?? null;
+        $isExamSource = in_array($sourceType, ['mock_exam', 'school_exam']);
 
-        if (empty($levels) || empty($questionTypeIds)) {
+        if (empty($questionTypeIds)) {
+            return $result;
+        }
+
+        // 기출 문제는 level이 채워지지 않은 경우가 많아 level 필터를 건너뜀
+        // 일반 교재 문제는 기존 동작 유지 (levels 필수)
+        if (empty($levels) && !$isExamSource) {
+            return $result;
+        }
+
+        // 기출 + 레벨 미선택: 레벨 무시하고 유형 ID만으로 균등 분배
+        if (empty($levels) && $isExamSource) {
+            $totalCount = $params['question_count'];
+            $perType = (int) floor($totalCount / count($questionTypeIds));
+            $remainder = $totalCount % count($questionTypeIds);
+            $shuffledTypeIds = $questionTypeIds;
+            shuffle($shuffledTypeIds);
+            $selectedIds = $excludeIds;
+
+            foreach ($shuffledTypeIds as $idx => $typeId) {
+                $needed = $perType + ($idx < $remainder ? 1 : 0);
+                $picked = self::selectQuestionsForType($typeId, $needed, $params, $selectedIds, null);
+                $result = $result->concat($picked);
+                $selectedIds = array_merge($selectedIds, $picked->pluck('id')->toArray());
+            }
+
+            // 부족분 추가
+            if ($result->count() < $totalCount) {
+                $needed = $totalCount - $result->count();
+                $additional = self::selectQuestionsForType($questionTypeIds, $needed, $params, $selectedIds, null);
+                $result = $result->concat($additional);
+            }
+
             return $result;
         }
 

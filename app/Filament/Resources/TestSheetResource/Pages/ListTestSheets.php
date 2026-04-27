@@ -77,7 +77,8 @@ class ListTestSheets extends ListRecords
         array $types = [],
         array $questionNumbers = [],
         array $questionTypeIds = [],
-        ?string $creationMethod = 'number'
+        ?string $creationMethod = 'number',
+        array $seriesList = []
     ): int {
         $query = \App\Models\Question::withoutGlobalScopes()
             ->where('source_type', $sourceType)
@@ -87,6 +88,7 @@ class ListTestSheets extends ListRecords
         if (!empty($years)) $query->whereIn('exam_year', $years);
         if (!empty($months)) $query->whereIn('exam_month', $months);
         if (!empty($subjects)) $query->whereIn('exam_subject', $subjects);
+        if (!empty($seriesList)) $query->whereIn('exam_series', $seriesList);
         if ($schoolId) $query->where('school_id', $schoolId);
         if (!empty($semesters)) $query->whereIn('exam_semester', $semesters);
         if (!empty($types)) $query->whereIn('exam_type', $types);
@@ -103,9 +105,9 @@ class ListTestSheets extends ListRecords
     }
 
     /**
-     * 선택된 학년/년도/월(/학교/학기/시험유형/과목) 조건에 따라
+     * 선택된 학년/년도/월(/학교/학기/시험유형/과목/계열) 조건에 따라
      * DB에 실제로 등록된 문제 번호만 반환.
-     * 등록된 번호가 없으면 fallback으로 1~30 표시.
+     * 등록된 번호가 없으면 빈 배열 반환 (조건이 아무 것도 없을 때만 1~45 fallback).
      */
     protected static function getAvailableQuestionNumbers(
         string $sourceType,
@@ -115,16 +117,22 @@ class ListTestSheets extends ListRecords
         array $subjects = [],
         ?int $schoolId = null,
         array $semesters = [],
-        array $types = []
+        array $types = [],
+        array $seriesList = []
     ): array {
         $query = \App\Models\Question::withoutGlobalScopes()
             ->where('source_type', $sourceType)
             ->whereNotNull('exam_question_number');
 
+        $hasAnyFilter = !empty($grades) || !empty($years) || !empty($months)
+            || !empty($subjects) || !empty($seriesList) || $schoolId
+            || !empty($semesters) || !empty($types);
+
         if (!empty($grades)) $query->whereIn('exam_grade', $grades);
         if (!empty($years)) $query->whereIn('exam_year', $years);
         if (!empty($months)) $query->whereIn('exam_month', $months);
         if (!empty($subjects)) $query->whereIn('exam_subject', $subjects);
+        if (!empty($seriesList)) $query->whereIn('exam_series', $seriesList);
         if ($schoolId) $query->where('school_id', $schoolId);
         if (!empty($semesters)) $query->whereIn('exam_semester', $semesters);
         if (!empty($types)) $query->whereIn('exam_type', $types);
@@ -136,9 +144,10 @@ class ListTestSheets extends ListRecords
             ->values()
             ->toArray();
 
-        // 등록된 번호가 있으면 그것만, 없으면 (학년/년도/월 미지정 등) 1~30 fallback
-        if (empty($numbers)) {
-            $numbers = range(1, 30);
+        // 필터가 지정되었지만 결과가 없으면 빈 배열 → 사용자가 조건 확인 가능
+        // 필터가 아무 것도 없을 때만 1~45 fallback (전체 가능 범위)
+        if (empty($numbers) && !$hasAnyFilter) {
+            $numbers = range(1, 45);
         }
 
         return collect($numbers)
@@ -536,7 +545,7 @@ class ListTestSheets extends ListRecords
                                 ->maxHeight(240)
                                 ->live()
                                 ->items(
-                                    collect(range(date('Y'), 1994, -1))
+                                    collect(range((int) date('Y') + 1, 1990, -1))
                                         ->map(fn($y) => ['value' => $y, 'label' => $y . '년'])
                                         ->toArray()
                                 ),
@@ -567,9 +576,9 @@ class ListTestSheets extends ListRecords
                                 ->live(),
                         ]),
 
-                    // 과목 선택 (학년/년도/월에 따라 동적으로 옵션 변경)
+                    // 과목 선택 (학년/년도/월에 따라 동적으로 옵션 변경) - 선택사항
                     ExamGridSelect::make('exam_subjects')
-                        ->label('과목 선택')
+                        ->label('과목 선택 (선택)')
                         ->multiple()
                         ->cols(5)
                         ->live()
@@ -590,6 +599,25 @@ class ListTestSheets extends ListRecords
                         })
                         ->columnSpanFull(),
 
+                    // 문제 계열 선택 - 선택사항
+                    ExamGridSelect::make('exam_series_list')
+                        ->label('문제 계열 (선택)')
+                        ->multiple()
+                        ->cols(5)
+                        ->live()
+                        ->items([
+                            ['value' => '가형', 'label' => '가형'],
+                            ['value' => '나형', 'label' => '나형'],
+                            ['value' => '이과', 'label' => '이과'],
+                            ['value' => '문과', 'label' => '문과'],
+                            ['value' => '공통', 'label' => '공통'],
+                            ['value' => '확률과통계', 'label' => '선택 (확률과 통계)'],
+                            ['value' => '기하', 'label' => '선택 (기하)'],
+                            ['value' => '미적분', 'label' => '선택 (미적분)'],
+                            ['value' => '이산수학', 'label' => '선택 (이산수학)'],
+                        ])
+                        ->columnSpanFull(),
+
                     // 매치 가능 문제 개수 미리보기
                     Placeholder::make('available_count_preview')
                         ->label('')
@@ -602,12 +630,13 @@ class ListTestSheets extends ListRecords
                                 subjects: (array) ($get('exam_subjects') ?? []),
                                 questionNumbers: (array) ($get('question_numbers') ?? []),
                                 questionTypeIds: (array) ($get('question_type_ids') ?? []),
-                                creationMethod: $get('creation_method') ?? 'number'
+                                creationMethod: $get('creation_method') ?? 'number',
+                                seriesList: (array) ($get('exam_series_list') ?? [])
                             );
 
                             $color = $count === 0 ? '#dc2626' : ($count < 10 ? '#d97706' : '#059669');
                             $msg = $count === 0
-                                ? '⚠️ 선택 조건에 매치되는 모의고사 기출 문제가 없습니다. 학년/년도/단원/번호를 다시 확인하세요.'
+                                ? '⚠️ 선택 조건에 매치되는 모의고사 기출 문제가 없습니다. 학년/년도/단원/번호/계열을 다시 확인하세요.'
                                 : "✓ 현재 조건에 매치되는 모의고사 기출 문제: <strong>{$count}개</strong>";
                             return new \Illuminate\Support\HtmlString(
                                 "<div style='color: {$color}; font-size: 13px; padding: 8px 12px; background: " .
@@ -620,8 +649,9 @@ class ListTestSheets extends ListRecords
                         ->columnSpanFull(),
 
                     // 문제 번호로 추가 시: 등록된 문제 개수만큼만 동적으로 표시
+                    // 등록된 번호가 없으면 빈 상태로 표시되어 사용자가 인지 가능
                     ExamGridSelect::make('question_numbers')
-                        ->label('문제 번호 선택')
+                        ->label('문제 번호 선택 (등록된 번호만 표시)')
                         ->multiple()
                         ->cols(10)
                         ->live()
@@ -631,7 +661,8 @@ class ListTestSheets extends ListRecords
                                 grades: (array) ($get('exam_grades') ?? []),
                                 years: (array) ($get('exam_years') ?? []),
                                 months: (array) ($get('exam_months') ?? []),
-                                subjects: (array) ($get('exam_subjects') ?? [])
+                                subjects: (array) ($get('exam_subjects') ?? []),
+                                seriesList: (array) ($get('exam_series_list') ?? [])
                             );
                         })
                         ->columnSpanFull()
@@ -679,11 +710,11 @@ class ListTestSheets extends ListRecords
                     Grid::make(3)
                         ->schema([
                             Select::make('levels')
-                                ->label('레벨')
+                                ->label('레벨 (기출은 선택)')
+                                ->helperText('기출 문제는 레벨이 미지정된 경우가 많습니다. 비워두면 레벨 무시.')
                                 ->options([1 => '1', 2 => '2', 3 => '3', 4 => '4', 5 => '5'])
                                 ->multiple()
-                                ->live()
-                                ->required(),
+                                ->live(),
                             Checkbox::make('is_even_distribution')
                                 ->columnStart(1)
                                 ->default(true)
@@ -762,7 +793,7 @@ class ListTestSheets extends ListRecords
                                 ->maxHeight(240)
                                 ->live()
                                 ->items(
-                                    collect(range(date('Y'), 1994, -1))
+                                    collect(range((int) date('Y') + 1, 1990, -1))
                                         ->map(fn($y) => ['value' => $y, 'label' => $y . '년'])
                                         ->toArray()
                                 ),
@@ -795,9 +826,9 @@ class ListTestSheets extends ListRecords
                                 ->live(),
                         ]),
 
-                    // 과목 선택
+                    // 과목 선택 - 선택사항
                     ExamGridSelect::make('exam_subjects')
-                        ->label('과목 선택')
+                        ->label('과목 선택 (선택)')
                         ->multiple()
                         ->cols(7)
                         ->live()
@@ -904,11 +935,11 @@ class ListTestSheets extends ListRecords
                     Grid::make(3)
                         ->schema([
                             Select::make('levels')
-                                ->label('레벨')
+                                ->label('레벨 (기출은 선택)')
+                                ->helperText('기출 문제는 레벨이 미지정된 경우가 많습니다. 비워두면 레벨 무시.')
                                 ->options([1 => '1', 2 => '2', 3 => '3', 4 => '4', 5 => '5'])
                                 ->multiple()
-                                ->live()
-                                ->required(),
+                                ->live(),
                             Checkbox::make('is_even_distribution')
                                 ->columnStart(1)
                                 ->default(true)
