@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Scopes\AcademyScope;
 use App\Models\Student;
 use App\Models\TestSheet;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -86,9 +88,15 @@ class UserWebController extends Controller implements HasMiddleware
     $page = request('page', 1);
     $type = request('type', 'test');
 
-    $testsheets = TestSheet::inProgressOrCompleted()
+    // 같은 사람(전화번호 기준)이 여러 학원에 등록된 경우 모두 통합
+    $relatedStudents = $this->getRelatedStudents($student);
+    $testSheetIds = $this->collectAvailableTestSheetIds($relatedStudents);
+
+    $testsheets = TestSheet::query()
+      ->withoutGlobalScopes([AcademyScope::class])
+      ->whereIn('id', $testSheetIds)
+      ->inProgressOrCompleted()
       ->hasQuestions()
-      ->availableFor($student)
       ->when($type === 'homework', function ($query) {
         return $query->whereJsonContains('tags', '숙제');
       })
@@ -96,10 +104,7 @@ class UserWebController extends Controller implements HasMiddleware
         return $query->whereJsonDoesntContain('tags', '숙제');
       })
       ->latest('start_date')
-      ->paginate($perPage)
-      ->through(function ($testsheet) {
-        return $testsheet;
-      });
+      ->paginate($perPage);
 
     if (request()->ajax()) {
       if ($testsheets->isEmpty()) {
@@ -113,13 +118,69 @@ class UserWebController extends Controller implements HasMiddleware
     return view('main', compact('testsheets', 'type', 'perPage', 'page', 'remaining_count'));
   }
 
+  /**
+   * 같은 전화번호로 여러 학원에 등록된 학생 계정들을 모두 반환.
+   * AcademyScope 우회.
+   */
+  protected function getRelatedStudents(Student $student)
+  {
+    $phone = auth()->user()->phone;
+    if (!$phone) {
+      return collect([$student]);
+    }
+
+    $relatedUserIds = User::query()
+      ->where('phone', $phone)
+      ->where('userable_type', Student::class)
+      ->pluck('userable_id')
+      ->all();
+
+    $relatedUserIds[] = $student->id;
+    $relatedUserIds = array_unique($relatedUserIds);
+
+    return Student::query()
+      ->withoutGlobalScopes([AcademyScope::class])
+      ->whereIn('id', $relatedUserIds)
+      ->get();
+  }
+
+  /**
+   * 여러 학생 계정에 대해 availableFor()를 각각 호출하여
+   * 노출 가능한 시험지 id들을 합집합으로 반환.
+   */
+  protected function collectAvailableTestSheetIds($relatedStudents): array
+  {
+    $ids = [];
+    foreach ($relatedStudents as $rs) {
+      $ids = array_merge($ids, TestSheet::query()
+        ->withoutGlobalScopes([AcademyScope::class])
+        ->availableFor($rs)
+        ->pluck('id')
+        ->all());
+    }
+    return array_values(array_unique($ids));
+  }
+
   public function _getRemainingTestsCount($student)
   {
-    $base_query = TestSheet::inProgress()
-      ->availableFor($student)
+    $relatedStudents = $this->getRelatedStudents($student);
+    $relatedUserIds = User::query()
+      ->where('phone', auth()->user()->phone)
+      ->where('userable_type', Student::class)
+      ->pluck('id')
+      ->push(auth()->id())
+      ->unique()
+      ->all();
+    $testSheetIds = $this->collectAvailableTestSheetIds($relatedStudents);
+
+    $base_query = TestSheet::query()
+      ->withoutGlobalScopes([AcademyScope::class])
+      ->whereIn('id', $testSheetIds)
+      ->inProgress()
       ->hasQuestions()
-      ->whereDoesntHave('latestUserAnswer', function ($query) use ($student) {
-        $query->where('status', 'completed');
+      ->whereDoesntHave('answers', function ($query) use ($relatedUserIds) {
+        $query->whereIn('user_id', $relatedUserIds)
+          ->where('status', 'completed');
       });
 
     return [
