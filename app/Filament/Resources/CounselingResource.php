@@ -45,6 +45,11 @@ class CounselingResource extends Resource
 
     protected static ?string $navigationGroup = '교실 관리';
 
+    public static function canViewAny(): bool
+    {
+        return \App\Models\Academy::isMenuGroupVisibleForCurrentUser('classroom');
+    }
+
     public static function getBreadcrumb(): string
     {
         return '';

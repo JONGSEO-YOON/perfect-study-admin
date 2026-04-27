@@ -28,6 +28,11 @@ class StudentHistoryResource extends Resource
 
     protected static ?string $pluralModelLabel = '학생 이력관리';
 
+    public static function canViewAny(): bool
+    {
+        return \App\Models\Academy::isMenuGroupVisibleForCurrentUser('classroom');
+    }
+
     public static function getBreadcrumb(): string
     {
         return '';

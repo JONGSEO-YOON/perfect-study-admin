@@ -24,6 +24,9 @@ class ClassroomOverview extends Page
 
     public static function canAccess(): bool
     {
+        if (!\App\Models\Academy::isMenuGroupVisibleForCurrentUser('classroom')) {
+            return false;
+        }
         return auth()->user()->isRoleAbove('admin', true)
             || !auth()->user()->userable instanceof \App\Models\Teacher;
     }

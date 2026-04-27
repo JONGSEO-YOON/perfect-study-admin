@@ -125,8 +125,20 @@ class AcademyResource extends Resource
                 ])->columns(2),
 
             Section::make('메뉴 공개 설정')
-                ->description('학원별로 자료실/강의실/결제 메뉴의 공개 여부를 설정합니다.')
+                ->description('학원별로 각 메뉴 그룹의 공개 여부를 설정합니다.')
                 ->schema([
+                    Toggle::make('settings.classroom_visible')
+                        ->label('교실 관리 공개')
+                        ->default(true)
+                        ->helperText('비활성화 시 교실 관리 그룹(학생/반/강사/상담/보충/공지 등)이 표시되지 않습니다.'),
+                    Toggle::make('settings.attendance_visible')
+                        ->label('출결 공개')
+                        ->default(true)
+                        ->helperText('비활성화 시 출결 그룹(일별/월별 출결)이 표시되지 않습니다.'),
+                    Toggle::make('settings.tests_visible')
+                        ->label('문제 관리 공개')
+                        ->default(true)
+                        ->helperText('비활성화 시 문제 관리 그룹(문제지/문제은행)이 표시되지 않습니다.'),
                     Toggle::make('settings.resources_visible')
                         ->label('자료실 공개')
                         ->default(true)

@@ -44,6 +44,9 @@ class TeacherResource extends Resource
 
     public static function canViewAny(): bool
     {
+        if (!\App\Models\Academy::isMenuGroupVisibleForCurrentUser('classroom')) {
+            return false;
+        }
         // 일반 강사는 강사관리 접근 불가
         return !auth()->user()->userable instanceof \App\Models\Teacher
             || auth()->user()->isRoleAbove('general');

@@ -19,4 +19,9 @@ class TestSheetManagement extends Page
     protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $navigationGroup = '교실 관리';
+
+    public static function canAccess(): bool
+    {
+        return \App\Models\Academy::isMenuGroupVisibleForCurrentUser('classroom');
+    }
 }

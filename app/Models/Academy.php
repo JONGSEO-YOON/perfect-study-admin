@@ -51,4 +51,26 @@ class Academy extends Model
     {
         return $this->hasMany(ExamSharingRule::class);
     }
+
+    public function isMenuGroupVisible(string $groupKey): bool
+    {
+        $settings = $this->settings ?? [];
+        return ($settings["{$groupKey}_visible"] ?? true) !== false;
+    }
+
+    public static function isMenuGroupVisibleForCurrentUser(string $groupKey): bool
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return true;
+        }
+        if ($user->role === 'root_admin') {
+            return true;
+        }
+        $academy = $user->academy;
+        if (!$academy) {
+            return true;
+        }
+        return $academy->isMenuGroupVisible($groupKey);
+    }
 }

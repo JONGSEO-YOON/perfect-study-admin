@@ -45,6 +45,9 @@ class ClassroomResource extends Resource
 
     public static function canViewAny(): bool
     {
+        if (!\App\Models\Academy::isMenuGroupVisibleForCurrentUser('classroom')) {
+            return false;
+        }
         return auth()->user()->isRoleAbove('admin', true)
             || !auth()->user()->userable instanceof \App\Models\Teacher;
     }
