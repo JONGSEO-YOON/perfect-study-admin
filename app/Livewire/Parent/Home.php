@@ -22,9 +22,13 @@ class Home extends Component
     public function mount()
     {
         $parent_phone = session('parent_phone');
-        $this->student = Student::where('phone_father', $parent_phone)
-            ->orWhere('phone_mother', $parent_phone)
-            ->first();
+        $academyId = session('parent_academy_id');
+        $students = Student::where(function ($q) use ($parent_phone) {
+            $q->where('phone_father', $parent_phone)
+              ->orWhere('phone_mother', $parent_phone);
+        })->get();
+        $this->student = ($academyId ? $students->firstWhere('academy_id', $academyId) : null)
+            ?: $students->first();
 
         // AttendanceLog 모델의 메서드 사용
         $this->attendances = AttendanceLog::getTodayAttendanceForStudent($this->student->id);

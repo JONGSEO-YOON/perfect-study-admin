@@ -41,9 +41,15 @@ class Payment extends Component
             return;
         }
 
-        $students = Student::where('phone_father', $phone)
-            ->orWhere('phone_mother', $phone)
-            ->get();
+        $academyId = session('parent_academy_id');
+        $studentsQuery = Student::where(function ($q) use ($phone) {
+            $q->where('phone_father', $phone)
+              ->orWhere('phone_mother', $phone);
+        });
+        if ($academyId) {
+            $studentsQuery->where('academy_id', $academyId);
+        }
+        $students = $studentsQuery->get();
 
         $studentIds = $students->pluck('id');
 
