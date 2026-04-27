@@ -62,6 +62,32 @@ class QuestionResource extends Resource
         return auth()->user()->userable instanceof \App\Models\Teacher;
     }
 
+    /**
+     * 문제 유형표(question_categories)의 고/고3 하위 과목들을 옵션으로 반환.
+     * 공통수학1/공통수학2/대수/미적분1/미적분2/확률과 통계/기하/이산수학 등 전부 포함.
+     */
+    public static function getExamSubjectOptions(): array
+    {
+        $rootIds = QuestionCategory::where('depth', 0)
+            ->whereRaw("REPLACE(REPLACE(name, '<p>', ''), '</p>', '') IN ('고', '고3')")
+            ->pluck('id');
+
+        return QuestionCategory::where('depth', 1)
+            ->whereIn('id', function ($q) use ($rootIds) {
+                $q->select('descendant_id')
+                    ->from('question_category_closure')
+                    ->where('depth', 1)
+                    ->whereIn('ancestor_id', $rootIds);
+            })
+            ->orderBy('id')
+            ->pluck('name')
+            ->map(fn($name) => trim(str_replace('(2025개정)', '', strip_tags(trim($name)))))
+            ->filter(fn($name) => !in_array($name, ['교과외', '연산문제', 'test']))
+            ->unique()
+            ->mapWithKeys(fn($name) => [$name => $name])
+            ->toArray();
+    }
+
     public static function handleUpdate($data)
     {
         $choices = $data['choices'] ?? [];
@@ -227,14 +253,8 @@ class QuestionResource extends Resource
                                 ->required(),
                             Select::make('exam_subject')
                                 ->label('과목 (선택)')
-                                ->options([
-                                    '공통수학' => '공통수학',
-                                    '대수' => '대수',
-                                    '미적분' => '미적분',
-                                    '미적분2' => '미적분2',
-                                    '확통' => '확률과 통계',
-                                    '기하' => '기하',
-                                ])
+                                ->options(fn() => self::getExamSubjectOptions())
+                                ->searchable()
                                 ->placeholder('미선택')
                                 ->nullable(),
                             Select::make('exam_series')
@@ -252,13 +272,12 @@ class QuestionResource extends Resource
                                 ])
                                 ->placeholder('미선택')
                                 ->nullable(),
-                            Select::make('exam_score')
+                            TextInput::make('exam_score')
                                 ->label('배점')
-                                ->options([
-                                    2 => '2점',
-                                    3 => '3점',
-                                    4 => '4점',
-                                ])
+                                ->numeric()
+                                ->step(0.5)
+                                ->minValue(0.5)
+                                ->placeholder('예: 2, 2.5, 3, 4')
                                 ->required(),
                             TextInput::make('exam_question_number')
                                 ->label('문제 번호')
@@ -302,14 +321,8 @@ class QuestionResource extends Resource
                                 ->required(),
                             Select::make('exam_subject')
                                 ->label('과목 (선택)')
-                                ->options([
-                                    '공통수학' => '공통수학',
-                                    '대수' => '대수',
-                                    '미적분' => '미적분',
-                                    '미적분2' => '미적분2',
-                                    '확통' => '확률과 통계',
-                                    '기하' => '기하',
-                                ])
+                                ->options(fn() => self::getExamSubjectOptions())
+                                ->searchable()
                                 ->placeholder('미선택')
                                 ->nullable(),
                             Select::make('exam_type')

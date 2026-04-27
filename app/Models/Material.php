@@ -102,15 +102,27 @@ class Material extends Model
     public function scopeVisible(Builder $query): Builder
     {
         $userId = auth()->id();
+        $user = auth()->user();
+        $academyId = $user?->academy_id;
 
-        if (auth()->user()->isRoleAbove('manager', true)) {
+        if ($user && $user->isRoleAbove('manager', true)) {
             return $query;
         }
 
-        return $query->where(function ($query) use ($userId) {
-            $query->Where('user_id', $userId)  // 자신이 만든 자료
+        return $query->where(function ($query) use ($userId, $academyId) {
+            $query->where('user_id', $userId)  // 자신이 만든 자료
                 ->orWhereHas('visibleUsers', function ($query) use ($userId) {
                     $query->where('users.id', $userId);
+                })
+                // 같은 학원에서 만든 모든 자료 (강사도 학원 내 자료 접근 가능)
+                ->when($academyId, function ($query) use ($academyId) {
+                    $query->orWhere('materials.academy_id', $academyId);
+                })
+                // 다른 학원이 우리 학원에 공유해준 자료
+                ->when($academyId, function ($query) use ($academyId) {
+                    $query->orWhereHas('visibleAcademies', function ($sub) use ($academyId) {
+                        $sub->where('academy_id', $academyId);
+                    });
                 });
         });
     }

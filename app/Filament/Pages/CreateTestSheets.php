@@ -433,9 +433,9 @@ class CreateTestSheets extends Page implements HasForms, HasActions
                         ->rules([
                             fn(): Closure => function (string $attribute, $value, Closure $fail) {
                                 foreach ($value as $key => $score) {
-                                    // 배점 검증 (양의 정수인지 확인)
-                                    if (!is_numeric($score) || intval($score) != $score || $score <= 0) {
-                                        $fail('유효하지 않은 배점표입니다.');
+                                    // 배점 검증 (양의 숫자, 소수점 허용)
+                                    if (!is_numeric($score) || (float) $score <= 0) {
+                                        $fail('유효하지 않은 배점표입니다. 배점은 양수여야 합니다.');
                                         return;
                                     }
 
@@ -1469,14 +1469,17 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             $result['total_score'] += 1;
         }
 
-        // 배점표에 명시된 점수로 업데이트
+        // 배점표에 명시된 점수로 업데이트 (소수점 허용)
         foreach ($scoreData as $key => $score) {
             $questionIndices = self::parseQuestionIndices($key);
+            $scoreValue = (float) $score;
+            // 정수면 int로, 소수면 float로 보존
+            $stored = (floor($scoreValue) == $scoreValue) ? (int) $scoreValue : $scoreValue;
             foreach ($questionIndices as $index) {
                 // 총점에서 기존 점수(1)를 빼고 새로운 점수를 더함
                 $result['total_score'] -= $result['table'][$index];
-                $result['table'][$index] = intval($score);
-                $result['total_score'] += intval($score);
+                $result['table'][$index] = $stored;
+                $result['total_score'] += $stored;
             }
         }
 

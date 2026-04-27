@@ -579,8 +579,21 @@ class TestSheetResource extends Resource
                     Tables\Actions\DeleteAction::make()
                         ->label('삭제')
                         ->modalHeading('시험지 삭제')
+                        ->modalDescription(fn($record) => $record->status === 'completed'
+                            ? '마감된 시험지를 삭제합니다. 학생 답안과 성적표 데이터도 함께 사라질 수 있습니다.'
+                            : '이 시험지를 삭제하시겠습니까?')
                         ->icon('heroicon-m-trash')
-                        ->visible(fn($record) => $record->academy_id === auth()->user()->academy_id && $record->status === 'pending'),
+                        ->visible(function ($record) {
+                            // 자기 학원의 시험지만 (root_admin 은 모든 학원)
+                            $user = auth()->user();
+                            $isOwnAcademy = $record->academy_id === $user->academy_id || $user->role === 'root_admin';
+                            if (!$isOwnAcademy) return false;
+                            // 일반강사는 자기가 만든 것만, manager 이상은 자기 학원 모두
+                            if ($user->role === 'general') {
+                                return $record->user_id === $user->id;
+                            }
+                            return true;
+                        }),
                     Tables\Actions\Action::make('print-test-sheet')
                         ->label('문제지 출력')
                         ->icon('heroicon-m-printer')

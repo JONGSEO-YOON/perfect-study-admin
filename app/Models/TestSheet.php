@@ -1353,30 +1353,47 @@ class TestSheet extends Model
 
     public function getTargetStudents()
     {
-        $allStudents = Student::with(['user', 'classrooms.teacher.user'])
-            ->whereHas('classrooms.teacher.user', function ($query) {
-                $query->where('id', $this->user_id);
-            })
-            ->get();
+        // target_* 필드 기반으로 대상 학생을 직접 조회
+        // (기존: 출제자의 담임/부담임 학생만 반환 → 본점 admin이 출제 후 서브학원에서 제출현황 안뜨던 문제 해결)
+        $query = Student::query()
+            ->with(['user', 'classrooms.teacher.user']);
 
-        // 2. 대상 학생 필터링을 위한 배열
-        $targetStudents = [];
+        switch ($this->target_group) {
+            case 'classroom':
+                $query->whereHas('classrooms', function ($q) {
+                    $q->whereIn('classroom_id', (array) ($this->target_classrooms ?? []));
+                });
+                break;
 
-        // 3. 각 학생별로 시험지 대상자인지 확인
-        foreach ($allStudents as $student) {
-            // 현재 시험지의 clone을 만들어서 스코프 체크
-            $testSheetQuery = static::query()
-                ->where('id', $this->id)
-                ->availableFor($student);
+            case 'grade':
+                $query->whereIn('grade_system_id', (array) ($this->target_grades ?? []));
+                break;
 
-            // 해당 학생이 시험지 대상자인 경우
-            if ($testSheetQuery->exists()) {
-                $targetStudents[] = $student;
-            }
+            case 'level':
+                $grades = (array) ($this->target_grades ?? []);
+                $levels = (array) ($this->target_levels ?? []);
+                if (!empty($grades)) $query->whereIn('grade_system_id', $grades);
+                if (!empty($levels)) {
+                    $query->whereHas('classrooms', function ($q) use ($levels) {
+                        $q->whereIn('target_level', $levels);
+                    });
+                }
+                break;
+
+            case 'student':
+                $query->whereIn('id', (array) ($this->target_students ?? []));
+                break;
+
+            default:
+                // target_group 없거나 알 수 없는 경우: 본 시험지의 학원 학생만
+                if ($this->academy_id) {
+                    $query->where('academy_id', $this->academy_id);
+                } else {
+                    return collect();
+                }
         }
 
-        // 4. 필터링된 학생들 반환
-        return collect($targetStudents);
+        return $query->get();
     }
 
     public function getTotalScoreAttribute()

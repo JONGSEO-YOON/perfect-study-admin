@@ -40,7 +40,7 @@ class Question extends Model
             'metadata' => 'array',
             'exam_year' => 'integer',
             'exam_month' => 'integer',
-            'exam_score' => 'integer',
+            'exam_score' => 'decimal:2',
             'exam_question_number' => 'integer',
             'exam_semester' => 'integer',
         ];
