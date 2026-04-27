@@ -119,28 +119,32 @@ class UserWebController extends Controller implements HasMiddleware
   }
 
   /**
-   * 같은 전화번호로 여러 학원에 등록된 학생 계정들을 모두 반환.
-   * AcademyScope 우회.
+   * 같은 전화번호로 여러 학원에 등록된 학생 계정들을 반환.
+   * 안전장치: 유효한 휴대전화 형식(010-XXXX-XXXX, 11자리)일 때만 다른 학원 매칭.
+   * 그 외(빈 phone, 기본값 등)는 본인 계정만 반환 → 학원 간 데이터 누수 차단.
    */
   protected function getRelatedStudents(Student $student)
   {
-    $phone = auth()->user()->phone;
-    if (!$phone) {
+    $phone = trim((string) auth()->user()->phone);
+    $digits = preg_replace('/[^0-9]/', '', $phone);
+
+    // 11자리 010 으로 시작하는 정상 휴대전화만 cross-academy 매칭
+    if (strlen($digits) !== 11 || !str_starts_with($digits, '010')) {
       return collect([$student]);
     }
 
-    $relatedUserIds = User::query()
+    // 정확히 같은 phone 문자열로 등록된 다른 학생 계정 조회
+    $relatedStudentIds = User::query()
       ->where('phone', $phone)
       ->where('userable_type', Student::class)
       ->pluck('userable_id')
+      ->push($student->id)
+      ->unique()
       ->all();
-
-    $relatedUserIds[] = $student->id;
-    $relatedUserIds = array_unique($relatedUserIds);
 
     return Student::query()
       ->withoutGlobalScopes([AcademyScope::class])
-      ->whereIn('id', $relatedUserIds)
+      ->whereIn('id', $relatedStudentIds)
       ->get();
   }
 
@@ -164,13 +168,21 @@ class UserWebController extends Controller implements HasMiddleware
   public function _getRemainingTestsCount($student)
   {
     $relatedStudents = $this->getRelatedStudents($student);
-    $relatedUserIds = User::query()
-      ->where('phone', auth()->user()->phone)
-      ->where('userable_type', Student::class)
-      ->pluck('id')
-      ->push(auth()->id())
-      ->unique()
-      ->all();
+
+    // 안전장치 동일 적용: 유효 phone 일 때만 cross-academy 매칭
+    $phone = trim((string) auth()->user()->phone);
+    $digits = preg_replace('/[^0-9]/', '', $phone);
+    if (strlen($digits) === 11 && str_starts_with($digits, '010')) {
+      $relatedUserIds = User::query()
+        ->where('phone', $phone)
+        ->where('userable_type', Student::class)
+        ->pluck('id')
+        ->push(auth()->id())
+        ->unique()
+        ->all();
+    } else {
+      $relatedUserIds = [auth()->id()];
+    }
     $testSheetIds = $this->collectAvailableTestSheetIds($relatedStudents);
 
     $base_query = TestSheet::query()
