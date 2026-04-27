@@ -61,7 +61,7 @@
                         $currentAcademy = auth()->user()?->academy;
                         $logoUrl = $currentAcademy?->logo_path ? Storage::url($currentAcademy->logo_path) : '/logo.png';
                     @endphp
-                    <img src="{{ $logoUrl }}" class="w-2/3" />
+                    <img src="{{ $logoUrl }}" alt="{{ $currentAcademy?->name ?? '학원' }}" class="w-2/3 max-h-20 object-contain" />
                     <button class="lg:hidden menu-button">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-6">
                             <path
@@ -174,7 +174,7 @@
                                 stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                     </a>
-                    <img src="{{ isset($currentAcademy) && $currentAcademy->logo_path ? \Illuminate\Support\Facades\Storage::url($currentAcademy->logo_path) : '/logo.png' }}" class="h-[40px] ml-4" alt="{{ $currentAcademy->name ?? '' }}" />
+                    <img src="{{ isset($currentAcademy) && $currentAcademy->logo_path ? \Illuminate\Support\Facades\Storage::url($currentAcademy->logo_path) : '/logo.png' }}" class="h-[40px] max-w-[160px] object-contain ml-4" alt="{{ $currentAcademy->name ?? '' }}" />
                 </div>
                 <div class="flex-1 flex flex-col h-0">
                     {{ $slot }}
@@ -186,7 +186,7 @@
         <footer class="w-full border-t px-5 py-6" style="background-color: #f3f4f6;">
             <div class="flex flex-col md:flex-row gap-6 md:gap-16">
                 <div class="flex-shrink-0">
-                    <img src="{{ $currentAcademy->logo_path ? Storage::url($currentAcademy->logo_path) : '/logo.png' }}" class="w-32 md:w-40" alt="{{ $currentAcademy->name }}" />
+                    <img src="{{ $currentAcademy->logo_path ? Storage::url($currentAcademy->logo_path) : '/logo.png' }}" class="w-32 md:w-40 max-h-24 object-contain" alt="{{ $currentAcademy->name }}" />
                 </div>
                 <div class="text-sm text-gray-600 flex-1">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">

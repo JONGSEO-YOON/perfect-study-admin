@@ -98,10 +98,9 @@ class AcademyResource extends Resource
                         ->image()
                         ->directory('academy-branding')
                         ->imageResizeMode('contain')
-                        ->imageCropAspectRatio('16:9')
-                        ->imageResizeTargetWidth('400')
-                        ->imageResizeTargetHeight('200')
-                        ->helperText('로그인 페이지, 사이드바 상단에 표시됩니다'),
+                        ->imageResizeTargetWidth('600')
+                        ->imageResizeTargetHeight('600')
+                        ->helperText('원본 비율 그대로 저장됩니다 (정사각/세로/가로 모두 가능)'),
                     FileUpload::make('favicon_path')
                         ->label('파비콘')
                         ->image()
