@@ -42,19 +42,14 @@ class Header extends Component
 
     public function changeAcademy()
     {
-        $parent_phone = session('parent_phone');
-        $allStudents = Student::with(['user', 'academy'])
-            ->where('phone_father', $parent_phone)
-            ->orWhere('phone_mother', $parent_phone)
-            ->get();
-
-        $this->filterStudents($allStudents);
-
         // 세션에 학원 저장
         session(['parent_academy_id' => $this->academyId]);
+        session()->save();
 
-        // 학원 변경 시 학생도 변경 이벤트 발생
-        $this->dispatch('change-student', id: $this->studentId);
+        // ResolveAcademy 미들웨어가 새 academy_id로 currentAcademy를 다시 계산하도록
+        // 현재 페이지를 풀 리다이렉트로 새로고침
+        $referer = request()->header('referer');
+        return $this->redirect($referer ?: '/parent', navigate: false);
     }
 
     public function changeStudent()
