@@ -25,18 +25,37 @@ class Attendance extends Component
     {
         // 출석체크 로직 구현
         $phoneNumbers = preg_replace('/[^0-9]/', '', $this->phone);
-        $user = User::where('phone', $this->phone)->first();
 
-        // 현재 학원 확인
+        // 1. 휴대전화 형식 검증
+        if (strlen($phoneNumbers) !== 11 || substr($phoneNumbers, 0, 3) !== '010') {
+            $this->message = '휴대전화번호 형식이 올바르지 않습니다. (010-XXXX-XXXX)';
+            $this->messageType = 'error';
+            return;
+        }
+
+        // 2. DB에 저장된 번호 형식이 다양할 수 있으므로(010-1234-5678, 01012345678 등)
+        //    숫자만 추출하여 비교
+        $user = User::whereRaw("REPLACE(REPLACE(REPLACE(phone, '-', ''), ' ', ''), '.', '') = ?", [$phoneNumbers])
+            ->first();
+
+        // 3. 학생 존재 여부
+        if (!$user || !$user->isStudent()) {
+            $this->message = '등록된 학생을 찾을 수 없습니다. 휴대전화번호를 확인해주세요.';
+            $this->messageType = 'error';
+            return;
+        }
+
+        // 4. 학원 일치 여부
         $currentAcademy = app()->has('current_academy') ? app('current_academy') : null;
+        if ($currentAcademy && $user->academy_id !== $currentAcademy->id) {
+            $userAcademyName = $user->academy?->name ?? '본인';
+            $this->message = "소속이 다른 학원입니다 ({$userAcademyName}). 본인 학원의 출결 페이지로 접속해주세요.";
+            $this->messageType = 'error';
+            return;
+        }
 
-        if (
-            strlen($phoneNumbers) === 11
-            && substr($phoneNumbers, 0, 3) === '010'
-            && $user !== null
-            && $user->isStudent()
-            && (!$currentAcademy || $user->academy_id === $currentAcademy->id)
-        ) {
+        // 5. 출석 처리 (위 모든 검증 통과)
+        {
             // 정규 수업 여부 확인
             $currentTime = now();
             $currentDay = strtolower($currentTime->format('D')); // mon, tue, wed, thu, fri, sat, sun
@@ -114,9 +133,6 @@ class Attendance extends Component
 
             // 3초 후 메시지 초기화
             $this->dispatch('clearMessageAfterDelay');
-        } else {
-            $this->message = '올바른 휴대전화번호를 입력해주세요.';
-            $this->messageType = 'error';
         }
     }
 
