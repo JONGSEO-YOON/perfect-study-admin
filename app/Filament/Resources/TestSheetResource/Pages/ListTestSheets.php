@@ -746,7 +746,7 @@ class ListTestSheets extends ListRecords
                     redirect('/admin/test-sheets/create/' . $tempData->id);
                 })
                 ->modalSubmitActionLabel('문제 선택')
-                ->visible(fn() => in_array(auth()->user()->role, ['root_admin', 'admin'])),
+                ->visible(fn() => auth()->user()?->userable instanceof \App\Models\Teacher),
 
             // === 학교 기출 문제지 ===
             Actions\CreateAction::make('create-school-exam')
@@ -971,7 +971,7 @@ class ListTestSheets extends ListRecords
                     redirect('/admin/test-sheets/create/' . $tempData->id);
                 })
                 ->modalSubmitActionLabel('문제 선택')
-                ->visible(fn() => in_array(auth()->user()->role, ['root_admin', 'admin'])),
+                ->visible(fn() => auth()->user()?->userable instanceof \App\Models\Teacher),
         ];
     }
 }
