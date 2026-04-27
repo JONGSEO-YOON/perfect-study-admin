@@ -474,16 +474,7 @@ class TestSheetResource extends Resource
                                     Tab::make('TabAnalysis')
                                         ->label('오답 유형분석표')
                                         ->schema([
-                                            Select::make('analysis_student_id')
-                                                ->label('학생')
-                                                ->options(fn() => $record->getTargetStudents()
-                                                    ->mapWithKeys(fn($s) => [$s->id => $s->user?->name ?? '-'])
-                                                    ->toArray())
-                                                ->searchable()
-                                                ->preload()
-                                                ->placeholder('학생 선택')
-                                                ->live(),
-                                            View::make('filament.components.modals.test-sheet-type-analysis')
+                                            View::make('filament.components.modals.test-sheet-type-analysis-wrapper')
                                                 ->viewData(['record' => $record])
                                                 ->columnSpanFull(),
                                         ]),
