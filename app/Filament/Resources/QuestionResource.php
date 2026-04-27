@@ -198,14 +198,13 @@ class QuestionResource extends Resource
                     Grid::make(4)
                         ->visible(fn(Get $get) => $get('source_type') === 'mock_exam')
                         ->schema([
-                            Select::make('exam_year')
+                            TextInput::make('exam_year')
                                 ->label('년도')
-                                ->options(array_combine(
-                                    range(date('Y'), 2010, -1),
-                                    range(date('Y'), 2010, -1)
-                                ))
-                                ->required()
-                                ->searchable(),
+                                ->numeric()
+                                ->minValue(1990)
+                                ->maxValue((int) date('Y') + 1)
+                                ->placeholder('예: 2024')
+                                ->required(),
                             Select::make('exam_month')
                                 ->label('월')
                                 ->options([
@@ -227,7 +226,7 @@ class QuestionResource extends Resource
                                 ])
                                 ->required(),
                             Select::make('exam_subject')
-                                ->label('과목')
+                                ->label('과목 (선택)')
                                 ->options([
                                     '공통수학' => '공통수학',
                                     '대수' => '대수',
@@ -236,7 +235,23 @@ class QuestionResource extends Resource
                                     '확통' => '확률과 통계',
                                     '기하' => '기하',
                                 ])
-                                ->required(),
+                                ->placeholder('미선택')
+                                ->nullable(),
+                            Select::make('exam_series')
+                                ->label('문제 계열 (선택)')
+                                ->options([
+                                    '가형' => '가형',
+                                    '나형' => '나형',
+                                    '이과' => '이과',
+                                    '문과' => '문과',
+                                    '공통' => '공통',
+                                    '확률과통계' => '선택 (확률과 통계)',
+                                    '기하' => '선택 (기하)',
+                                    '미적분' => '선택 (미적분)',
+                                    '이산수학' => '선택 (이산수학)',
+                                ])
+                                ->placeholder('미선택')
+                                ->nullable(),
                             Select::make('exam_score')
                                 ->label('배점')
                                 ->options([
@@ -271,14 +286,13 @@ class QuestionResource extends Resource
                                 )
                                 ->required()
                                 ->columnSpan(2),
-                            Select::make('exam_year')
+                            TextInput::make('exam_year')
                                 ->label('년도')
-                                ->options(array_combine(
-                                    range(date('Y'), 2010, -1),
-                                    range(date('Y'), 2010, -1)
-                                ))
-                                ->required()
-                                ->searchable(),
+                                ->numeric()
+                                ->minValue(1990)
+                                ->maxValue((int) date('Y') + 1)
+                                ->placeholder('예: 2024')
+                                ->required(),
                             Select::make('exam_semester')
                                 ->label('학기')
                                 ->options([
@@ -287,7 +301,7 @@ class QuestionResource extends Resource
                                 ])
                                 ->required(),
                             Select::make('exam_subject')
-                                ->label('과목')
+                                ->label('과목 (선택)')
                                 ->options([
                                     '공통수학' => '공통수학',
                                     '대수' => '대수',
@@ -296,7 +310,8 @@ class QuestionResource extends Resource
                                     '확통' => '확률과 통계',
                                     '기하' => '기하',
                                 ])
-                                ->required(),
+                                ->placeholder('미선택')
+                                ->nullable(),
                             Select::make('exam_type')
                                 ->label('시험 유형')
                                 ->options([
