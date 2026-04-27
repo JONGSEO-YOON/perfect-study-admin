@@ -22,6 +22,64 @@
                 </div>
             @endif
         </div>
+        @if ($isAcademyGroupingActive && !empty($materialsByAcademy))
+            {{-- 본점/root_admin: 학원별로 그룹화된 교재 목록 --}}
+            @foreach ($materialsByAcademy as $group)
+                <div class="px-4 mt-4 mb-2 flex items-center gap-2">
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        {{ $group['academy_name'] }} 교재목록
+                    </h3>
+                    <span class="text-xs text-gray-400">{{ count($group['materials']) }}개</span>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 px-4 mb-4">
+                    @foreach (collect($group['materials'])->where('type', 'folder')->sortBy('created_at') as $material)
+                        <div class="flex flex-col items-center space-y-2 hover:brightness-90 cursor-pointer transition-all"
+                            wire:click="setSelectedMaterial({{ $material->id }})"
+                            wire:dblclick="redirectTo(location.href, {{ $material->id }})">
+                            <div class="aspect-[2/3] w-full flex items-center justify-center bg-gray-100 rounded-lg">
+                                <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                </svg>
+                            </div>
+                            <p @class([
+                                'text-sm select-none font-medium text-center line-clamp-2 px-2 py-1 rounded',
+                                'bg-primary-500 text-white' => $selectedMaterialId === $material->id,
+                            ])>{{ $material->name }}</p>
+                        </div>
+                    @endforeach
+                    @foreach (collect($group['materials'])->where('type', 'book')->sortBy('created_at') as $material)
+                        <div class="flex flex-col items-center space-y-2 hover:brightness-90 cursor-pointer transition-all relative"
+                            wire:click="redirectTo(location.href, {{ $material->id }})">
+                            @if ($material->image_path)
+                                <div class="aspect-[2/3] w-full bg-gray-200 rounded-lg overflow-hidden shadow">
+                                    <img src="{{ Storage::url($material->image_path) }}" alt="{{ $material->name }}" class="w-full h-full object-cover">
+                                </div>
+                            @else
+                                <div class="aspect-[2/3] w-full flex items-center justify-center bg-gray-100 rounded-lg text-gray-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-16">
+                                        <path d="M11.25 4.533A9.707 9.707 0 0 0 6 3a9.735 9.735 0 0 0-3.25.555.75.75 0 0 0-.5.707v14.25a.75.75 0 0 0 1 .707A8.237 8.237 0 0 1 6 18.75c1.995 0 3.823.707 5.25 1.886V4.533ZM12.75 20.636A8.214 8.214 0 0 1 18 18.75c.966 0 1.89.166 2.75.47a.75.75 0 0 0 1-.708V4.262a.75.75 0 0 0-.5-.707A9.735 9.735 0 0 0 18 3a9.707 9.707 0 0 0-5.25 1.533v16.103Z" />
+                                    </svg>
+                                </div>
+                            @endif
+                            <p @class([
+                                'text-sm select-none font-medium text-center line-clamp-2 px-2 py-1 rounded',
+                                'bg-primary-500 text-white' => $selectedMaterialId === $material->id,
+                            ])>{{ $material->name }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            @endforeach
+            <div class="px-4 mt-4">
+                <div wire:click="mountAction('addNewBookOrFolder')"
+                    class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 cursor-pointer text-sm">
+                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+                    </svg>
+                    내 학원 교재/폴더 추가
+                </div>
+            </div>
+        @else
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 px-4">
             @if ($hasUpperLevel)
                 <div class="flex flex-col items-center space-y-2 hover:brightness-90 cursor-pointer transition-all"
@@ -106,6 +164,7 @@
                 </div>
             </div>
         </div>
+        @endif
         <x-filament-actions::modals />
     </x-filament::section>
 </x-filament-widgets::widget>

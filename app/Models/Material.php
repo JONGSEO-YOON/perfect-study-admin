@@ -30,6 +30,12 @@ class Material extends Model
             // root_admin은 전체 조회
             if ($user->role === 'root_admin') return;
 
+            // 본점(academy_id=1, '퍼펙트 스터디')의 admin은 전체 학원 교재 조회 가능
+            // → 다른 학원이 만든 교재를 본점에서 확인하고 본점으로 복사 가능
+            if ($user->role === 'admin' && $user->academy_id === 1) {
+                return;
+            }
+
             $academyId = $user->academy_id;
             if (!$academyId) return;
 
