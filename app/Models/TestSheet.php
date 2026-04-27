@@ -1358,10 +1358,18 @@ class TestSheet extends Model
 
     public function getTargetStudents()
     {
-        // target_* 필드 기반으로 대상 학생을 직접 조회
-        // (기존: 출제자의 담임/부담임 학생만 반환 → 본점 admin이 출제 후 서브학원에서 제출현황 안뜨던 문제 해결)
+        // target_* 필드 기반 직접 조회.
+        // 주의: target_students 는 USER ID 배열 (Student ID 아님).
+        // AcademyScope를 우회해서 시험지 academy_id 기준으로 정확히 매칭
+        // (본점 admin/서브학원 어디서 보든 동일한 대상 반환)
         $query = Student::query()
+            ->withoutGlobalScopes([\App\Models\Scopes\AcademyScope::class])
             ->with(['user', 'classrooms.teacher.user']);
+
+        // 시험지 학원의 학생만 (다른 학원 학생 매칭 방지)
+        if ($this->academy_id) {
+            $query->where('students.academy_id', $this->academy_id);
+        }
 
         switch ($this->target_group) {
             case 'classroom':
@@ -1386,16 +1394,19 @@ class TestSheet extends Model
                 break;
 
             case 'student':
-                $query->whereIn('id', (array) ($this->target_students ?? []));
+                // target_students 는 USER ID 배열
+                $userIds = array_filter(array_map('intval', (array) ($this->target_students ?? [])));
+                if (empty($userIds)) {
+                    return collect();
+                }
+                $query->whereHas('user', function ($q) use ($userIds) {
+                    $q->whereIn('users.id', $userIds);
+                });
                 break;
 
             default:
-                // target_group 없거나 알 수 없는 경우: 본 시험지의 학원 학생만
-                if ($this->academy_id) {
-                    $query->where('academy_id', $this->academy_id);
-                } else {
-                    return collect();
-                }
+                // target_group 없거나 알 수 없는 경우 → 시험지 학원 학생 전체
+                break;
         }
 
         return $query->get();

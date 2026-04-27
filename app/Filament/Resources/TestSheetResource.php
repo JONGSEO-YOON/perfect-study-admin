@@ -78,12 +78,23 @@ class TestSheetResource extends Resource
                     ->originals()
                     ->whereNotNull('target_group')
                     ->when(in_array($role, ['general', 'manager']), function ($query) {
-                        // general/manager: 자기가 올린 문제지 + 강사 할당된 문제지만
+                        // general/manager: 자기 출제 + 강사 attach + 담임/부담임인 반의 시험지
                         $teacher = auth()->user()->userable;
                         return $query->where(function ($subQuery) use ($teacher) {
                             $subQuery->where('user_id', auth()->user()->id)
                                 ->orWhereHas('teachers', function ($q) use ($teacher) {
                                     $q->where('teachers.id', $teacher->id);
+                                })
+                                // 자기가 담임/부담임인 반이 target_classrooms 에 포함되거나
+                                // 학년/학생 대상이라도 같은 학원 내에서 담임/부담임 관련 학생과 매칭
+                                ->orWhereExists(function ($q) use ($teacher) {
+                                    $q->select(\Illuminate\Support\Facades\DB::raw(1))
+                                        ->from('classrooms')
+                                        ->where(function ($cw) use ($teacher) {
+                                            $cw->where('teacher_id', $teacher->id)
+                                                ->orWhere('sub_teacher_id', $teacher->id);
+                                        })
+                                        ->whereRaw('JSON_CONTAINS(test_sheets.target_classrooms, CAST(classrooms.id AS JSON))');
                                 });
                         });
                     });

@@ -158,7 +158,10 @@ class ListPayments extends ListRecords
                 }),
 
             Actions\Action::make('edit_schedule')
-                ->hidden()
+                // ->hidden() 사용 시 모달 HTML 자체가 렌더 안 되어 mountAction이 작동하지 않음.
+                // CSS로 트리거 버튼만 숨기고 모달 정의는 유지.
+                ->extraAttributes(['style' => 'display:none !important;'])
+                ->label('')
                 ->modalHeading('예약 알림 수정')
                 ->modalSubmitActionLabel('저장')
                 ->modalWidth('lg')

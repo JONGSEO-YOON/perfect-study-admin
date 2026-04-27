@@ -63,14 +63,24 @@ class QuestionResource extends Resource
     }
 
     /**
-     * 문제 유형표(question_categories)의 고/고3 하위 과목들을 옵션으로 반환.
-     * 공통수학1/공통수학2/대수/미적분1/미적분2/확률과 통계/기하/이산수학 등 전부 포함.
+     * 문제 유형표(question_categories)의 고/고3 하위 1차 과목들을 옵션으로 반환.
+     * 공통수학1/2, 대수, 미적분1/2, 확률과 통계, 기하, 이산수학 등 핵심만 포함.
+     * (test/교과외/연산문제/내부 더미 등은 제외)
      */
     public static function getExamSubjectOptions(): array
     {
         $rootIds = QuestionCategory::where('depth', 0)
             ->whereRaw("REPLACE(REPLACE(name, '<p>', ''), '</p>', '') IN ('고', '고3')")
             ->pluck('id');
+
+        $whitelist = [
+            '공통수학1', '공통수학2',
+            '대수', '미적분', '미적분1', '미적분2', '미적분 2',
+            '확률과 통계', '확률과통계', '확통',
+            '기하', '기하와 벡터',
+            '이산수학',
+            '수학 1', '수학1', '수학 2', '수학2',
+        ];
 
         return QuestionCategory::where('depth', 1)
             ->whereIn('id', function ($q) use ($rootIds) {
@@ -82,7 +92,8 @@ class QuestionResource extends Resource
             ->orderBy('id')
             ->pluck('name')
             ->map(fn($name) => trim(str_replace('(2025개정)', '', strip_tags(trim($name)))))
-            ->filter(fn($name) => !in_array($name, ['교과외', '연산문제', 'test']))
+            ->map(fn($name) => trim(preg_replace('/\(.+?\)/', '', $name)))
+            ->filter(fn($name) => $name !== '' && in_array($name, $whitelist))
             ->unique()
             ->mapWithKeys(fn($name) => [$name => $name])
             ->toArray();
@@ -257,20 +268,21 @@ class QuestionResource extends Resource
                                 ->searchable()
                                 ->placeholder('미선택')
                                 ->nullable(),
-                            Select::make('exam_series')
-                                ->label('문제 계열 (선택)')
-                                ->options([
-                                    '가형' => '가형',
-                                    '나형' => '나형',
-                                    '이과' => '이과',
-                                    '문과' => '문과',
-                                    '공통' => '공통',
-                                    '확률과통계' => '선택 (확률과 통계)',
-                                    '기하' => '선택 (기하)',
-                                    '미적분' => '선택 (미적분)',
-                                    '이산수학' => '선택 (이산수학)',
+                            TextInput::make('exam_series')
+                                ->label('문제 계열 (선택, 직접 입력 가능)')
+                                ->datalist([
+                                    '가형',
+                                    '나형',
+                                    '이과',
+                                    '문과',
+                                    '공통',
+                                    '확률과통계',
+                                    '기하',
+                                    '미적분',
+                                    '이산수학',
                                 ])
-                                ->placeholder('미선택')
+                                ->placeholder('예: 가형, 미적분, 또는 신규 명칭 직접 입력')
+                                ->maxLength(50)
                                 ->nullable(),
                             TextInput::make('exam_score')
                                 ->label('배점')

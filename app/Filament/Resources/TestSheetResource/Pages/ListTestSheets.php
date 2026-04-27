@@ -35,6 +35,66 @@ class ListTestSheets extends ListRecords
         return null;
     }
 
+    /**
+     * 단원/유형 선택용 옵션. depth 1 이하 (과목)와 그 하위 leaf를 평탄화하여 노출.
+     * 라벨은 "고1 > 함수 > 일차함수" 식의 경로로 표시.
+     */
+    protected static function getQuestionCategoryOptions(): array
+    {
+        $rootIds = \App\Models\QuestionCategory::where('depth', 0)
+            ->whereRaw("REPLACE(REPLACE(name, '<p>', ''), '</p>', '') IN ('고', '고3', '중', '초')")
+            ->pluck('id')
+            ->all();
+
+        if (empty($rootIds)) {
+            // 루트 식별 실패 시 모든 leaf 노드 반환
+            return \App\Models\QuestionCategory::orderBy('name')
+                ->limit(500)
+                ->pluck('name', 'id')
+                ->map(fn($name) => trim(str_replace(['<p>', '</p>'], '', $name)))
+                ->toArray();
+        }
+
+        $cats = \App\Models\QuestionCategory::whereIn('id', function ($q) use ($rootIds) {
+            $q->select('descendant_id')->from('question_category_closure')
+              ->whereIn('ancestor_id', $rootIds);
+        })->orderBy('depth')->orderBy('id')->get(['id', 'name', 'depth']);
+
+        $byId = $cats->keyBy('id');
+        $closure = \Illuminate\Support\Facades\DB::table('question_category_closure')
+            ->whereIn('descendant_id', $cats->pluck('id'))
+            ->where('depth', '>', 0)
+            ->orderBy('depth')
+            ->get();
+
+        // 각 카테고리의 ancestors 수집 → 라벨 경로 생성
+        $ancestorMap = [];
+        foreach ($closure as $row) {
+            $ancestorMap[$row->descendant_id][$row->depth] = $row->ancestor_id;
+        }
+
+        $options = [];
+        foreach ($cats as $cat) {
+            $cleanName = trim(str_replace(['<p>', '</p>'], '', $cat->name));
+            if (in_array($cleanName, ['교과외', '연산문제', 'test'])) continue;
+
+            $path = [$cleanName];
+            $ancestors = $ancestorMap[$cat->id] ?? [];
+            ksort($ancestors); // depth 1, 2, 3...
+            foreach ($ancestors as $depth => $ancId) {
+                if (isset($byId[$ancId])) {
+                    $ancName = trim(str_replace(['<p>', '</p>'], '', $byId[$ancId]->name));
+                    array_unshift($path, $ancName);
+                }
+            }
+            $options[$cat->id] = implode(' > ', $path);
+        }
+
+        // 경로 알파벳순 정렬
+        asort($options);
+        return $options;
+    }
+
     protected static function getExamSubjectItems(): array
     {
         // 고/고3 루트 카테고리 하위의 과목(depth=1)을 자동으로 가져옴
@@ -668,12 +728,14 @@ class ListTestSheets extends ListRecords
                         ->columnSpanFull()
                         ->visible(fn(Get $get) => $get('creation_method') !== 'category'),
 
-                    // 단원으로 추가 시: 문제 유형 선택
-                    ViewField::make('question_type_ids')
-                        ->label('문제 유형')
-                        ->view('filament.components.forms.question-type', [
-                            'multiple' => true,
-                        ])
+                    // 단원으로 추가 시: 문제 유형 선택 (모달 안에서 안정적인 multi-select)
+                    Select::make('question_type_ids')
+                        ->label('단원/유형 선택')
+                        ->helperText('한 개 이상 선택하세요. 검색 가능.')
+                        ->multiple()
+                        ->searchable()
+                        ->preload()
+                        ->options(fn() => self::getQuestionCategoryOptions())
                         ->live()
                         ->required(fn(Get $get) => $get('creation_method') === 'category')
                         ->columnSpanFull()
@@ -893,12 +955,14 @@ class ListTestSheets extends ListRecords
                         ->columnSpanFull()
                         ->visible(fn(Get $get) => $get('creation_method') !== 'category'),
 
-                    // 단원으로 추가 시: 문제 유형 선택
-                    ViewField::make('question_type_ids')
-                        ->label('문제 유형')
-                        ->view('filament.components.forms.question-type', [
-                            'multiple' => true,
-                        ])
+                    // 단원으로 추가 시: 문제 유형 선택 (모달 안에서 안정적인 multi-select)
+                    Select::make('question_type_ids')
+                        ->label('단원/유형 선택')
+                        ->helperText('한 개 이상 선택하세요. 검색 가능.')
+                        ->multiple()
+                        ->searchable()
+                        ->preload()
+                        ->options(fn() => self::getQuestionCategoryOptions())
                         ->live()
                         ->required(fn(Get $get) => $get('creation_method') === 'category')
                         ->columnSpanFull()
