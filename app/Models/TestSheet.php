@@ -1745,11 +1745,14 @@ class TestSheet extends Model
         $endCarbon = Carbon::parse($endDate);
 
         // 조건에 맞는 테스트 시트 조회
+        // 마감(completed) 또는 진행중(progress)이지만 해당 학생이 이미 제출(completed)한 경우 포함
+        // → 선생님이 마감 누르지 않아도 학생 본인이 제출하면 즉시 오답유형분석표 노출
         $testSheets = static::query()
-            ->where('status', 'completed')
+            ->whereIn('status', ['progress', 'completed'])
             ->originals()
             ->whereHas('answers', function ($query) use ($student) {
-                $query->where('user_id', $student->user->id);
+                $query->where('user_id', $student->user->id)
+                    ->where('status', 'completed');
             })
             ->whereBetween('start_date', [$startCarbon, $endCarbon])
             ->orderBy('start_date', 'asc')
@@ -1836,11 +1839,14 @@ class TestSheet extends Model
         $endCarbon = Carbon::parse($endDate);
 
         // 조건에 맞는 테스트 시트 조회
+        // 마감(completed) 또는 진행중(progress)이지만 해당 학생이 이미 제출(completed)한 경우 포함
+        // → 선생님이 마감 누르지 않아도 학생 본인이 제출하면 즉시 오답유형분석표 노출
         $testSheets = static::query()
-            ->where('status', 'completed')
+            ->whereIn('status', ['progress', 'completed'])
             ->originals()
             ->whereHas('answers', function ($query) use ($student) {
-                $query->where('user_id', $student->user->id);
+                $query->where('user_id', $student->user->id)
+                    ->where('status', 'completed');
             })
             ->whereBetween('start_date', [$startCarbon, $endCarbon])
             ->orderBy('start_date', 'asc')
