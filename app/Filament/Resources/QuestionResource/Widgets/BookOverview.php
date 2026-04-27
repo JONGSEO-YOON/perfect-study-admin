@@ -41,6 +41,14 @@ class BookOverview extends Widget implements HasForms, HasActions
     public $selectedMaterialId = null;
     public $selectedMaterial = null;
 
+    /**
+     * 본점/root_admin이 루트 레벨에서 볼 때 학원별로 그룹화된 교재 목록.
+     * [{academy_id, academy_name, materials: Collection}, ...]
+     */
+    public $materialsByAcademy = [];
+
+    public $isAcademyGroupingActive = false;
+
     protected static string $view = 'filament.resources.question-resource.widgets.book-overview';
 
     public function mount()
@@ -67,6 +75,34 @@ class BookOverview extends Widget implements HasForms, HasActions
         $this->materials = Material::where('parent_id', $parentId)
             ->visible()
             ->get();
+
+        // 본점(스터디) admin 또는 root_admin이 루트 레벨일 때만 학원별 그룹화 활성화
+        $user = auth()->user();
+        $canSeeAllAcademies = $user && (
+            $user->role === 'root_admin'
+            || ($user->role === 'admin' && $user->academy_id === 1)
+        );
+        $this->isAcademyGroupingActive = $canSeeAllAcademies && $parentId === null;
+
+        if ($this->isAcademyGroupingActive) {
+            $academyMap = \App\Models\Academy::pluck('name', 'id')->toArray();
+
+            $this->materialsByAcademy = $this->materials
+                ->groupBy('academy_id')
+                ->map(function ($group, $academyId) use ($academyMap) {
+                    return [
+                        'academy_id' => (int) $academyId,
+                        'academy_name' => $academyMap[$academyId] ?? '미지정',
+                        'materials' => $group->values(),
+                    ];
+                })
+                // 본점(1) 먼저, 그 다음 학원명 가나다순
+                ->sortBy(fn($g) => $g['academy_id'] === 1 ? '0' : '1' . $g['academy_name'])
+                ->values()
+                ->toArray();
+        } else {
+            $this->materialsByAcademy = [];
+        }
     }
 
     public function setSelectedMaterial($materialId)
@@ -274,10 +310,14 @@ class BookOverview extends Widget implements HasForms, HasActions
             })
             ->visible(function () {
                 if (!$this->selectedMaterial) return false;
-                // 다른 학원 공유 받은 교재일 때만 표시
-                $myAcademyId = auth()->user()->academy_id;
-                return $this->selectedMaterial->academy_id !== $myAcademyId
-                    && auth()->user()->isRoleAbove('manager', true);
+                // 본점(academy_id=1, '퍼펙트 스터디')의 root_admin/admin만 다른 학원 교재를 본점으로 복사 가능
+                $user = auth()->user();
+                $myAcademyId = $user->academy_id;
+                $isParentAcademy = $user->role === 'root_admin'
+                    || ($user->role === 'admin' && $user->academy_id === 1);
+
+                return $isParentAcademy
+                    && $this->selectedMaterial->academy_id !== $myAcademyId;
             })
             ->action(function () {
                 $source = $this->selectedMaterial;
