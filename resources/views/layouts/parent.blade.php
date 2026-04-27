@@ -303,7 +303,7 @@
        <footer class="w-full px-5 py-6" style="background-color: #f3f4f6;">
            <div class="flex flex-col md:flex-row gap-6 md:gap-16">
                <div class="flex-shrink-0">
-                   <img src="{{ $currentAcademy->logo_path ? Storage::url($currentAcademy->logo_path) : '/logo.png' }}" class="w-32 md:w-40" alt="{{ $currentAcademy->name }}" />
+                   <img src="{{ $currentAcademy->logo_path ? Storage::url($currentAcademy->logo_path) : '/logo.png' }}" class="w-32 md:w-40 max-h-24 object-contain" alt="{{ $currentAcademy->name }}" />
                </div>
                <div class="text-sm text-gray-600 flex-1">
                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">

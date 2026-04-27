@@ -56,6 +56,7 @@ class AdminPanelProvider extends PanelProvider
                 ]
             )
             ->brandLogo($brandLogo)
+            ->brandLogoHeight('2.5rem')
             ->brandName($academy?->name)
             ->maxContentWidth(MaxWidth::ScreenTwoExtraLarge)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')

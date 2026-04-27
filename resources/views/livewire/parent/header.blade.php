@@ -4,7 +4,7 @@
             <!-- Logo and Brand -->
             <div class="flex items-center ">
                 <a href="{{ route('parent.home') }}" wire:navigate>
-                    <img src="{{ isset($currentAcademy) && $currentAcademy->logo_path ? \Illuminate\Support\Facades\Storage::url($currentAcademy->logo_path) : asset('logo.png') }}" alt="{{ $currentAcademy->name ?? '학원' }}" class="h-10">
+                    <img src="{{ isset($currentAcademy) && $currentAcademy->logo_path ? \Illuminate\Support\Facades\Storage::url($currentAcademy->logo_path) : asset('logo.png') }}" alt="{{ $currentAcademy->name ?? '학원' }}" class="h-10 max-w-[160px] object-contain">
                 </a>
             </div>
             <!-- User Menu -->
