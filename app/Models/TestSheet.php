@@ -102,6 +102,11 @@ class TestSheet extends Model
             }
         }
 
+        // 본점(academy_id=1, '퍼펙트 스터디') admin도 전체 학원 시험지 조회 가능
+        if ($user->role === 'admin' && $user->academy_id === 1) {
+            return $query->withoutGlobalScope(\App\Models\Scopes\AcademyScope::class);
+        }
+
         $academyId = $user->academy_id;
 
         // AcademyScope를 해제하고 직접 조건을 걸어야 다른 학원 공유 문제지도 보임

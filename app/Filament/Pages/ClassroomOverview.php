@@ -2,9 +2,12 @@
 
 namespace App\Filament\Pages;
 
+use App\Exports\ClassroomOverviewExport;
+use Filament\Actions\Action;
 use Filament\Pages\Page;
 use App\Models\Classroom;
 use App\Models\GradeSystem;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ClassroomOverview extends Page
 {
@@ -29,6 +32,20 @@ class ClassroomOverview extends Page
         }
         return auth()->user()->isRoleAbove('admin', true)
             || !auth()->user()->userable instanceof \App\Models\Teacher;
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('downloadExcel')
+                ->label('엑셀 다운로드')
+                ->icon('heroicon-m-arrow-down-tray')
+                ->color('success')
+                ->action(function () {
+                    $filename = '반전체현황_' . now()->format('Ymd_His') . '.xlsx';
+                    return Excel::download(new ClassroomOverviewExport(), $filename);
+                }),
+        ];
     }
 
     private static function getGradeMap(): array

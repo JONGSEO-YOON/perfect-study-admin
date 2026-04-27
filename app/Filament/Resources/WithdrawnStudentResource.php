@@ -201,15 +201,17 @@ class WithdrawnStudentResource extends Resource
                     ->label('히스토리')
                     ->icon('heroicon-m-clock')
                     ->color('gray')
-                    ->modalHeading('상태 변경 히스토리')
+                    ->modalHeading(fn($record) => $record->user?->name . ' 학생 이력')
                     ->modalSubmitAction(false)
+                    ->modalWidth('3xl')
                     ->modalCancelActionLabel('닫기')
                     ->modalContent(function ($record) {
-                        $histories = StudentStatusHistory::where('student_id', $record->id)
-                            ->with('changedBy')
-                            ->orderBy('created_at', 'desc')
-                            ->get();
-                        return view('filament.student-status-history', ['histories' => $histories]);
+                        // 학생 이력관리와 동일한 타임라인 사용 (전반/반 배정/해제/퇴원/재등록 모두 표시)
+                        $timeline = \App\Filament\Resources\StudentHistoryResource::buildTimeline($record);
+                        return view('filament.components.modals.student-history', [
+                            'timeline' => $timeline,
+                            'student' => $record,
+                        ]);
                     }),
             ])
             ->emptyStateHeading('퇴원생이 없습니다.');
