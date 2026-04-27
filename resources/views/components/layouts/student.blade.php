@@ -61,7 +61,7 @@
                         $currentAcademy = auth()->user()?->academy;
                         $logoUrl = $currentAcademy?->logo_path ? Storage::url($currentAcademy->logo_path) : '/logo.png';
                     @endphp
-                    <img src="{{ $logoUrl }}" alt="{{ $currentAcademy?->name ?? '학원' }}" class="w-2/3 max-h-20 object-contain" />
+                    <img src="{{ $logoUrl }}" alt="{{ $currentAcademy?->name ?? '학원' }}" class="max-w-[180px] max-h-32 object-contain" />
                     <button class="lg:hidden menu-button">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-6">
                             <path

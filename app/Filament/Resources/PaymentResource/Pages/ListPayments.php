@@ -325,6 +325,19 @@ class ListPayments extends ListRecords
         ];
     }
 
+    public function openEditScheduleModal(int $scheduleId): void
+    {
+        // 외부 payment_schedules 모달 닫기 (있으면)
+        try {
+            $this->unmountAction();
+        } catch (\Throwable $e) {
+            // 무시: unmountAction이 모든 상황에서 안전하지 않을 수 있음
+        }
+
+        // 수정 모달 마운트
+        $this->mountAction('edit_schedule', ['schedule_id' => $scheduleId]);
+    }
+
     public function deletePaymentSchedule(int $scheduleId): void
     {
         $schedule = PaymentSchedule::find($scheduleId);

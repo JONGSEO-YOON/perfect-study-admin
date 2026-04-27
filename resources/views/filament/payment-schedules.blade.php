@@ -41,7 +41,7 @@
                             <div class="flex items-center justify-center gap-2">
                                 <button
                                     type="button"
-                                    x-on:click="$wire.unmountAction(); $nextTick(() => $wire.mountAction('edit_schedule', @js(['schedule_id' => $schedule->id])))"
+                                    wire:click="openEditScheduleModal({{ $schedule->id }})"
                                     class="text-xs text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
                                 >
                                     수정
