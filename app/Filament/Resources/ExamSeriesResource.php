@@ -27,7 +27,7 @@ class ExamSeriesResource extends Resource
 
     protected static ?int $navigationSort = 11;
 
-    protected static ?string $navigationIcon = 'heroicon-o-tag';
+    protected static ?string $navigationIcon = null;
 
     public static function canViewAny(): bool
     {
