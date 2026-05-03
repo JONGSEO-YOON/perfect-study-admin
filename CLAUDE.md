@@ -1,5 +1,9 @@
 # Claude Code 설정
 
+## 참고 자료
+
+- Andrej Karpathy Skills (참고용 커뮤니티 모음): https://github.com/forrestchang/andrej-karpathy-skills
+
 ## Git 커밋 메시지 규칙
 
 - 커밋 메시지에 다음 내용을 **절대 포함하지 마세요**:
@@ -160,6 +164,20 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
   - 어드민: `test-academy.perfectstudy.co.kr/admin/login`
   - 학생: `test-academy.perfectstudy.co.kr/login`
   - 학부모: `test-academy.perfectstudy.co.kr/parent`
+
+### 2026-05-03: 모의고사 문제계열 DB 관리 + 오답유형분석표 안전 렌더링
+
+- **신규 테이블**: `exam_series` (id, name, sort_order, is_active, timestamps)
+  - 마이그레이션: `2026_05_03_100000_create_exam_series_table.php`
+  - 초기값 9개 자동 시드: 가형, 나형, 이과, 문과, 공통, 확률과통계, 기하, 미적분, 이산수학
+- **신규 모델**: `app/Models/ExamSeries.php`
+  - `activeNames()` 정적 메서드 — 활성 계열만 정렬 순서대로 반환 (10분 캐시)
+  - 저장/삭제 시 캐시 자동 무효화
+- **신규 Filament Resource**: `app/Filament/Resources/ExamSeriesResource.php`
+  - 메뉴: 설정 > 모의고사 문제계열 (`navigationSort: 11`)
+  - 권한: root_admin, admin
+- **하드코딩 제거**: `QuestionResource.php`(문제 등록 폼)와 `ListTestSheets.php`(모의고사 기출 모달)에서 9개 고정 옵션 → DB 동적 조회로 교체
+- **오답유형분석표 HTML 정화**: `TestSheetTypeAnalysis.php`와 `test-sheet-type-analysis.blade.php`(modal 버전)에서 QuestionCategory 이름의 `<p>` 태그 등을 `strip_tags`로 정리 후 표시 (XSS 회피하면서 카테고리 이름 깔끔히 노출)
 
 ## 알려진 이슈 (TODO)
 

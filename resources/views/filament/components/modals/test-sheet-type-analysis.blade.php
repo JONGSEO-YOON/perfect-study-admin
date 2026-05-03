@@ -21,6 +21,7 @@
         </div>
     @else
         @php
+            $clean = fn($s) => trim(strip_tags((string) $s));
             $hierarchy = $report['hierarchical_analysis'] ?? [];
             $rows = [];
             foreach ($hierarchy as $major => $majorData) {
@@ -31,9 +32,9 @@
                             $levels[$level] = $data;
                         }
                         $rows[] = [
-                            'major' => $majorData['name'] ?? $major,
-                            'middle' => $middleData['name'] ?? $middle,
-                            'type' => $typeData['name'] ?? $type,
+                            'major' => $clean($majorData['name'] ?? $major),
+                            'middle' => $clean($middleData['name'] ?? $middle),
+                            'type' => $clean($typeData['name'] ?? $type),
                             'levels' => $levels,
                         ];
                     }

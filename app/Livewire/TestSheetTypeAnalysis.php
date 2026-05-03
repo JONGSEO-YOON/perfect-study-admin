@@ -51,6 +51,8 @@ class TestSheetTypeAnalysis extends Component
 
         if (!$report) return;
 
+        $clean = fn($s) => trim(strip_tags((string) $s));
+
         $hierarchy = $report['hierarchical_analysis'] ?? [];
         foreach ($hierarchy as $major => $majorData) {
             foreach (($majorData['sub_categories'] ?? []) as $middle => $middleData) {
@@ -60,9 +62,9 @@ class TestSheetTypeAnalysis extends Component
                         $levels[$level] = $data;
                     }
                     $this->rows[] = [
-                        'major' => $majorData['name'] ?? $major,
-                        'middle' => $middleData['name'] ?? $middle,
-                        'type' => $typeData['name'] ?? $type,
+                        'major' => $clean($majorData['name'] ?? $major),
+                        'middle' => $clean($middleData['name'] ?? $middle),
+                        'type' => $clean($typeData['name'] ?? $type),
                         'levels' => $levels,
                     ];
                 }

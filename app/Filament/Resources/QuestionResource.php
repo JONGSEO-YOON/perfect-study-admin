@@ -270,17 +270,7 @@ class QuestionResource extends Resource
                                 ->nullable(),
                             TextInput::make('exam_series')
                                 ->label('문제 계열 (선택, 직접 입력 가능)')
-                                ->datalist([
-                                    '가형',
-                                    '나형',
-                                    '이과',
-                                    '문과',
-                                    '공통',
-                                    '확률과통계',
-                                    '기하',
-                                    '미적분',
-                                    '이산수학',
-                                ])
+                                ->datalist(fn() => \App\Models\ExamSeries::activeNames())
                                 ->placeholder('예: 가형, 미적분, 또는 신규 명칭 직접 입력')
                                 ->maxLength(50)
                                 ->nullable(),

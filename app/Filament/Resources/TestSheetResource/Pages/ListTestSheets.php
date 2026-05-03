@@ -659,23 +659,15 @@ class ListTestSheets extends ListRecords
                         })
                         ->columnSpanFull(),
 
-                    // 문제 계열 선택 - 선택사항
+                    // 문제 계열 선택 - 선택사항 (관리: 설정 > 모의고사 문제계열)
                     ExamGridSelect::make('exam_series_list')
                         ->label('문제 계열 (선택)')
                         ->multiple()
                         ->cols(5)
                         ->live()
-                        ->items([
-                            ['value' => '가형', 'label' => '가형'],
-                            ['value' => '나형', 'label' => '나형'],
-                            ['value' => '이과', 'label' => '이과'],
-                            ['value' => '문과', 'label' => '문과'],
-                            ['value' => '공통', 'label' => '공통'],
-                            ['value' => '확률과통계', 'label' => '선택 (확률과 통계)'],
-                            ['value' => '기하', 'label' => '선택 (기하)'],
-                            ['value' => '미적분', 'label' => '선택 (미적분)'],
-                            ['value' => '이산수학', 'label' => '선택 (이산수학)'],
-                        ])
+                        ->items(fn() => collect(\App\Models\ExamSeries::activeNames())
+                            ->map(fn($name) => ['value' => $name, 'label' => $name])
+                            ->all())
                         ->columnSpanFull(),
 
                     // 매치 가능 문제 개수 미리보기
