@@ -97,29 +97,13 @@ class ListTestSheets extends ListRecords
 
     protected static function getExamSubjectItems(): array
     {
-        // 고/고3 루트 카테고리 하위의 과목(depth=1)을 자동으로 가져옴
-        $rootIds = \App\Models\QuestionCategory::where('depth', 0)
-            ->whereRaw("REPLACE(REPLACE(name, '<p>', ''), '</p>', '') IN ('고', '고3')")
-            ->pluck('id');
+        // 문제지관리(QuestionResource)와 동일한 whitelist 적용된 과목 목록 사용
+        $opts = \App\Filament\Resources\QuestionResource::getExamSubjectOptions();
 
-        return \App\Models\QuestionCategory::where('depth', 1)
-            ->whereIn('id', function ($q) use ($rootIds) {
-                $q->select('descendant_id')
-                    ->from('question_category_closure')
-                    ->where('depth', 1)
-                    ->whereIn('ancestor_id', $rootIds);
-            })
-            ->orderBy('id')
-            ->pluck('name')
-            ->map(fn($name) => trim(str_replace('(2025개정)', '', strip_tags(trim($name)))))
-            ->filter(fn($name) => !in_array($name, ['교과외', '연산문제']))
-            ->unique()
-            ->map(fn($name) => [
-                'value' => $name,
-                'label' => $name,
-            ])
+        return collect($opts)
+            ->map(fn($label, $value) => ['value' => (string) $value, 'label' => $label])
             ->values()
-            ->toArray();
+            ->all();
     }
 
     /**

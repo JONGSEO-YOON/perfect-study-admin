@@ -1,13 +1,15 @@
 <div
     x-data="{
         items: @js($getItems()),
-        selected: $wire.entangle('{{ $getStatePath() }}'),
+        selected: $wire.entangle('{{ $getStatePath() }}').live,
         multiple: @js($isMultiple()),
         cols: @js($getCols()),
         maxHeight: @js($getMaxHeight()),
+        statePath: @js($getStatePath()),
         toggle(val) {
             if (!this.multiple) {
                 this.selected = (this.selected === val) ? null : val;
+                $wire.set(this.statePath, this.selected);
                 return;
             }
             if (!Array.isArray(this.selected)) this.selected = [];
@@ -17,6 +19,7 @@
             } else {
                 this.selected.push(val);
             }
+            $wire.set(this.statePath, this.selected);
         },
         isSelected(val) {
             if (this.multiple) {
@@ -31,6 +34,7 @@
         selectAll() {
             if (this.multiple) { this.selected = []; }
             else { this.selected = null; }
+            $wire.set(this.statePath, this.selected);
         }
     }"
     class="space-y-1"

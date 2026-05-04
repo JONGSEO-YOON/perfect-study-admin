@@ -20,6 +20,7 @@ use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\Tabs\Tab;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\View;
+use Filament\Forms\Components\ViewField;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -345,7 +346,7 @@ class TestSheetResource extends Resource
                     ->label('제출 현황')
                     ->icon('heroicon-m-clipboard-document-check')
                     ->color('info')
-                    ->visible(fn($record) => in_array($record->status, ['progress', 'completed']))
+                    ->visible(fn($record) => $record !== null)
                     ->modalHeading(fn($record) => $record->name . ' - 제출 현황')
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('닫기')
@@ -474,7 +475,8 @@ class TestSheetResource extends Resource
                                     Tab::make('TabAnalysis')
                                         ->label('오답 유형분석표')
                                         ->schema([
-                                            View::make('filament.components.modals.test-sheet-type-analysis-wrapper')
+                                            ViewField::make('analysis_view')
+                                                ->view('filament.components.modals.test-sheet-type-analysis-wrapper')
                                                 ->viewData(['record' => $record])
                                                 ->columnSpanFull(),
                                         ]),
