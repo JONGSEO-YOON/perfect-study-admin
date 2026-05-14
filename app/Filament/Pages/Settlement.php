@@ -45,7 +45,28 @@ class Settlement extends Page
     public static function canAccess(): bool
     {
         $user = Auth::user();
-        return $user && in_array($user->role, ['root_admin', 'admin']);
+
+        if (!$user || !in_array($user->role, ['root_admin', 'admin'])) {
+            return false;
+        }
+
+        // 학원별 settings로 결제 메뉴 숨김 시 결산 및 부가세도 함께 숨김
+        if ($user->role !== 'root_admin') {
+            $academy = $user->academy;
+            if ($academy) {
+                $settings = $academy->settings ?? [];
+                if (isset($settings['payments_visible']) && $settings['payments_visible'] === false) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canAccess();
     }
 
     public function mount()

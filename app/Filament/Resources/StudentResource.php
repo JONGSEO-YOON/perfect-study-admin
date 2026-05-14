@@ -555,6 +555,9 @@ class StudentResource extends Resource
                                 'teacher_mismatch' => '선생님맞지않음',
                                 'academy_atmosphere' => '학원분위기안좋음',
                                 'relocation' => '이사',
+                                'family_circumstances' => '가정형편',
+                                'friend_conflict' => '친구와의불화',
+                                'gave_up_studying' => '공부포기',
                                 'other' => '기타',
                             ])
                             ->required()
@@ -598,6 +601,9 @@ class StudentResource extends Resource
                                     'teacher_mismatch' => '선생님맞지않음',
                                     'academy_atmosphere' => '학원분위기안좋음',
                                     'relocation' => '이사',
+                                    'family_circumstances' => '가정형편',
+                                    'friend_conflict' => '친구와의불화',
+                                    'gave_up_studying' => '공부포기',
                                 ][$data['withdrawal_reason']] ?? $data['withdrawal_reason'],
                             'memo' => $classroomInfo ? "소속 반: {$classroomInfo}" : null,
                         ]);

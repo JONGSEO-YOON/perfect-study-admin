@@ -93,7 +93,7 @@ class ExamSharingRuleResource extends Resource
                     ->placeholder('전체 년도'),
                 Select::make('exam_month')
                     ->label('월 (모의고사)')
-                    ->options([3 => '3월', 4 => '4월', 6 => '6월', 7 => '7월', 9 => '9월', 10 => '10월', 11 => '11월'])
+                    ->options([3 => '3월', 4 => '4월', 5 => '5월', 6 => '6월', 7 => '7월', 9 => '9월', 10 => '10월', 11 => '11월'])
                     ->placeholder('전체')
                     ->visible(fn(Get $get) => $get('source_type') === 'mock_exam'),
                 Select::make('school_id')

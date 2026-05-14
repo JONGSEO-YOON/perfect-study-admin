@@ -19,9 +19,6 @@ class Dashboard extends BaseDashboard
     //title
     protected static ?string $title = '대시보드';
 
-    //shouldRegisterNavigation
-    protected static bool $shouldRegisterNavigation = true;
-
     public static function canAccess(): bool
     {
         $user = Auth::user();
@@ -29,10 +26,14 @@ class Dashboard extends BaseDashboard
             return false;
         }
 
-        // Filament 패널에 로그인 가능한 모든 강사(Teacher) 역할 접근 허용
-        // (students 미들웨어에서 Student는 이미 차단됨)
-        // 역할별 위젯 노출은 위젯 단에서 별도 제어
-        return $user->userable_type === \App\Models\Teacher::class;
+        // 대시보드는 root_admin, admin(학원 관리자)만 접근 가능
+        // 그 외 강사/매니저/상담실은 메뉴에 보이지 않고 접근 시 권한 없음
+        return in_array($user->role, ['root_admin', 'admin']);
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canAccess();
     }
 
     public function getWidgets(): array

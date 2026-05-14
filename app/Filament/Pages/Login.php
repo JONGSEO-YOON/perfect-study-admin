@@ -62,22 +62,17 @@ class Login extends BaseLogin
   {
     $user = Auth::user();
 
-    // 일반 강사는 학생 목록으로
-    if ($user && $user->role === 'general') {
-      return '/admin/students';
-    }
-
     // 상담실은 상담 관리로
     if ($user && $user->role === 'counselor') {
       return '/admin/counselings';
     }
 
-    // 관리자, 매니저는 대시보드로
-    if ($user && in_array($user->role, ['root_admin', 'admin', 'manager'])) {
+    // 학원 관리자(root_admin, admin)만 대시보드로
+    if ($user && in_array($user->role, ['root_admin', 'admin'])) {
       return '/admin/dashboard';
     }
 
-    // 기본값: 학생 목록 (Dashboard 권한 없는 역할이어도 안전)
+    // 그 외(manager, general 등) 직원은 학생 목록으로
     return '/admin/students';
   }
 
