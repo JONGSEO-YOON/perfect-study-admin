@@ -130,7 +130,7 @@ const getHeaderImagePath = () => {
     <!-- 첫 페이지일 경우 헤더 표시 -->
     <template v-if="pageIndex === 0">
       <div class="w-full h-28"></div>
-      <img v-if="customLogo != ''" :src="customLogo" alt="" class="absolute max-w-[120px] max-h-[60px] right-[15mm] top-[8mm] object-contain z-0" />
+      <img v-if="customLogo != ''" :src="customLogo" alt="" class="absolute max-w-[200px] max-h-[80px] right-[15mm] top-[8mm] object-contain z-0" style="height: auto; width: auto;" />
       <div class="absolute px-[20mm] w-full left-0 right-0 top-0 pb-5">
         <div class="relative z-10 pt-16">
           <h1 class="text-2xl text-gray-800 m-0 py-2 font-bold">

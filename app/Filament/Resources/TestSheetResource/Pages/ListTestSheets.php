@@ -138,7 +138,26 @@ class ListTestSheets extends ListRecords
         if (!empty($types)) $query->whereIn('exam_type', $types);
 
         if ($creationMethod === 'number' && !empty($questionNumbers)) {
-            $query->whereIn('exam_question_number', $questionNumbers);
+            // 복합 키 "year_month_semester_type_number" 와 단순 정수(레거시) 둘 다 지원
+            $parsed = self::parseCompositeQuestionNumbers($questionNumbers);
+            if (!empty($parsed['composites'])) {
+                $query->where(function ($q) use ($parsed) {
+                    foreach ($parsed['composites'] as $combo) {
+                        $q->orWhere(function ($qq) use ($combo) {
+                            if ($combo['year'] !== null && $combo['year'] !== '') $qq->where('exam_year', $combo['year']);
+                            if ($combo['month'] !== null && $combo['month'] !== '') $qq->where('exam_month', $combo['month']);
+                            if ($combo['semester'] !== null && $combo['semester'] !== '') $qq->where('exam_semester', $combo['semester']);
+                            if ($combo['type'] !== null && $combo['type'] !== '') $qq->where('exam_type', $combo['type']);
+                            $qq->where('exam_question_number', $combo['number']);
+                        });
+                    }
+                    if (!empty($parsed['simple'])) {
+                        $q->orWhereIn('exam_question_number', $parsed['simple']);
+                    }
+                });
+            } elseif (!empty($parsed['simple'])) {
+                $query->whereIn('exam_question_number', $parsed['simple']);
+            }
         }
 
         if ($creationMethod === 'category' && !empty($questionTypeIds)) {
@@ -146,6 +165,36 @@ class ListTestSheets extends ListRecords
         }
 
         return $query->count();
+    }
+
+    /**
+     * 복합 question_numbers 값을 파싱해서 회차별 필터 조건으로 분리.
+     * 입력 예: ["2024__1__5", "2025__1__7", 10]
+     * 출력: ['composites' => [['year' => 2024, ..., 'number' => 5], ...], 'simple' => [10]]
+     */
+    protected static function parseCompositeQuestionNumbers(array $questionNumbers): array
+    {
+        $composites = [];
+        $simple = [];
+
+        foreach ($questionNumbers as $v) {
+            if (is_string($v) && str_contains($v, '_')) {
+                $parts = explode('_', $v);
+                if (count($parts) >= 5) {
+                    $composites[] = [
+                        'year' => $parts[0] !== '' ? (int) $parts[0] : null,
+                        'month' => $parts[1] !== '' ? (int) $parts[1] : null,
+                        'semester' => $parts[2] !== '' ? (int) $parts[2] : null,
+                        'type' => $parts[3] !== '' ? $parts[3] : null,
+                        'number' => (int) $parts[4],
+                    ];
+                    continue;
+                }
+            }
+            $simple[] = (int) $v;
+        }
+
+        return ['composites' => $composites, 'simple' => $simple];
     }
 
     /**
@@ -181,22 +230,64 @@ class ListTestSheets extends ListRecords
         if (!empty($semesters)) $query->whereIn('exam_semester', $semesters);
         if (!empty($types)) $query->whereIn('exam_type', $types);
 
-        $numbers = $query->distinct()
-            ->orderBy('exam_question_number')
-            ->pluck('exam_question_number')
-            ->filter()
-            ->values()
-            ->toArray();
+        // 년도/월/학기/시험유형 별로 그룹화해서 각 회차의 번호를 따로 노출
+        // value 는 "year_month_semester_type_number" 복합키, 라벨은 회차 prefix 포함
+        $hasMultipleYears = count($years) > 1;
+        $hasMultipleMonths = count($months) > 1;
+        $hasMultipleSemesters = count($semesters) > 1;
+        $hasMultipleTypes = count($types) > 1;
+        $needPrefix = $hasMultipleYears || $hasMultipleMonths || $hasMultipleSemesters || $hasMultipleTypes;
 
-        // 필터가 지정되었지만 결과가 없으면 빈 배열 → 사용자가 조건 확인 가능
-        // 필터가 아무 것도 없을 때만 1~45 fallback (전체 가능 범위)
-        if (empty($numbers) && !$hasAnyFilter) {
-            $numbers = range(1, 45);
+        $rows = $query
+            ->select(['exam_year', 'exam_month', 'exam_semester', 'exam_type', 'exam_question_number'])
+            ->distinct()
+            ->orderBy('exam_year')
+            ->orderBy('exam_month')
+            ->orderBy('exam_semester')
+            ->orderBy('exam_type')
+            ->orderBy('exam_question_number')
+            ->get();
+
+        if ($rows->isEmpty()) {
+            if (!$hasAnyFilter) {
+                return collect(range(1, 45))
+                    ->map(fn($n) => ['value' => (int)$n, 'label' => $n . '번'])
+                    ->toArray();
+            }
+            return [];
         }
 
-        return collect($numbers)
-            ->map(fn($n) => ['value' => (int)$n, 'label' => $n . '번'])
-            ->toArray();
+        $typeLabels = ['midterm' => '중간', 'final' => '기말'];
+
+        return $rows->map(function ($row) use ($needPrefix, $typeLabels) {
+            $parts = [];
+            if ($row->exam_year) {
+                $parts[] = $row->exam_year . '년';
+            }
+            if ($row->exam_month) {
+                $parts[] = $row->exam_month . '월';
+            }
+            if ($row->exam_semester) {
+                $parts[] = $row->exam_semester . '학기';
+            }
+            if ($row->exam_type && isset($typeLabels[$row->exam_type])) {
+                $parts[] = $typeLabels[$row->exam_type];
+            }
+
+            $prefix = $needPrefix && !empty($parts) ? implode(' ', $parts) . ' ' : '';
+            $label = $prefix . $row->exam_question_number . '번';
+
+            // 복합 key: 회차+번호 (selectExamQuestionsByNumber 에서 parse)
+            $value = implode('_', [
+                $row->exam_year ?? '',
+                $row->exam_month ?? '',
+                $row->exam_semester ?? '',
+                $row->exam_type ?? '',
+                $row->exam_question_number,
+            ]);
+
+            return ['value' => $value, 'label' => $label];
+        })->values()->toArray();
     }
 
     protected function getHeaderActions(): array
@@ -704,14 +795,13 @@ class ListTestSheets extends ListRecords
                         ->columnSpanFull()
                         ->visible(fn(Get $get) => $get('creation_method') !== 'category'),
 
-                    // 단원으로 추가 시: 문제 유형 선택 (모달 안에서 안정적인 multi-select)
-                    Select::make('question_type_ids')
-                        ->label('단원/유형 선택')
-                        ->helperText('한 개 이상 선택하세요. 검색 가능.')
-                        ->multiple()
-                        ->searchable()
-                        ->preload()
-                        ->options(fn() => self::getQuestionCategoryOptions())
+                    // 단원으로 추가 시: 문제 유형 트리 선택 (문제집 출제와 동일한 초/중/고/고3 + 과목 트리)
+                    ViewField::make('question_type_ids')
+                        ->label('문제 유형')
+                        ->view('filament.components.forms.question-type', [
+                            'multiple' => true,
+                        ])
+                        ->reactive()
                         ->live()
                         ->required(fn(Get $get) => $get('creation_method') === 'category')
                         ->columnSpanFull()
@@ -931,14 +1021,13 @@ class ListTestSheets extends ListRecords
                         ->columnSpanFull()
                         ->visible(fn(Get $get) => $get('creation_method') !== 'category'),
 
-                    // 단원으로 추가 시: 문제 유형 선택 (모달 안에서 안정적인 multi-select)
-                    Select::make('question_type_ids')
-                        ->label('단원/유형 선택')
-                        ->helperText('한 개 이상 선택하세요. 검색 가능.')
-                        ->multiple()
-                        ->searchable()
-                        ->preload()
-                        ->options(fn() => self::getQuestionCategoryOptions())
+                    // 단원으로 추가 시: 문제 유형 트리 선택 (문제집 출제와 동일한 초/중/고/고3 + 과목 트리)
+                    ViewField::make('question_type_ids')
+                        ->label('문제 유형')
+                        ->view('filament.components.forms.question-type', [
+                            'multiple' => true,
+                        ])
+                        ->reactive()
                         ->live()
                         ->required(fn(Get $get) => $get('creation_method') === 'category')
                         ->columnSpanFull()

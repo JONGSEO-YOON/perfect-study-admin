@@ -373,13 +373,27 @@ class CounselingResource extends Resource
                     ->modalHeading('상담 기록하기')
                     ->modalWidth('xl')
                     ->before(function ($record, $data) {
-                        if (!$record->confirmed && $data['confirmed']) {
-                            Notification::create([
-                                'user_id' => $record->counselor_id,
-                                'type' => Notification::TYPE_COUNSELING_CONFIRMATION,
-                                'title' => '상담 원장/관리자 확인',
-                                'content' =>  $record->student->user->name . '학생의 상담을 관리자가 확인했습니다.',
-                                'data' => ['user_id' => $record->counselor_id, 'student_id' => $record->student_id],
+                        try {
+                            // confirmed 필드가 form 에 없을 수 있으므로 안전 처리
+                            $newConfirmed = $data['confirmed'] ?? false;
+                            if (!$record->confirmed && $newConfirmed) {
+                                // counselor_id 는 teachers.id 이므로 alarm 의 user_id 로는
+                                // teacher 의 user_id 를 사용
+                                $counselorUserId = $record->counselor?->user?->id;
+                                $studentName = $record->student?->user?->name ?? '학생';
+                                if ($counselorUserId) {
+                                    Notification::create([
+                                        'user_id' => $counselorUserId,
+                                        'type' => Notification::TYPE_COUNSELING_CONFIRMATION,
+                                        'title' => '상담 원장/관리자 확인',
+                                        'content' =>  $studentName . '학생의 상담을 관리자가 확인했습니다.',
+                                        'data' => ['user_id' => $counselorUserId, 'student_id' => $record->student_id],
+                                    ]);
+                                }
+                            }
+                        } catch (\Throwable $e) {
+                            \Illuminate\Support\Facades\Log::error('상담 확인 알림 생성 실패: ' . $e->getMessage(), [
+                                'counseling_id' => $record->id ?? null,
                             ]);
                         }
                     }),

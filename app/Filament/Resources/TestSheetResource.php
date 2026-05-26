@@ -79,22 +79,50 @@ class TestSheetResource extends Resource
                     ->originals()
                     ->whereNotNull('target_group')
                     ->when(in_array($role, ['general', 'manager']), function ($query) {
-                        // general/manager: 자기 출제 + 강사 attach + 담임/부담임인 반의 시험지
+                        // general/manager: 자기 + 같은 반 동료(담임/부담임) 출제
+                        //                  + 시험지의 teachers attach + 자기 반이 target_classrooms 에 포함
                         $teacher = auth()->user()->userable;
-                        return $query->where(function ($subQuery) use ($teacher) {
-                            $subQuery->where('user_id', auth()->user()->id)
+
+                        // 자기가 담임 또는 부담임인 모든 반 ID
+                        $myClassroomIds = \App\Models\Classroom::withoutGlobalScopes()
+                            ->where(function ($q) use ($teacher) {
+                                $q->where('teacher_id', $teacher->id)
+                                    ->orWhere('sub_teacher_id', $teacher->id);
+                            })
+                            ->pluck('id');
+
+                        // 같은 반의 (담임 + 부담임) user_id 모음
+                        $coTeacherUserIds = [auth()->id()];
+                        if ($myClassroomIds->isNotEmpty()) {
+                            $coTeacherIds = \App\Models\Classroom::withoutGlobalScopes()
+                                ->whereIn('id', $myClassroomIds)
+                                ->get(['teacher_id', 'sub_teacher_id'])
+                                ->flatMap(fn($c) => [$c->teacher_id, $c->sub_teacher_id])
+                                ->filter()
+                                ->unique()
+                                ->values();
+
+                            if ($coTeacherIds->isNotEmpty()) {
+                                $coTeacherUserIds = \App\Models\User::where('userable_type', \App\Models\Teacher::class)
+                                    ->whereIn('userable_id', $coTeacherIds)
+                                    ->pluck('id')
+                                    ->all();
+                            }
+                        }
+
+                        return $query->where(function ($subQuery) use ($teacher, $coTeacherUserIds, $myClassroomIds) {
+                            $subQuery
+                                // 1) 자기 또는 같은 반 동료(담임/부담임)가 출제한 시험지
+                                ->whereIn('user_id', $coTeacherUserIds)
+                                // 2) 시험지의 teachers pivot 에 자기가 attach 된 시험지
                                 ->orWhereHas('teachers', function ($q) use ($teacher) {
                                     $q->where('teachers.id', $teacher->id);
                                 })
-                                // 자기가 담임/부담임인 반이 target_classrooms 에 포함되거나
-                                // 학년/학생 대상이라도 같은 학원 내에서 담임/부담임 관련 학생과 매칭
-                                ->orWhereExists(function ($q) use ($teacher) {
+                                // 3) 자기 반이 target_classrooms 에 포함된 시험지
+                                ->orWhereExists(function ($q) use ($myClassroomIds) {
                                     $q->select(\Illuminate\Support\Facades\DB::raw(1))
                                         ->from('classrooms')
-                                        ->where(function ($cw) use ($teacher) {
-                                            $cw->where('teacher_id', $teacher->id)
-                                                ->orWhere('sub_teacher_id', $teacher->id);
-                                        })
+                                        ->whereIn('classrooms.id', $myClassroomIds)
                                         ->whereRaw('JSON_CONTAINS(test_sheets.target_classrooms, CAST(classrooms.id AS JSON))');
                                 });
                         });

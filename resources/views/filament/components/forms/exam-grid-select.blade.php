@@ -1,11 +1,16 @@
+@php
+    $items = $getItems();
+    $statePath = $getStatePath();
+    // form state 가 변하면 items 도 다시 평가되므로, items 시그니처를 wire:key 에 넣어
+    // Livewire 가 컴포넌트를 정확히 re-mount 하도록 함 (Alpine x-data 캐시 문제 해결)
+    $itemsKey = md5(json_encode($items));
+@endphp
 <div
+    wire:key="exam-grid-{{ $statePath }}-{{ $itemsKey }}"
     x-data="{
-        items: @js($getItems()),
-        selected: $wire.entangle('{{ $getStatePath() }}').live,
+        selected: $wire.entangle('{{ $statePath }}').live,
         multiple: @js($isMultiple()),
-        cols: @js($getCols()),
-        maxHeight: @js($getMaxHeight()),
-        statePath: @js($getStatePath()),
+        statePath: @js($statePath),
         toggle(val) {
             if (!this.multiple) {
                 this.selected = (this.selected === val) ? null : val;
@@ -13,7 +18,8 @@
                 return;
             }
             if (!Array.isArray(this.selected)) this.selected = [];
-            let idx = this.selected.indexOf(val);
+            // 비교 시 값 형변환을 통일 (int/string 혼동 방지)
+            let idx = this.selected.findIndex(x => String(x) === String(val));
             if (idx > -1) {
                 this.selected.splice(idx, 1);
             } else {
@@ -23,9 +29,10 @@
         },
         isSelected(val) {
             if (this.multiple) {
-                return Array.isArray(this.selected) && this.selected.includes(val);
+                return Array.isArray(this.selected)
+                    && this.selected.some(x => String(x) === String(val));
             }
-            return this.selected === val;
+            return String(this.selected) === String(val);
         },
         isAllSelected() {
             if (this.multiple) return !Array.isArray(this.selected) || this.selected.length === 0;
@@ -47,11 +54,11 @@
     </div>
     <div
         class="border border-gray-200 rounded-lg overflow-y-auto"
-        :style="maxHeight ? 'max-height: ' + maxHeight + 'px' : ''"
+        @if ($getMaxHeight()) style="max-height: {{ $getMaxHeight() }}px" @endif
     >
         <div
             class="grid"
-            :style="'grid-template-columns: repeat(' + cols + ', 1fr)'"
+            style="grid-template-columns: repeat({{ $getCols() }}, 1fr)"
         >
             {{-- 전체 버튼 --}}
             <button
@@ -60,16 +67,21 @@
                 class="px-2 py-2.5 text-sm border border-gray-100 transition-all cursor-pointer text-center"
                 :class="isAllSelected() ? 'bg-green-50 text-green-700 font-semibold' : 'bg-white text-gray-500 hover:bg-gray-50'"
             >전체</button>
-            {{-- 항목 버튼 --}}
-            <template x-for="item in items" :key="item.value">
+            {{-- 항목 버튼: 서버에서 직접 렌더링 (Alpine x-for 가 items 캐시되는 문제 회피) --}}
+            @foreach ($items as $item)
+                @php
+                    $val = $item['value'];
+                    $jsVal = is_string($val)
+                        ? "'" . addslashes($val) . "'"
+                        : (int) $val;
+                @endphp
                 <button
                     type="button"
-                    @click="toggle(item.value)"
+                    @click="toggle({{ $jsVal }})"
                     class="px-2 py-2.5 text-sm border border-gray-100 transition-all cursor-pointer text-center"
-                    :class="isSelected(item.value) ? 'bg-blue-50 text-blue-700 font-semibold' : 'bg-white text-gray-700 hover:bg-gray-50'"
-                    x-text="item.label"
-                ></button>
-            </template>
+                    :class="isSelected({{ $jsVal }}) ? 'bg-blue-50 text-blue-700 font-semibold' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                >{{ $item['label'] }}</button>
+            @endforeach
         </div>
     </div>
 </div>

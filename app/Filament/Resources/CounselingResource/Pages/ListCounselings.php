@@ -44,13 +44,25 @@ class ListCounselings extends ListRecords
                     ];
                 })
                 ->after(function ($record) {
-                    Notification::create([
-                        'user_id' => $record->counselor_id,
-                        'type' => Notification::TYPE_COUNSELING_REQUEST,
-                        'title' => '상담 신청',
-                        'content' =>  $record->student->user->name . '학생의 상담 신청이 있습니다.',
-                        'data' => ['user_id' => $record->counselor_id, 'student_id' => $record->student_id],
-                    ]);
+                    try {
+                        // counselor_id 는 teachers.id (counselor() 관계 기준).
+                        // 알림 user_id 는 users.id 이므로 teacher 의 user_id 로 변환.
+                        $counselorUserId = $record->counselor?->user?->id;
+                        $studentName = $record->student?->user?->name ?? '학생';
+                        if ($counselorUserId) {
+                            Notification::create([
+                                'user_id' => $counselorUserId,
+                                'type' => Notification::TYPE_COUNSELING_REQUEST,
+                                'title' => '상담 신청',
+                                'content' =>  $studentName . '학생의 상담 신청이 있습니다.',
+                                'data' => ['user_id' => $counselorUserId, 'student_id' => $record->student_id],
+                            ]);
+                        }
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::error('상담 요청 알림 생성 실패: ' . $e->getMessage(), [
+                            'counseling_id' => $record->id ?? null,
+                        ]);
+                    }
                 })
                 ->modalWidth('xl'),
             Actions\CreateAction::make('create-counseling')

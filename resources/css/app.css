@@ -30,6 +30,64 @@ body {
     height: 5rem !important;
     max-height: 5rem !important;
     max-width: 16rem !important;
+    object-fit: contain !important;
+}
+
+/* FilePond 이미지 프리뷰: 로고가 잘리지 않도록 항상 비율 유지 */
+.filepond--image-preview img,
+.filepond--file-info img,
+.fi-fo-file-upload img,
+.filepond--image-preview-wrapper img,
+.fi-fo-file-upload-image-preview img {
+    object-fit: contain !important;
+    background: #ffffff;
+}
+
+/* FilePond 프리뷰 컨테이너 자체도 자르지 않도록 */
+.filepond--image-preview,
+.filepond--image-preview-wrapper {
+    background: #ffffff !important;
+}
+
+/* FilePond 클립(canvas 래퍼) - 잘리지 않게 transform/overflow 풀어줌 */
+.filepond--image-clip {
+    overflow: visible !important;
+}
+.filepond--image-clip canvas,
+.filepond--image-preview canvas {
+    object-fit: contain !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    width: auto !important;
+    height: auto !important;
+    background: #ffffff !important;
+}
+
+/* FilePond 프리뷰 캔버스 (썸네일 미리보기) */
+.filepond--image-preview-overlay {
+    background: transparent !important;
+}
+
+/* 일반 이미지 프리뷰 모달/오버레이 안 이미지 잘림 방지 */
+.fi-modal img,
+[data-fancybox] img,
+.fi-image-preview img {
+    object-fit: contain !important;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+/* 학원 로고 업로드 컨테이너: 로고 프리뷰 비율 유지 + 흰 배경 */
+.logo-upload-contain .filepond--image-preview-wrapper,
+.logo-upload-contain .filepond--image-preview,
+.logo-upload-contain .filepond--image-clip {
+    background: #ffffff !important;
+    overflow: visible !important;
+}
+.logo-upload-contain .filepond--image-clip canvas {
+    object-fit: contain !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
 }
 
 .fi-simple-layout {

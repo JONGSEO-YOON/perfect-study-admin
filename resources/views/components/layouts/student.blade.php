@@ -61,7 +61,7 @@
                         $currentAcademy = auth()->user()?->academy;
                         $logoUrl = $currentAcademy?->logo_path ? Storage::url($currentAcademy->logo_path) : '/logo.png';
                     @endphp
-                    <img src="{{ $logoUrl }}" alt="{{ $currentAcademy?->name ?? '학원' }}" class="max-w-[180px] max-h-32 object-contain" />
+                    <img src="{{ $logoUrl }}" alt="{{ $currentAcademy?->name ?? '학원' }}" class="max-w-[180px] max-h-32 object-contain" style="width: auto; height: auto;" />
                     <button class="lg:hidden menu-button">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-6">
                             <path
@@ -69,30 +69,7 @@
                         </svg>
                     </button>
                 </div>
-                @php
-                    // 같은 전화번호로 등록된 다른 학원의 학생 계정 조회
-                    $otherAccounts = collect();
-                    if (auth()->check() && auth()->user()->phone) {
-                        $otherAccounts = \App\Models\User::where('phone', auth()->user()->phone)
-                            ->where('userable_type', \App\Models\Student::class)
-                            ->where('id', '!=', auth()->id())
-                            ->with('academy')
-                            ->get();
-                    }
-                @endphp
-                @if ($otherAccounts->isNotEmpty())
-                    <div class="mt-3 mb-1">
-                        <select onchange="if(this.value) window.location.href=this.value"
-                            class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:ring-2 focus:ring-[#8570C2] focus:border-[#8570C2]">
-                            <option value="">{{ auth()->user()->academy?->name ?? '학원 선택' }}</option>
-                            @foreach ($otherAccounts as $account)
-                                <option value="{{ route('switch-academy', $account->id) }}">
-                                    {{ $account->academy?->name ?? '학원 ' . $account->academy_id }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                @endif
+                {{-- 학원 전환 UI 제거: 학생은 로그인한 자기 학원만 사용 --}}
                 <div class="flex flex-col mt-4 gap-y-0.5 flex-1">
                     <a href="/"
                         class="flex items-center gap-x-5 font-semibold p-4 transition-all hover:bg-[#F6F8FF] rounded-lg {{ request()->is('/') ? 'bg-[#F6F8FF] text-[#8570C2]' : '' }}">
@@ -174,7 +151,7 @@
                                 stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                     </a>
-                    <img src="{{ isset($currentAcademy) && $currentAcademy->logo_path ? \Illuminate\Support\Facades\Storage::url($currentAcademy->logo_path) : '/logo.png' }}" class="h-[40px] max-w-[160px] object-contain ml-4" alt="{{ $currentAcademy->name ?? '' }}" />
+                    <img src="{{ isset($currentAcademy) && $currentAcademy->logo_path ? \Illuminate\Support\Facades\Storage::url($currentAcademy->logo_path) : '/logo.png' }}" class="max-h-[40px] max-w-[160px] object-contain ml-4" style="height: auto; width: auto;" alt="{{ $currentAcademy->name ?? '' }}" />
                 </div>
                 <div class="flex-1 flex flex-col h-0">
                     {{ $slot }}
@@ -186,7 +163,7 @@
         <footer class="w-full border-t px-5 py-6" style="background-color: #f3f4f6;">
             <div class="flex flex-col md:flex-row gap-6 md:gap-16">
                 <div class="flex-shrink-0">
-                    <img src="{{ $currentAcademy->logo_path ? Storage::url($currentAcademy->logo_path) : '/logo.png' }}" class="w-32 md:w-40 max-h-24 object-contain" alt="{{ $currentAcademy->name }}" />
+                    <img src="{{ $currentAcademy->logo_path ? Storage::url($currentAcademy->logo_path) : '/logo.png' }}" class="max-w-32 md:max-w-40 max-h-24 object-contain" style="height: auto; width: auto;" alt="{{ $currentAcademy->name }}" />
                 </div>
                 <div class="text-sm text-gray-600 flex-1">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">

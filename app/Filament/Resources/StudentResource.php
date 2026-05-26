@@ -189,21 +189,74 @@ class StudentResource extends Resource
                                 ->label('전화번호 (본인)')
                                 ->required()
                                 ->rules([
-                                    fn(Get $get): Closure => function (string $attribute, $value, Closure $fail) use ($get) {
+                                    fn($livewire, $record, $operation): Closure => function (string $attribute, $value, Closure $fail) use ($livewire, $record, $operation) {
                                         $result = self::validatePhoneNumber($value);
                                         if (!$result['is_valid']) {
                                             $fail($result['message']);
+                                            return;
                                         }
 
                                         $phone = implode('-', $value);
-                                        $query = User::where('phone', $phone)->where('id', '!=', $get('id'));
+
+                                        // 편집 중인 학생의 user_id 를 구함
+                                        $currentUserId = null;
+
+                                        // 1) $record 가 User 인 경우 (relationship('user') 컨텍스트)
+                                        if ($record instanceof \App\Models\User) {
+                                            $currentUserId = $record->id;
+                                        }
+                                        // 2) $record 가 Student 인 경우
+                                        if (!$currentUserId && $record instanceof \App\Models\Student) {
+                                            $currentUserId = $record->user?->id;
+                                        }
+
+                                        // 3) 테이블 EditAction 모달 - mountedTableActionRecord (학생 ID)
+                                        if (!$currentUserId && $livewire && isset($livewire->mountedTableActionRecord) && $livewire->mountedTableActionRecord) {
+                                            $student = \App\Models\Student::withoutGlobalScopes()
+                                                ->with('user')
+                                                ->find($livewire->mountedTableActionRecord);
+                                            $currentUserId = $student?->user?->id;
+                                        }
+
+                                        // 4) EditPage 등 livewire->record
+                                        if (!$currentUserId && $livewire && property_exists($livewire, 'record')) {
+                                            $lwRecord = $livewire->record ?? null;
+                                            if (is_numeric($lwRecord) || is_string($lwRecord)) {
+                                                $student = \App\Models\Student::withoutGlobalScopes()
+                                                    ->with('user')
+                                                    ->find($lwRecord);
+                                                $currentUserId = $student?->user?->id;
+                                            } elseif ($lwRecord instanceof \App\Models\Student) {
+                                                $currentUserId = $lwRecord->user?->id;
+                                            } elseif ($lwRecord instanceof \App\Models\User) {
+                                                $currentUserId = $lwRecord->id;
+                                            }
+                                        }
+
                                         // 현재 접속한 학원 기준으로 중복 체크
                                         $academyId = (app()->has('current_academy') && app('current_academy'))
                                             ? app('current_academy')->id
                                             : auth()->user()->academy_id;
+
+                                        // 같은 학원 내 학생 계정 중에서만 중복 체크 (학부모/강사와 phone 겹쳐도 OK)
+                                        $query = User::where('phone', $phone)
+                                            ->where('userable_type', \App\Models\Student::class);
+                                        if ($currentUserId) {
+                                            $query->where('id', '!=', $currentUserId);
+                                        }
                                         if ($academyId) {
                                             $query->where('academy_id', $academyId);
                                         }
+
+                                        // edit 인데 자기 자신을 못 찾았다면, 같은 phone 의 학생 계정이
+                                        // 정확히 1건 이하면 그건 자기 자신일 가능성이 높으므로 통과
+                                        if ($operation === 'edit' && !$currentUserId) {
+                                            $matchCount = (clone $query)->count();
+                                            if ($matchCount <= 1) {
+                                                return;
+                                            }
+                                        }
+
                                         if ($query->exists()) {
                                             $fail('이미 존재하는 전화번호입니다.');
                                         }
@@ -487,18 +540,23 @@ class StudentResource extends Resource
                         }
                     })
                     ->before(function ($record) {
-                        // 수정 전 원본 데이터 스냅샷 보관 (변경사항 추적용)
-                        $record->_originalData = $record->getOriginal();
-                        $record->_originalUserName = $record->user?->name;
-                        $record->_originalSchoolId = $record->school_id;
-                        $record->_originalGradeSystemId = $record->grade_system_id;
+                        // 수정 전 원본 데이터 스냅샷을 캐시에 보관 (모델 attribute 에 저장하면
+                        // Eloquent 가 컬럼으로 인식해 update 쿼리에 포함시켜 SQL 에러 발생)
+                        cache()->put(
+                            'student_edit_snapshot_' . $record->id,
+                            [
+                                'data' => $record->getOriginal(),
+                                'userName' => $record->user?->name,
+                                'schoolId' => $record->school_id,
+                                'gradeSystemId' => $record->grade_system_id,
+                            ],
+                            now()->addMinutes(5)
+                        );
                     })
                     ->after(function ($record, array $data) {
                         // 변경된 필드 감지
                         $changes = [];
                         $fieldLabels = [
-                            'user.name' => '이름',
-                            'user.phone' => '본인 전화번호',
                             'school_id' => '학교',
                             'grade_system_id' => '학년',
                             'phone_father' => '부 전화번호',
@@ -508,20 +566,23 @@ class StudentResource extends Resource
                             'remark' => '비고',
                         ];
 
-                        $original = $record->_originalData ?? [];
+                        $snapshot = cache()->pull('student_edit_snapshot_' . $record->id, []);
+                        $original = $snapshot['data'] ?? [];
+
+                        $fresh = $record->fresh();
                         foreach ($fieldLabels as $key => $label) {
-                            if (str_starts_with($key, 'user.')) continue; // user 필드는 별도 처리
                             $oldValue = $original[$key] ?? null;
-                            $newValue = $record->fresh()->$key ?? null;
+                            $newValue = $fresh?->$key ?? null;
                             if ((string)$oldValue !== (string)$newValue) {
                                 $changes[] = "{$label}: '" . ($oldValue ?: '-') . "' → '" . ($newValue ?: '-') . "'";
                             }
                         }
 
                         // user 이름 변경 감지
-                        $newUserName = $record->fresh()->user?->name;
-                        if (($record->_originalUserName ?? null) !== $newUserName && $newUserName) {
-                            $changes[] = "이름: '" . ($record->_originalUserName ?: '-') . "' → '{$newUserName}'";
+                        $newUserName = $fresh?->user?->name;
+                        $oldUserName = $snapshot['userName'] ?? null;
+                        if ($oldUserName !== $newUserName && $newUserName) {
+                            $changes[] = "이름: '" . ($oldUserName ?: '-') . "' → '{$newUserName}'";
                         }
 
                         if (!empty($changes)) {

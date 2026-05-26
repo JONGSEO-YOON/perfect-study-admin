@@ -98,8 +98,23 @@ Route::get('/preview-test-sheet', function () {
 });
 
 
-Route::get('/juso-popup', [JusoPopupController::class, 'show']);
-Route::post('/juso-popup', [JusoPopupController::class, 'show']);
+// /juso-popup 은 외부(juso.go.kr) 에서 POST 로 다시 호출되는 콜백 URL.
+// 세션 미들웨어를 끄지 않으면 외부 cross-site POST 가 새 세션을 만들어
+// 부모 창의 세션 쿠키를 덮어쓰면서 부모 페이지가 "this page has expired" 로 로그아웃됨.
+Route::get('/juso-popup', [JusoPopupController::class, 'show'])
+    ->withoutMiddleware([
+        \Illuminate\Session\Middleware\StartSession::class,
+        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+        \App\Http\Middleware\ResolveAcademy::class,
+    ]);
+Route::post('/juso-popup', [JusoPopupController::class, 'show'])
+    ->withoutMiddleware([
+        \Illuminate\Session\Middleware\StartSession::class,
+        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+        \App\Http\Middleware\ResolveAcademy::class,
+    ]);
 
 
 // 출력용 라우트

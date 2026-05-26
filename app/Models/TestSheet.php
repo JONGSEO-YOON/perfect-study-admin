@@ -199,24 +199,29 @@ class TestSheet extends Model
             ->values()
             ->all();
 
-        return $query->where(function ($query) use ($student, $teacherIds) {
-            // 출제자/강사 매칭 (멀티 학원 친화):
-            // 1. 출제자(user_id)가 학생의 담임/부담임이거나
-            // 2. 시험지에 attach된 강사(teachers pivot) 중 학생의 담임/부담임이 있거나
-            // 3. 시험지가 학생과 같은 학원에 속한 경우 (admin/root_admin 출제 케이스 포함)
-            $query->where(function ($q) use ($teacherIds, $student) {
-                $q->whereIn('user_id', $teacherIds)
-                    ->orWhereHas('teachers.user', function ($t) use ($teacherIds) {
-                        $t->whereIn('users.id', $teacherIds);
-                    })
-                    ->orWhere('test_sheets.academy_id', $student->academy_id);
-            });
+        return $query
+            // 다른 학원 시험지 누수 방지: 시험지는 반드시 학생의 학원 소속이어야 함
+            ->where('test_sheets.academy_id', $student->academy_id)
+            ->where(function ($query) use ($student, $teacherIds) {
+                // 학원 안에서 추가 조건:
+                // 1. 출제자(user_id)가 학생의 담임/부담임이거나
+                // 2. 시험지에 attach된 강사(teachers pivot) 중 학생의 담임/부담임이 있거나
+                // 3. 학원 admin/root_admin 이 출제한 경우 (target_group 매칭으로 학생까지 도달)
+                $query->where(function ($q) use ($teacherIds, $student) {
+                    $q->whereIn('user_id', $teacherIds)
+                        ->orWhereHas('teachers.user', function ($t) use ($teacherIds) {
+                            $t->whereIn('users.id', $teacherIds);
+                        })
+                        ->orWhereHas('user', function ($u) use ($student) {
+                            $u->where('academy_id', $student->academy_id);
+                        });
+                });
 
-            // target_group별 조건 체크 (학년/반/학생/레벨 매칭은 반드시 통과)
-            $query->where(function ($q) use ($student) {
-                $this->addTargetGroupConditions($q, $student);
+                // target_group별 조건 체크 (학년/반/학생/레벨 매칭은 반드시 통과)
+                $query->where(function ($q) use ($student) {
+                    $this->addTargetGroupConditions($q, $student);
+                });
             });
-        });
     }
 
     /**
@@ -369,11 +374,25 @@ class TestSheet extends Model
             $result = $this->grade($answers, $dontKnowAnswers, $userId);
 
             // 2. 답안 업데이트 또는 생성
+            // 한 학생당 한 시험지에 답안은 1건만 존재해야 함 (status 조건 제거)
+            // 중복으로 쌓인 이력이 있다면 가장 최근 1건만 유지하고 정리
+            $existing = TestSheetAnswer::where([
+                'test_sheet_id' => $this->id,
+                'user_id' => $userId,
+            ])->orderByDesc('id')->get();
+
+            if ($existing->count() > 1) {
+                $keep = $existing->first();
+                TestSheetAnswer::where('test_sheet_id', $this->id)
+                    ->where('user_id', $userId)
+                    ->where('id', '!=', $keep->id)
+                    ->delete();
+            }
+
             TestSheetAnswer::updateOrCreate(
                 [
                     'test_sheet_id' => $this->id,
                     'user_id' => $userId,
-                    'status' => 'pending'
                 ],
                 [
                     'answers' => $answers,
@@ -506,6 +525,32 @@ class TestSheet extends Model
                 $validMappings[] = $wrong;
                 $validQuestions[] = $childQuestion->toArray();
             }
+        }
+
+        // 기존 1차 오답 테스트가 있다면 먼저 정리 (재제출 시 중복 시험지 방지)
+        $existingRetry = WrongAnswerTestSheet::where([
+            'original_test_sheet_id' => $this->id,
+            'user_id' => $userId,
+            'retry_count' => 1,
+        ])->get();
+
+        foreach ($existingRetry as $oldRetry) {
+            // 연결된 시험지 (오답 유사 유형) 와 그에 딸린 2차 오답 테스트까지 정리
+            if ($oldRetry->testSheet) {
+                // 2차 재시험 정리
+                WrongAnswerTestSheet::where('original_test_sheet_id', $oldRetry->test_sheet_id)
+                    ->where('retry_count', 2)
+                    ->get()
+                    ->each(function ($secondRetry) {
+                        if ($secondRetry->testSheet) {
+                            $secondRetry->testSheet->delete();
+                        }
+                        $secondRetry->delete();
+                    });
+
+                $oldRetry->testSheet->delete();
+            }
+            $oldRetry->delete();
         }
 
         // 새로운 테스트 시트 생성
@@ -696,7 +741,12 @@ class TestSheet extends Model
 
             // 1. 대상 학생들과 답안 수집
             $targetStudents = $this->getTargetStudents();
-            $answers = TestSheetAnswer::where('test_sheet_id', $this->id)->get();
+            // 동일 user_id의 답안이 여러 개일 경우 가장 최근(id 최대) 1건만 사용해 중복 행 방지
+            $answers = TestSheetAnswer::where('test_sheet_id', $this->id)
+                ->orderByDesc('id')
+                ->get()
+                ->unique('user_id')
+                ->values();
 
             // 1-2. 반별 답안 수집
             $classroomAnalyses = [];

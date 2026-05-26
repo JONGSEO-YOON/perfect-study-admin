@@ -4,34 +4,45 @@
             address: `{{ $getRecord()?->address ?? '' }}`,
             postal_code: `{{ $getRecord()?->postal_code ?? '' }}`,
         },
-    
+
         init() {
+            // 부모 창의 jusoCallBack 등록. 팝업 종료 시 한 번만 호출됨.
+            // 기존에 $watch(state, ...) 로 매 변경 시 $wire.set 을 호출했더니
+            // CSRF token 갱신 충돌로 419 (this page has expired) 가 발생하던 문제 해결을 위해
+            // watch 를 제거하고 callback 안에서만 한 번만 동기화한다.
             window.jusoCallBack = (...args) => {
                 this.jusoCallBack(...args);
             };
-    
-            this.$watch('state', (value) => {
-                this.$wire.set('{{ $getStatePath() }}', value);
-            }, { deep: true });
         },
-    
+
         goPopup() {
             const width = 570;
             const height = 420;
             const left = (window.screen.width / 2) - (width / 2);
             const top = (window.screen.height / 2) - (height / 2);
-    
+
             window.open('/juso-popup', 'pop',
                 `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`);
         },
-    
+
         jusoCallBack(roadFullAddr, roadAddrPart1, addrDetail, roadAddrPart2, engAddr, jibunAddr, zipNo,
             admCd, rnMgtSn, bdMgtSn, detBdNmList, bdNm, bdKdcd, siNm, sggNm, emdNm, liNm,
             rn, udrtYn, buldMnnm, buldSlno, mtYn, lnbrMnnm, lnbrSlno, emdNo) {
             this.state = {
-                address: roadFullAddr,
-                postal_code: zipNo,
+                address: roadFullAddr || '',
+                postal_code: zipNo || '',
             };
+            // 한 번만 form state 에 반영. (afterStateUpdated 가 hidden address/postal_code 에 set)
+            try {
+                this.$wire.set('{{ $getStatePath() }}', this.state);
+            } catch (e) {
+                // 토큰 만료 등 livewire 호출 실패 시, hidden field 들을 DOM 직접 조작으로 채워
+                // 사용자가 저장 버튼을 누를 때 form 제출이 정상 동작하도록 fallback.
+                const addrInput = document.querySelector('input[wire\\:model=\"data.address\"], input[name=\"address\"]');
+                const zipInput = document.querySelector('input[wire\\:model=\"data.postal_code\"], input[name=\"postal_code\"]');
+                if (addrInput) addrInput.value = this.state.address;
+                if (zipInput) zipInput.value = this.state.postal_code;
+            }
         }
     }">
         <div class="space-y-2">

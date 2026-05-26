@@ -12,12 +12,38 @@ class FcmService
 {
     private $fcmTokens;
     private $serviceAccountPath;
+    private $serviceAccountJson;
     private $projectId;
 
     public function __construct()
     {
-        $this->serviceAccountPath = base_path('perfact-study-firebase-adminsdk-fbsvc-1b82c3585c.json');
-        $this->projectId = 'perfact-study';
+        $this->projectId = config('services.fcm.project_id', 'perfact-study');
+
+        // 1) 환경변수 FIREBASE_CREDENTIALS_JSON 우선 (배포 환경에 안전)
+        $envJson = env('FIREBASE_CREDENTIALS_JSON');
+        if ($envJson) {
+            $decoded = json_decode($envJson, true);
+            if (is_array($decoded)) {
+                $this->serviceAccountJson = $decoded;
+                return;
+            }
+        }
+
+        // 2) 가능한 파일 위치들을 순서대로 탐색
+        $candidates = array_filter([
+            env('FIREBASE_CREDENTIALS_PATH'),
+            base_path('perfact-study-firebase-adminsdk-fbsvc-1b82c3585c.json'),
+            base_path('firebase-credentials.json'),
+            storage_path('app/firebase/credentials.json'),
+            storage_path('app/firebase-credentials.json'),
+        ]);
+
+        foreach ($candidates as $path) {
+            if ($path && file_exists($path)) {
+                $this->serviceAccountPath = $path;
+                return;
+            }
+        }
     }
 
     /**
@@ -26,8 +52,24 @@ class FcmService
     private function getAccessToken()
     {
         try {
+            if (!$this->serviceAccountPath && !$this->serviceAccountJson) {
+                throw new Exception(
+                    'Firebase 서비스 계정 키가 설정되지 않았습니다. ' .
+                    '다음 중 하나로 설정해 주세요: ' .
+                    '(1) .env 의 FIREBASE_CREDENTIALS_JSON 에 JSON 문자열 직접 입력, ' .
+                    '(2) .env 의 FIREBASE_CREDENTIALS_PATH 에 파일 경로 입력, ' .
+                    '(3) ' . base_path('firebase-credentials.json') . ' 에 파일 업로드'
+                );
+            }
+
             $client = new GoogleClient();
-            $client->setAuthConfig($this->serviceAccountPath);
+
+            if ($this->serviceAccountJson) {
+                $client->setAuthConfig($this->serviceAccountJson);
+            } else {
+                $client->setAuthConfig($this->serviceAccountPath);
+            }
+
             $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
 
             $accessToken = $client->fetchAccessTokenWithAssertion();
@@ -88,11 +130,34 @@ class FcmService
             curl_close($ch);
 
             if ($httpCode >= 200 && $httpCode < 300) {
+                Log::info('FCM 전송 성공', ['token_prefix' => substr($token, 0, 12), 'title' => $title]);
                 return true;
-            } else {
-                Log::error('FCM 메시지 전송 실패: ' . $res);
-                return false;
             }
+
+            // FCM 에러 응답 파싱
+            $errorBody = json_decode($res, true);
+            $errorCode = $errorBody['error']['details'][0]['errorCode'] ?? null;
+            $errorStatus = $errorBody['error']['status'] ?? null;
+
+            Log::error('FCM 메시지 전송 실패', [
+                'http_code' => $httpCode,
+                'error_code' => $errorCode,
+                'error_status' => $errorStatus,
+                'token_prefix' => substr($token, 0, 12),
+                'response' => $res,
+            ]);
+
+            // 무효 토큰(만료/미등록/잘못된 형식)이면 DB 에서 자동 삭제
+            $invalidTokenCodes = ['UNREGISTERED', 'INVALID_ARGUMENT', 'INVALID_REGISTRATION'];
+            $invalidStatuses = ['NOT_FOUND', 'INVALID_ARGUMENT', 'UNREGISTERED'];
+            if (in_array($errorCode, $invalidTokenCodes, true)
+                || in_array($errorStatus, $invalidStatuses, true)
+                || $httpCode === 404) {
+                FcmToken::where('token', $token)->delete();
+                Log::warning('FCM 무효 토큰 삭제됨', ['token_prefix' => substr($token, 0, 12)]);
+            }
+
+            return false;
         } catch (Exception $e) {
             Log::error('FCM 전송 오류: ' . $e->getMessage());
             return false;

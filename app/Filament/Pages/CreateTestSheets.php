@@ -808,13 +808,49 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         $questionNumbers = $params['question_numbers'] ?? [];
         $sourceType = $params['source_type'] ?? null;
 
+        // 복합 키 "year_month_semester_type_number" 와 단순 정수(레거시) 분리
+        $composites = [];
+        $simpleNumbers = [];
+        foreach ($questionNumbers as $v) {
+            if (is_string($v) && str_contains($v, '_')) {
+                $parts = explode('_', $v);
+                if (count($parts) >= 5) {
+                    $composites[] = [
+                        'year' => $parts[0] !== '' ? (int) $parts[0] : null,
+                        'month' => $parts[1] !== '' ? (int) $parts[1] : null,
+                        'semester' => $parts[2] !== '' ? (int) $parts[2] : null,
+                        'type' => $parts[3] !== '' ? $parts[3] : null,
+                        'number' => (int) $parts[4],
+                    ];
+                    continue;
+                }
+            }
+            $simpleNumbers[] = (int) $v;
+        }
+
         $query = Question::withoutGlobalScopes([
             AcademyScope::class,
             'material_visibility',
         ])
-            ->when(!empty($questionNumbers), fn($q) => $q->whereIn('exam_question_number', $questionNumbers))
             ->whereNull('parent_question_id')
             ->where('source_type', $sourceType);
+
+        if (!empty($composites) || !empty($simpleNumbers)) {
+            $query->where(function ($q) use ($composites, $simpleNumbers) {
+                foreach ($composites as $combo) {
+                    $q->orWhere(function ($qq) use ($combo) {
+                        if ($combo['year'] !== null) $qq->where('exam_year', $combo['year']);
+                        if ($combo['month'] !== null) $qq->where('exam_month', $combo['month']);
+                        if ($combo['semester'] !== null) $qq->where('exam_semester', $combo['semester']);
+                        if ($combo['type'] !== null) $qq->where('exam_type', $combo['type']);
+                        $qq->where('exam_question_number', $combo['number']);
+                    });
+                }
+                if (!empty($simpleNumbers)) {
+                    $q->orWhereIn('exam_question_number', $simpleNumbers);
+                }
+            });
+        }
 
         // 모의고사 기출 필터
         if ($sourceType === 'mock_exam') {

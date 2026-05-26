@@ -21,10 +21,16 @@ class AddressInput extends Field
         $this->dehydrated(false);
 
         $this->formatStateUsing(function ($state, $record) {
-            return $record?->address ?? null;
+            return [
+                'address' => $record?->address ?? '',
+                'postal_code' => $record?->postal_code ?? '',
+            ];
         });
 
         $this->afterStateUpdated(function ($state, $livewire, $set) {
+            if (!is_array($state)) {
+                return;
+            }
             $set('address', $state['address'] ?? null);
             $set('postal_code', $state['postal_code'] ?? null);
         });

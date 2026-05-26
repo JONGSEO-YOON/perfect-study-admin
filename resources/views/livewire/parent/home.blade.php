@@ -203,16 +203,60 @@
         return false;
     }
 
-    // PWA 모드 확인 후 버튼 표시/숨김
-    if (isPWAMode()) {
-        console.log('PWA 모드 감지 - 알림 버튼 표시');
-        document.getElementById('notificationButton').style.display = 'block';
-        document.getElementById('installButton').style.display = 'none';
-    } else {
-        console.log('브라우저 모드 - 설치 버튼 표시');
-        document.getElementById('notificationButton').style.display = 'none';
-        document.getElementById('installButton').style.display = 'block';
+    // FCM 알림 상태 확인 (실제 브라우저 권한 + 서버 토큰 등록 여부)
+    async function isFcmAlreadyEnabled() {
+        // 1. 알림 권한이 granted 상태여야 함
+        if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+            return false;
+        }
+
+        // 2. localStorage에 토큰이 저장되어 있어야 함
+        const enabled = localStorage.getItem('fcm_enabled') === 'true';
+        const token = localStorage.getItem('fcm_token');
+        if (!enabled || !token) {
+            return false;
+        }
+
+        // 3. service worker가 실제로 등록되어 있어야 함
+        if (!('serviceWorker' in navigator)) {
+            return false;
+        }
+        try {
+            const registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
+            if (!registration || !registration.active) {
+                return false;
+            }
+        } catch (e) {
+            return false;
+        }
+
+        return true;
     }
+
+    // PWA 모드 확인 후 버튼 표시/숨김
+    (async () => {
+        const notificationButton = document.getElementById('notificationButton');
+        const installButton = document.getElementById('installButton');
+
+        if (isPWAMode()) {
+            console.log('PWA 모드 감지');
+            installButton.style.display = 'none';
+
+            // 이미 FCM 알림이 활성화되어 있으면 버튼 숨김
+            const fcmEnabled = await isFcmAlreadyEnabled();
+            if (fcmEnabled) {
+                console.log('FCM 이미 활성화됨 - 알림 버튼 숨김');
+                notificationButton.style.display = 'none';
+            } else {
+                console.log('FCM 미활성화 - 알림 버튼 표시');
+                notificationButton.style.display = 'block';
+            }
+        } else {
+            console.log('브라우저 모드 - 설치 버튼 표시');
+            notificationButton.style.display = 'none';
+            installButton.style.display = 'block';
+        }
+    })();
 
     // iOS 확인 함수
     function isIos() {
@@ -329,30 +373,26 @@
                 throw new Error('알림 권한이 허용되지 않았습니다.');
             }
             
-            // Service Worker 등록 확인 및 등록
-            console.log('11. Service Worker 등록 확인 시작');
-            let registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
-            console.log('12. 기존 Service Worker 등록:', registration);
+            // Service Worker 등록 (register 는 이미 등록된 경우 동일한 registration 반환)
+            console.log('11. Service Worker 등록 시작');
+            await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            console.log('12. Service Worker 등록 완료');
 
-            if (!registration) {
-                console.log('13. 새 Service Worker 등록 시작');
-                registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                console.log('14. 새 Service Worker 등록 완료');
+            // 항상 active 상태가 될 때까지 대기 (no active service worker 오류 방지)
+            // navigator.serviceWorker.ready 는 active worker 가 있을 때만 resolve 됨
+            console.log('13. Service Worker ready 대기 시작');
+            const registration = await navigator.serviceWorker.ready;
+            console.log('14. Service Worker ready 완료:', registration);
 
-                // 새로 등록한 경우에만 준비 확인
-                console.log('15. Service Worker 준비 확인 시작');
-                await navigator.serviceWorker.ready;
-                console.log('16. Service Worker ready 완료');
-            } else {
-                console.log('15. 기존 Service Worker 사용');
+            if (!registration.active) {
+                throw new Error('Service Worker 가 활성화되지 않았습니다. 페이지를 새로고침 한 뒤 다시 시도해주세요.');
             }
 
-            console.log('17. Service Worker 준비 완료:', registration);
-            
-            // FCM 토큰 생성
+            // FCM 토큰 생성 (serviceWorkerRegistration 명시적으로 전달)
             console.log('22. FCM 토큰 생성 시작');
-            const currentToken = await getToken(messaging, { 
-                vapidKey: 'BB4OAtniiO1lEmvxHzpLlpn9zQuCJ0Sc9uIEfanUmpPBWAkJEYYIc5bsWz5A0mylGxWw3vgpHBUxIwcKpLqwYTk'
+            const currentToken = await getToken(messaging, {
+                vapidKey: 'BB4OAtniiO1lEmvxHzpLlpn9zQuCJ0Sc9uIEfanUmpPBWAkJEYYIc5bsWz5A0mylGxWw3vgpHBUxIwcKpLqwYTk',
+                serviceWorkerRegistration: registration
             });
             console.log('23. FCM 토큰 생성 완료');
             
@@ -409,12 +449,18 @@
             console.log('FCM 초기화 시작');
             const token = await initializeFCM();
             console.log('FCM 초기화 완료, 토큰:', token);
-            
+
             if (token) {
                 // 로컬 스토리지에 알림 상태 저장
                 localStorage.setItem('fcm_enabled', 'true');
                 localStorage.setItem('fcm_token', token);
-                
+
+                // 알림 버튼 숨김
+                const notificationButton = document.getElementById('notificationButton');
+                if (notificationButton) {
+                    notificationButton.style.display = 'none';
+                }
+
                 // Livewire에 성공 알림
                 console.log('fcmEnabled 호출');
                 $wire.call('fcmEnabled');
@@ -423,6 +469,9 @@
             }
         } catch (error) {
             console.error('FCM 초기화 오류:', error);
+            // 오류 발생 시 로컬 상태도 초기화 (다음 시도를 위해)
+            localStorage.removeItem('fcm_enabled');
+            localStorage.removeItem('fcm_token');
             // Livewire에 오류 알림
             $wire.call('fcmError', error.message);
         }

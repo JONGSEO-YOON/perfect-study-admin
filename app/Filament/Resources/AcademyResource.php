@@ -97,10 +97,9 @@ class AcademyResource extends Resource
                         ->label('학원 로고')
                         ->image()
                         ->directory('academy-branding')
-                        ->imageResizeMode('contain')
-                        ->imageResizeTargetWidth('600')
-                        ->imageResizeTargetHeight('600')
-                        ->helperText('원본 비율 그대로 저장됩니다 (정사각/세로/가로 모두 가능)'),
+                        ->imagePreviewHeight('220')
+                        ->extraAttributes(['class' => 'logo-upload-contain'])
+                        ->helperText('원본 그대로 업로드됩니다 (잘림 방지를 위해 클라이언트 리사이즈를 비활성화함)'),
                     FileUpload::make('favicon_path')
                         ->label('파비콘')
                         ->image()
@@ -176,7 +175,7 @@ class AcademyResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('id')->label('ID')->sortable(),
-                ImageColumn::make('logo_path')->label('로고')->circular(),
+                ImageColumn::make('logo_path')->label('로고')->extraImgAttributes(['class' => 'object-contain bg-white'])->size(60),
                 TextColumn::make('name')->label('학원 이름')->searchable(),
                 TextColumn::make('slug')->label('슬러그'),
                 IconColumn::make('is_active')->label('활성')->boolean(),

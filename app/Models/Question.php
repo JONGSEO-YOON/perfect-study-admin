@@ -117,6 +117,46 @@ class Question extends Model
             }
         });
 
+        // 문제가 삭제되면 이미 출제된 시험지의 questions JSON 에서도 제거
+        // (그렇지 않으면 학생 사이트에 삭제된 문제가 계속 노출됨)
+        static::deleted(function ($model) {
+            try {
+                // MySQL JSON 컬럼은 조회 시 콜론 뒤 공백을 포함하므로 두 형태 모두 매치
+                $needle1WithSpace = '"id": ' . $model->id . ',';
+                $needle2WithSpace = '"id": ' . $model->id . '}';
+                $needle1NoSpace = '"id":' . $model->id . ',';
+                $needle2NoSpace = '"id":' . $model->id . '}';
+
+                \App\Models\TestSheet::withoutGlobalScopes()
+                    ->where(function ($q) use ($needle1WithSpace, $needle2WithSpace, $needle1NoSpace, $needle2NoSpace) {
+                        $q->where('questions', 'like', '%' . $needle1WithSpace . '%')
+                            ->orWhere('questions', 'like', '%' . $needle2WithSpace . '%')
+                            ->orWhere('questions', 'like', '%' . $needle1NoSpace . '%')
+                            ->orWhere('questions', 'like', '%' . $needle2NoSpace . '%');
+                    })
+                    ->chunkById(50, function ($testSheets) use ($model) {
+                        foreach ($testSheets as $ts) {
+                            $questions = $ts->questions ?? [];
+                            $filtered = array_values(array_filter($questions, function ($q) use ($model) {
+                                $qid = is_array($q) ? ($q['id'] ?? null) : null;
+                                return $qid != $model->id;
+                            }));
+
+                            if (count($filtered) !== count($questions)) {
+                                $ts->timestamps = false;
+                                $ts->update(['questions' => $filtered]);
+                                $ts->timestamps = true;
+                            }
+                        }
+                    });
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('문제 삭제 후 시험지 questions JSON 정리 실패', [
+                    'question_id' => $model->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        });
+
         static::addGlobalScope('material_visibility', function (Builder $builder) {
             if (!auth()->check()) {
                 return;
@@ -126,13 +166,38 @@ class Question extends Model
                 return;
             }
 
-            // $builder->where(function ($query) {
-            //     $query->whereNull('material_id')
-            //         ->orWhereHas('material', function ($query) {
-            //             $query->visible();
-            //         });
-            // });
-            $builder->where(function ($query) {
+            // 같은 반의 담임/부담임이 출제한 문제도 서로 볼 수 있어야 함.
+            // 현재 사용자가 담임/부담임인 반 목록을 구하고,
+            // 그 반의 (담임 + 부담임) 의 user_id 집합을 만든다.
+            $teacher = auth()->user()->userable;
+            $coTeacherUserIds = [auth()->id()];
+            if ($teacher) {
+                $classroomIds = \App\Models\Classroom::withoutGlobalScopes()
+                    ->where(function ($q) use ($teacher) {
+                        $q->where('teacher_id', $teacher->id)
+                          ->orWhere('sub_teacher_id', $teacher->id);
+                    })
+                    ->pluck('id');
+
+                if ($classroomIds->isNotEmpty()) {
+                    $coTeacherIds = \App\Models\Classroom::withoutGlobalScopes()
+                        ->whereIn('id', $classroomIds)
+                        ->get(['teacher_id', 'sub_teacher_id'])
+                        ->flatMap(fn($c) => [$c->teacher_id, $c->sub_teacher_id])
+                        ->filter()
+                        ->unique()
+                        ->values();
+
+                    if ($coTeacherIds->isNotEmpty()) {
+                        $coTeacherUserIds = \App\Models\User::where('userable_type', \App\Models\Teacher::class)
+                            ->whereIn('userable_id', $coTeacherIds)
+                            ->pluck('id')
+                            ->all();
+                    }
+                }
+            }
+
+            $builder->where(function ($query) use ($coTeacherUserIds) {
                 // material이 있는 경우
                 $query->where(function ($q) {
                     $q->whereNotNull('material_id')
@@ -141,10 +206,10 @@ class Question extends Model
                         });
                 })
                     // material이 없는 경우
-                    ->orWhere(function ($q) {
+                    ->orWhere(function ($q) use ($coTeacherUserIds) {
                         $q->whereNull('material_id')
-                            ->where(function ($q) {
-                                $q->where('user_id', auth()->id())
+                            ->where(function ($q) use ($coTeacherUserIds) {
+                                $q->whereIn('user_id', $coTeacherUserIds) // 본인 + 같은 반 동료(담임/부담임)
                                     ->orWhere('is_public', true)
                                     ->when(auth()->user()->isRoleAbove('manager', true), function ($q) {
                                         $q->orWhereRaw('1 = 1');

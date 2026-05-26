@@ -32,7 +32,7 @@ class ExamSeriesResource extends Resource
     public static function canViewAny(): bool
     {
         $user = auth()->user();
-        return $user && in_array($user->role, ['root_admin', 'admin']);
+        return $user && $user->role === 'root_admin';
     }
 
     public static function canCreate(): bool
