@@ -233,28 +233,46 @@
         return true;
     }
 
-    // PWA 모드 확인 후 버튼 표시/숨김
+    // PWA 모드 확인 후 버튼 표시/숨김 + 토큰 자동 갱신
     (async () => {
         const notificationButton = document.getElementById('notificationButton');
         const installButton = document.getElementById('installButton');
 
-        if (isPWAMode()) {
-            console.log('PWA 모드 감지');
-            installButton.style.display = 'none';
-
-            // 이미 FCM 알림이 활성화되어 있으면 버튼 숨김
-            const fcmEnabled = await isFcmAlreadyEnabled();
-            if (fcmEnabled) {
-                console.log('FCM 이미 활성화됨 - 알림 버튼 숨김');
-                notificationButton.style.display = 'none';
-            } else {
-                console.log('FCM 미활성화 - 알림 버튼 표시');
-                notificationButton.style.display = 'block';
-            }
-        } else {
+        if (!isPWAMode()) {
             console.log('브라우저 모드 - 설치 버튼 표시');
             notificationButton.style.display = 'none';
             installButton.style.display = 'block';
+            return;
+        }
+
+        console.log('PWA 모드 감지');
+        installButton.style.display = 'none';
+
+        // 알림 권한이 이미 허용되어 있으면, 진입할 때마다 토큰을 조용히 재발급/재저장한다.
+        //  - FCM 토큰은 주기적으로 회전(rotate)되므로, "알림 켜기" 버튼을 누른 그 순간에만 저장하면
+        //    며칠 뒤 서버 토큰이 만료되어 학부모에게 푸시가 전혀 가지 않게 된다.
+        //  - 진입 시 자동 갱신하면 토큰이 항상 최신으로 유지되고, "알림 켜기" 버튼이 다시
+        //    노출되는(설정이 유지되지 않는) 현상도 함께 해결된다.
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            notificationButton.style.display = 'none';
+            try {
+                const token = await initializeFCM(); // 권한이 granted 면 프롬프트가 뜨지 않음
+                if (token) {
+                    localStorage.setItem('fcm_enabled', 'true');
+                    localStorage.setItem('fcm_token', token);
+                    console.log('FCM 토큰 자동 갱신 완료');
+                } else {
+                    notificationButton.style.display = 'block';
+                }
+            } catch (e) {
+                console.error('FCM 토큰 자동 갱신 실패:', e);
+                // 갱신 실패 시 사용자가 수동으로 다시 켤 수 있도록 버튼 노출
+                notificationButton.style.display = 'block';
+            }
+        } else {
+            // 권한 미요청/거부 상태 → "알림 켜기" 버튼 노출
+            console.log('알림 권한 없음 - 알림 버튼 표시');
+            notificationButton.style.display = 'block';
         }
     })();
 

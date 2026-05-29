@@ -8,24 +8,28 @@
 <div
     wire:key="exam-grid-{{ $statePath }}-{{ $itemsKey }}"
     x-data="{
-        selected: $wire.entangle('{{ $statePath }}').live,
+        selected: $wire.entangle('{{ $statePath }}'),
         multiple: @js($isMultiple()),
         statePath: @js($statePath),
         toggle(val) {
             if (!this.multiple) {
-                this.selected = (this.selected === val) ? null : val;
-                $wire.set(this.statePath, this.selected);
+                const next = (String(this.selected) === String(val)) ? null : val;
+                this.selected = next;
+                this.$wire.set(this.statePath, next);
                 return;
             }
-            if (!Array.isArray(this.selected)) this.selected = [];
-            // 비교 시 값 형변환을 통일 (int/string 혼동 방지)
-            let idx = this.selected.findIndex(x => String(x) === String(val));
+            // 불변(immutable) 배열로 새로 만들어서 set 한다.
+            // 기존엔 entangle(...).live + push/splice + $wire.set 이 중복 발사되어
+            // 여러 개를 빠르게 선택하면 일부 선택이 누락(한 개만 남는)되는 race 가 있었다.
+            let arr = Array.isArray(this.selected) ? this.selected.map(x => x) : [];
+            let idx = arr.findIndex(x => String(x) === String(val));
             if (idx > -1) {
-                this.selected.splice(idx, 1);
+                arr.splice(idx, 1);
             } else {
-                this.selected.push(val);
+                arr.push(val);
             }
-            $wire.set(this.statePath, this.selected);
+            this.selected = arr;
+            this.$wire.set(this.statePath, arr);
         },
         isSelected(val) {
             if (this.multiple) {
@@ -39,9 +43,8 @@
             return this.selected === null || this.selected === '' || this.selected === undefined;
         },
         selectAll() {
-            if (this.multiple) { this.selected = []; }
-            else { this.selected = null; }
-            $wire.set(this.statePath, this.selected);
+            if (this.multiple) { this.selected = []; this.$wire.set(this.statePath, []); }
+            else { this.selected = null; this.$wire.set(this.statePath, null); }
         }
     }"
     class="space-y-1"

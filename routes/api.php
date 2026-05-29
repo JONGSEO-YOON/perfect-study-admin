@@ -31,15 +31,21 @@ Route::post('/fcm-token', function (Request $request) {
 
         $token = $request->token;
         $parentPhone = $request->parent_phone;
-        
-        // 기존 토큰이 있으면 삭제
-        \App\Models\FcmToken::forParent($parentPhone)->delete();
 
-        // 새 토큰 저장
-        \App\Models\FcmToken::create([
-            'parent_phone' => $parentPhone,
-            'token' => $token
-        ]);
+        // 같은 토큰이 다른 전화번호로 저장돼 있던 경우 정리 (기기 공유/재로그인)
+        \App\Models\FcmToken::where('token', $token)
+            ->where('parent_phone', '!=', $parentPhone)
+            ->delete();
+
+        // 토큰 기준 upsert.
+        //  - 한 학부모가 여러 기기(폰/태블릿)를 쓰는 경우를 지원한다.
+        //  - 기존처럼 전화번호로 전부 지우고 새로 만들면, 진입 시 자동 갱신할 때마다
+        //    다른 기기의 유효한 토큰을 지워버려 푸시가 안 가는 문제가 생긴다.
+        //  - 만료/무효 토큰은 FcmService 가 전송 실패 시 자동 삭제한다.
+        \App\Models\FcmToken::updateOrCreate(
+            ['token' => $token],
+            ['parent_phone' => $parentPhone]
+        );
 
         return response()->json([
             'success' => true,

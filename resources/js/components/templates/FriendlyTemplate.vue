@@ -123,7 +123,7 @@ const props = defineProps({
 
     <!-- 첫 페이지일 경우 헤더 표시 -->
     <template v-if="pageIndex === 0">
-      <img v-if="customLogo != ''" :src="customLogo" alt="" class="absolute max-w-[120px] max-h-[60px] right-[15mm] top-[8mm] object-contain z-0" />
+      <img v-if="customLogo != ''" :src="customLogo" alt="" class="absolute max-w-[200px] max-h-[80px] right-[15mm] top-[8mm] object-contain z-0" style="height: auto; width: auto;" />
       <div class="border-b pb-2 mb-3" :style="{ borderColor: color }">
         <div class="p-2 rounded-lg mb-2 relative">
           <!-- 귀여운 곰돌이 아이콘 (헤더 왼쪽) -->

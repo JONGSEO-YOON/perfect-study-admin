@@ -62,9 +62,13 @@ class Material extends Model
             $questionIds = $material->questions()->pluck('id')->toArray();
 
             if (!empty($questionIds)) {
+                // 쿼리빌더 일괄 삭제는 Question 모델 deleted 이벤트를 발생시키지 않으므로,
+                // 삭제 전에 이미 출제된 시험지의 questions JSON 스냅샷에서 직접 제거한다.
+                // (그렇지 않으면 교재 삭제 후에도 학생 사이트에 해당 문제가 계속 보임)
+                \App\Models\Question::purgeFromTestSheets($questionIds);
+
                 // Direct delete without complex conditions
                 DB::table('questions')->whereIn('id', $questionIds)->delete();
-                // Or with Eloquent: Question::whereIn('id', $questionIds)->delete();
             }
 
             // 2. folder인 경우 하위 항목들 재귀적 삭제

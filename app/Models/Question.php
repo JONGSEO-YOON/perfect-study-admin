@@ -97,6 +97,56 @@ class Question extends Model
         return $this->belongsTo(Material::class);
     }
 
+    /**
+     * 주어진 문제 id 들을 이미 출제된 모든 시험지의 questions JSON 스냅샷에서 제거한다.
+     * 문제를 단건 삭제할 때(모델 deleted 이벤트)뿐 아니라, 교재 삭제처럼
+     * 쿼리빌더로 일괄 삭제(이벤트 미발생)하는 경로에서도 직접 호출해야
+     * 학생 사이트에 삭제된 문제가 잔존 노출되지 않는다.
+     */
+    public static function purgeFromTestSheets(array $questionIds): void
+    {
+        $questionIds = array_values(array_unique(array_filter(array_map('intval', $questionIds))));
+        if (empty($questionIds)) {
+            return;
+        }
+
+        try {
+            $idSet = array_flip($questionIds);
+
+            \App\Models\TestSheet::withoutGlobalScopes()
+                ->where(function ($q) use ($questionIds) {
+                    foreach ($questionIds as $id) {
+                        // MySQL JSON 은 보통 콜론 뒤 공백 없이 저장되지만 두 형태 모두 매치.
+                        // 값 뒤에는 항상 ',' 또는 '}' 가 오므로 다른 id 의 접두사 오매치는 없다.
+                        $q->orWhere('questions', 'like', '%"id":' . $id . ',%')
+                            ->orWhere('questions', 'like', '%"id":' . $id . '}%')
+                            ->orWhere('questions', 'like', '%"id": ' . $id . ',%')
+                            ->orWhere('questions', 'like', '%"id": ' . $id . '}%');
+                    }
+                })
+                ->chunkById(50, function ($testSheets) use ($idSet) {
+                    foreach ($testSheets as $ts) {
+                        $questions = $ts->questions ?? [];
+                        $filtered = array_values(array_filter($questions, function ($q) use ($idSet) {
+                            $qid = is_array($q) ? ($q['id'] ?? null) : null;
+                            return $qid === null || !isset($idSet[(int) $qid]);
+                        }));
+
+                        if (count($filtered) !== count($questions)) {
+                            $ts->timestamps = false;
+                            $ts->update(['questions' => $filtered]);
+                            $ts->timestamps = true;
+                        }
+                    }
+                });
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('시험지 questions JSON 정리 실패', [
+                'question_ids' => $questionIds,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
     protected static function boot()
     {
         parent::boot();
@@ -120,41 +170,7 @@ class Question extends Model
         // 문제가 삭제되면 이미 출제된 시험지의 questions JSON 에서도 제거
         // (그렇지 않으면 학생 사이트에 삭제된 문제가 계속 노출됨)
         static::deleted(function ($model) {
-            try {
-                // MySQL JSON 컬럼은 조회 시 콜론 뒤 공백을 포함하므로 두 형태 모두 매치
-                $needle1WithSpace = '"id": ' . $model->id . ',';
-                $needle2WithSpace = '"id": ' . $model->id . '}';
-                $needle1NoSpace = '"id":' . $model->id . ',';
-                $needle2NoSpace = '"id":' . $model->id . '}';
-
-                \App\Models\TestSheet::withoutGlobalScopes()
-                    ->where(function ($q) use ($needle1WithSpace, $needle2WithSpace, $needle1NoSpace, $needle2NoSpace) {
-                        $q->where('questions', 'like', '%' . $needle1WithSpace . '%')
-                            ->orWhere('questions', 'like', '%' . $needle2WithSpace . '%')
-                            ->orWhere('questions', 'like', '%' . $needle1NoSpace . '%')
-                            ->orWhere('questions', 'like', '%' . $needle2NoSpace . '%');
-                    })
-                    ->chunkById(50, function ($testSheets) use ($model) {
-                        foreach ($testSheets as $ts) {
-                            $questions = $ts->questions ?? [];
-                            $filtered = array_values(array_filter($questions, function ($q) use ($model) {
-                                $qid = is_array($q) ? ($q['id'] ?? null) : null;
-                                return $qid != $model->id;
-                            }));
-
-                            if (count($filtered) !== count($questions)) {
-                                $ts->timestamps = false;
-                                $ts->update(['questions' => $filtered]);
-                                $ts->timestamps = true;
-                            }
-                        }
-                    });
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::error('문제 삭제 후 시험지 questions JSON 정리 실패', [
-                    'question_id' => $model->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+            self::purgeFromTestSheets([$model->id]);
         });
 
         static::addGlobalScope('material_visibility', function (Builder $builder) {

@@ -1,43 +1,58 @@
 <x-dynamic-component :component="$getFieldWrapperView()" :field="$field">
+    {{--
+        주소 검색을 카카오(다음) 우편번호 서비스로 처리한다.
+        기존 juso.go.kr 팝업은 외부 도메인이 우리 서버(/juso-popup)로 cross-site POST 를 보내는데,
+        SameSite=Lax 세션 쿠키가 전송되지 않아 새 게스트 세션이 만들어지고 → 관리자 세션이 덮어써져
+        "this page has expired (419)" + 로그아웃 이 발생했다.
+        Daum Postcode 는 100% 클라이언트 사이드 콜백이라 우리 서버로 POST 가 없으므로 세션이 유지된다.
+    --}}
     <div x-data="{
         state: {
             address: `{{ $getRecord()?->address ?? '' }}`,
             postal_code: `{{ $getRecord()?->postal_code ?? '' }}`,
         },
 
-        init() {
-            // 부모 창의 jusoCallBack 등록. 팝업 종료 시 한 번만 호출됨.
-            // 기존에 $watch(state, ...) 로 매 변경 시 $wire.set 을 호출했더니
-            // CSRF token 갱신 충돌로 419 (this page has expired) 가 발생하던 문제 해결을 위해
-            // watch 를 제거하고 callback 안에서만 한 번만 동기화한다.
-            window.jusoCallBack = (...args) => {
-                this.jusoCallBack(...args);
-            };
+        ensureScript() {
+            return new Promise((resolve, reject) => {
+                if (window.daum && window.daum.Postcode) { resolve(); return; }
+                let s = document.getElementById('daum-postcode-script');
+                if (s) {
+                    s.addEventListener('load', () => resolve());
+                    s.addEventListener('error', () => reject());
+                    return;
+                }
+                s = document.createElement('script');
+                s.id = 'daum-postcode-script';
+                s.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
+                s.onload = () => resolve();
+                s.onerror = () => reject();
+                document.head.appendChild(s);
+            });
         },
 
-        goPopup() {
-            const width = 570;
-            const height = 420;
-            const left = (window.screen.width / 2) - (width / 2);
-            const top = (window.screen.height / 2) - (height / 2);
-
-            window.open('/juso-popup', 'pop',
-                `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`);
+        async goPopup() {
+            try {
+                await this.ensureScript();
+            } catch (e) {
+                alert('주소 검색 서비스를 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해주세요.');
+                return;
+            }
+            new window.daum.Postcode({
+                oncomplete: (data) => {
+                    const address = data.roadAddress || data.address || data.jibunAddress || '';
+                    const postal_code = data.zonecode || '';
+                    this.apply(address, postal_code);
+                }
+            }).open();
         },
 
-        jusoCallBack(roadFullAddr, roadAddrPart1, addrDetail, roadAddrPart2, engAddr, jibunAddr, zipNo,
-            admCd, rnMgtSn, bdMgtSn, detBdNmList, bdNm, bdKdcd, siNm, sggNm, emdNm, liNm,
-            rn, udrtYn, buldMnnm, buldSlno, mtYn, lnbrMnnm, lnbrSlno, emdNo) {
-            this.state = {
-                address: roadFullAddr || '',
-                postal_code: zipNo || '',
-            };
-            // 한 번만 form state 에 반영. (afterStateUpdated 가 hidden address/postal_code 에 set)
+        apply(address, postal_code) {
+            this.state = { address, postal_code };
+            // form state 에 반영 (AddressInput 의 afterStateUpdated 가 hidden address/postal_code 에 set)
             try {
                 this.$wire.set('{{ $getStatePath() }}', this.state);
             } catch (e) {
-                // 토큰 만료 등 livewire 호출 실패 시, hidden field 들을 DOM 직접 조작으로 채워
-                // 사용자가 저장 버튼을 누를 때 form 제출이 정상 동작하도록 fallback.
+                // livewire 호출 실패 시 hidden field 들을 DOM 직접 조작으로 채워 저장이 동작하도록 fallback
                 const addrInput = document.querySelector('input[wire\\:model=\"data.address\"], input[name=\"address\"]');
                 const zipInput = document.querySelector('input[wire\\:model=\"data.postal_code\"], input[name=\"postal_code\"]');
                 if (addrInput) addrInput.value = this.state.address;
@@ -69,18 +84,6 @@
                     </div>
                 </div>
             </div>
-
-            {{-- <input type="text" x-model="state.roadAddrPart2"
-                class="block w-full border-gray-300 rounded-lg shadow-sm" placeholder="상세주소"> --}}
-
-            {{-- <div class="grid grid-cols-3 gap-2">
-                <input type="text" x-model="state.zipNo" readonly
-                    class="block w-full border-gray-300 rounded-lg shadow-sm" placeholder="우편번호">
-                <input type="text" x-model="state.siNm" readonly
-                    class="block w-full border-gray-300 rounded-lg shadow-sm" placeholder="시도">
-                <input type="text" x-model="state.sggNm" readonly
-                    class="block w-full border-gray-300 rounded-lg shadow-sm" placeholder="시군구">
-            </div> --}}
         </div>
     </div>
 </x-dynamic-component>

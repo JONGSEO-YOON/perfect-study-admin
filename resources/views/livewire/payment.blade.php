@@ -4,7 +4,7 @@
             <div class="bg-white overflow-hidden">
                 <!-- 로고 -->
                 <div class="text-center pt-6 pb-4">
-                    <img src="{{ isset($currentAcademy) && $currentAcademy->logo_path ? \Illuminate\Support\Facades\Storage::url($currentAcademy->logo_path) : asset('logo.png') }}" alt="{{ $currentAcademy->name ?? '학원' }}" class="h-12 mx-auto">
+                    <img src="{{ isset($currentAcademy) && $currentAcademy->logo_path ? \Illuminate\Support\Facades\Storage::url($currentAcademy->logo_path) : asset('logo.png') }}" alt="{{ $currentAcademy->name ?? '학원' }}" class="max-w-[220px] max-h-12 w-auto object-contain mx-auto" style="height: auto; width: auto;">
                 </div>
                 
                 <!-- 상품 정보 (빌링 네임) -->

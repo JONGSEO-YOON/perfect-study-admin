@@ -106,6 +106,53 @@ class StudentResource extends Resource
         return ['is_valid' => true, 'message' => ''];
     }
 
+    /**
+     * 편집 중인 학생의 user_id 를 여러 컨텍스트(EditPage / 테이블 EditAction / relationship)에서
+     * 안정적으로 해석한다. 본인 레코드를 정확히 제외해야 전화번호 중복 검사 오탐을 막을 수 있다.
+     */
+    protected static function resolveEditingStudentUserId($livewire, $record): ?int
+    {
+        // 1) $record 가 User (relationship('user') 컨텍스트)
+        if ($record instanceof \App\Models\User) {
+            return $record->id;
+        }
+        // 2) $record 가 Student
+        if ($record instanceof \App\Models\Student) {
+            return \App\Models\User::withoutGlobalScopes()
+                ->where('userable_type', \App\Models\Student::class)
+                ->where('userable_id', $record->id)
+                ->value('id');
+        }
+
+        // 학생 id 후보 수집
+        $studentId = null;
+        // 3) 테이블 EditAction 모달 (ListStudents)
+        if ($livewire && isset($livewire->mountedTableActionRecord) && $livewire->mountedTableActionRecord) {
+            $studentId = $livewire->mountedTableActionRecord;
+        }
+        // 4) EditRecord 페이지 등 livewire->record
+        if (!$studentId && $livewire && property_exists($livewire, 'record') && $livewire->record) {
+            $r = $livewire->record;
+            if ($r instanceof \App\Models\User) {
+                return $r->id;
+            }
+            if ($r instanceof \App\Models\Student) {
+                $studentId = $r->id;
+            } elseif (is_numeric($r) || is_string($r)) {
+                $studentId = $r;
+            }
+        }
+
+        if ($studentId) {
+            return \App\Models\User::withoutGlobalScopes()
+                ->where('userable_type', \App\Models\Student::class)
+                ->where('userable_id', $studentId)
+                ->value('id');
+        }
+
+        return null;
+    }
+
     public static function _form(bool $simplified = false): array
     {
         return [
@@ -198,38 +245,16 @@ class StudentResource extends Resource
 
                                         $phone = implode('-', $value);
 
-                                        // 편집 중인 학생의 user_id 를 구함
-                                        $currentUserId = null;
+                                        // 편집 대상 학생의 user_id 를 안정적으로 해석
+                                        $currentUserId = self::resolveEditingStudentUserId($livewire, $record);
 
-                                        // 1) $record 가 User 인 경우 (relationship('user') 컨텍스트)
-                                        if ($record instanceof \App\Models\User) {
-                                            $currentUserId = $record->id;
-                                        }
-                                        // 2) $record 가 Student 인 경우
-                                        if (!$currentUserId && $record instanceof \App\Models\Student) {
-                                            $currentUserId = $record->user?->id;
-                                        }
-
-                                        // 3) 테이블 EditAction 모달 - mountedTableActionRecord (학생 ID)
-                                        if (!$currentUserId && $livewire && isset($livewire->mountedTableActionRecord) && $livewire->mountedTableActionRecord) {
-                                            $student = \App\Models\Student::withoutGlobalScopes()
-                                                ->with('user')
-                                                ->find($livewire->mountedTableActionRecord);
-                                            $currentUserId = $student?->user?->id;
-                                        }
-
-                                        // 4) EditPage 등 livewire->record
-                                        if (!$currentUserId && $livewire && property_exists($livewire, 'record')) {
-                                            $lwRecord = $livewire->record ?? null;
-                                            if (is_numeric($lwRecord) || is_string($lwRecord)) {
-                                                $student = \App\Models\Student::withoutGlobalScopes()
-                                                    ->with('user')
-                                                    ->find($lwRecord);
-                                                $currentUserId = $student?->user?->id;
-                                            } elseif ($lwRecord instanceof \App\Models\Student) {
-                                                $currentUserId = $lwRecord->user?->id;
-                                            } elseif ($lwRecord instanceof \App\Models\User) {
-                                                $currentUserId = $lwRecord->id;
+                                        // 편집 중이고 전화번호를 바꾸지 않았다면 무조건 통과.
+                                        // (형제·대표번호 공유 등으로 같은 번호의 다른 학생이 이미 있어도,
+                                        //  본인 기존 번호를 그대로 저장하는 것은 허용해야 함 — "이미 존재하는 전화번호" 오저장 방지)
+                                        if ($operation === 'edit' && $currentUserId) {
+                                            $currentPhone = User::withoutGlobalScopes()->whereKey($currentUserId)->value('phone');
+                                            if ($currentPhone !== null && $currentPhone === $phone) {
+                                                return;
                                             }
                                         }
 
@@ -239,7 +264,8 @@ class StudentResource extends Resource
                                             : auth()->user()->academy_id;
 
                                         // 같은 학원 내 학생 계정 중에서만 중복 체크 (학부모/강사와 phone 겹쳐도 OK)
-                                        $query = User::where('phone', $phone)
+                                        $query = User::withoutGlobalScopes()
+                                            ->where('phone', $phone)
                                             ->where('userable_type', \App\Models\Student::class);
                                         if ($currentUserId) {
                                             $query->where('id', '!=', $currentUserId);
