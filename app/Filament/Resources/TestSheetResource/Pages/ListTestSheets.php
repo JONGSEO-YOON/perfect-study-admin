@@ -116,7 +116,7 @@ class ListTestSheets extends ListRecords
         array $years = [],
         array $months = [],
         array $subjects = [],
-        ?int $schoolId = null,
+        array $schoolIds = [],
         array $semesters = [],
         array $types = [],
         array $questionNumbers = [],
@@ -124,6 +124,8 @@ class ListTestSheets extends ListRecords
         ?string $creationMethod = 'number',
         array $seriesList = []
     ): int {
+        $schoolIds = array_values(array_filter(array_map('intval', (array) $schoolIds)));
+
         $query = \App\Models\Question::withoutGlobalScopes()
             ->where('source_type', $sourceType)
             ->whereNull('parent_question_id');
@@ -133,17 +135,19 @@ class ListTestSheets extends ListRecords
         if (!empty($months)) $query->whereIn('exam_month', $months);
         if (!empty($subjects)) $query->whereIn('exam_subject', $subjects);
         if (!empty($seriesList)) $query->whereIn('exam_series', $seriesList);
-        if ($schoolId) $query->where('school_id', $schoolId);
+        if (!empty($schoolIds)) $query->whereIn('school_id', $schoolIds);
         if (!empty($semesters)) $query->whereIn('exam_semester', $semesters);
         if (!empty($types)) $query->whereIn('exam_type', $types);
 
         if ($creationMethod === 'number' && !empty($questionNumbers)) {
-            // 복합 키 "year_month_semester_type_number" 와 단순 정수(레거시) 둘 다 지원
+            // 복합 키와 단순 정수(레거시) 둘 다 지원
             $parsed = self::parseCompositeQuestionNumbers($questionNumbers);
             if (!empty($parsed['composites'])) {
                 $query->where(function ($q) use ($parsed) {
                     foreach ($parsed['composites'] as $combo) {
                         $q->orWhere(function ($qq) use ($combo) {
+                            if (!empty($combo['grade'])) $qq->where('exam_grade', $combo['grade']);
+                            if (!empty($combo['school_id'])) $qq->where('school_id', $combo['school_id']);
                             if ($combo['year'] !== null && $combo['year'] !== '') $qq->where('exam_year', $combo['year']);
                             if ($combo['month'] !== null && $combo['month'] !== '') $qq->where('exam_month', $combo['month']);
                             if ($combo['semester'] !== null && $combo['semester'] !== '') $qq->where('exam_semester', $combo['semester']);
@@ -180,12 +184,28 @@ class ListTestSheets extends ListRecords
         foreach ($questionNumbers as $v) {
             if (is_string($v) && str_contains($v, '_')) {
                 $parts = explode('_', $v);
-                if (count($parts) >= 5) {
+                if (count($parts) >= 7) {
+                    // 신형: grade_year_month_semester_type_school_number
                     $composites[] = [
+                        'grade' => $parts[0] !== '' ? $parts[0] : null,
+                        'year' => $parts[1] !== '' ? (int) $parts[1] : null,
+                        'month' => $parts[2] !== '' ? (int) $parts[2] : null,
+                        'semester' => $parts[3] !== '' ? (int) $parts[3] : null,
+                        'type' => $parts[4] !== '' ? $parts[4] : null,
+                        'school_id' => $parts[5] !== '' ? (int) $parts[5] : null,
+                        'number' => (int) $parts[6],
+                    ];
+                    continue;
+                }
+                if (count($parts) >= 5) {
+                    // 레거시: year_month_semester_type_number
+                    $composites[] = [
+                        'grade' => null,
                         'year' => $parts[0] !== '' ? (int) $parts[0] : null,
                         'month' => $parts[1] !== '' ? (int) $parts[1] : null,
                         'semester' => $parts[2] !== '' ? (int) $parts[2] : null,
                         'type' => $parts[3] !== '' ? $parts[3] : null,
+                        'school_id' => null,
                         'number' => (int) $parts[4],
                     ];
                     continue;
@@ -208,17 +228,19 @@ class ListTestSheets extends ListRecords
         array $years = [],
         array $months = [],
         array $subjects = [],
-        ?int $schoolId = null,
+        array $schoolIds = [],
         array $semesters = [],
         array $types = [],
         array $seriesList = []
     ): array {
+        $schoolIds = array_values(array_filter(array_map('intval', (array) $schoolIds)));
+
         $query = \App\Models\Question::withoutGlobalScopes()
             ->where('source_type', $sourceType)
             ->whereNotNull('exam_question_number');
 
         $hasAnyFilter = !empty($grades) || !empty($years) || !empty($months)
-            || !empty($subjects) || !empty($seriesList) || $schoolId
+            || !empty($subjects) || !empty($seriesList) || !empty($schoolIds)
             || !empty($semesters) || !empty($types);
 
         if (!empty($grades)) $query->whereIn('exam_grade', $grades);
@@ -226,21 +248,27 @@ class ListTestSheets extends ListRecords
         if (!empty($months)) $query->whereIn('exam_month', $months);
         if (!empty($subjects)) $query->whereIn('exam_subject', $subjects);
         if (!empty($seriesList)) $query->whereIn('exam_series', $seriesList);
-        if ($schoolId) $query->where('school_id', $schoolId);
+        if (!empty($schoolIds)) $query->whereIn('school_id', $schoolIds);
         if (!empty($semesters)) $query->whereIn('exam_semester', $semesters);
         if (!empty($types)) $query->whereIn('exam_type', $types);
 
-        // 년도/월/학기/시험유형 별로 그룹화해서 각 회차의 번호를 따로 노출
-        // value 는 "year_month_semester_type_number" 복합키, 라벨은 회차 prefix 포함
+        // 학년/학교/년도/월/학기/시험유형 별로 그룹화해서 각 회차의 번호를 따로 노출.
+        // 핵심: exam_grade 와 school_id 를 SELECT/DISTINCT 에 넣지 않으면, 여러 학년(고2+고3)이나
+        //  여러 학교가 같은 번호를 가질 때 distinct 가 한 줄로 합쳐져 한 쪽 번호만 표시되는 버그가 난다.
+        $hasMultipleGrades = count($grades) > 1;
         $hasMultipleYears = count($years) > 1;
         $hasMultipleMonths = count($months) > 1;
         $hasMultipleSemesters = count($semesters) > 1;
         $hasMultipleTypes = count($types) > 1;
-        $needPrefix = $hasMultipleYears || $hasMultipleMonths || $hasMultipleSemesters || $hasMultipleTypes;
+        $hasMultipleSchools = count($schoolIds) > 1;
+        $needPrefix = $hasMultipleGrades || $hasMultipleYears || $hasMultipleMonths
+            || $hasMultipleSemesters || $hasMultipleTypes || $hasMultipleSchools;
 
         $rows = $query
-            ->select(['exam_year', 'exam_month', 'exam_semester', 'exam_type', 'exam_question_number'])
+            ->select(['exam_grade', 'school_id', 'exam_year', 'exam_month', 'exam_semester', 'exam_type', 'exam_question_number'])
             ->distinct()
+            ->orderBy('exam_grade')
+            ->orderBy('school_id')
             ->orderBy('exam_year')
             ->orderBy('exam_month')
             ->orderBy('exam_semester')
@@ -257,10 +285,23 @@ class ListTestSheets extends ListRecords
             return [];
         }
 
+        // 라벨에 학교 이름 표시용 (학교 기출에서 학교명이 안 나오던 문제 해결)
+        $schoolNames = [];
+        $rowSchoolIds = $rows->pluck('school_id')->filter()->unique()->all();
+        if (!empty($rowSchoolIds)) {
+            $schoolNames = \App\Models\School::whereIn('id', $rowSchoolIds)->pluck('name', 'id')->toArray();
+        }
+
         $typeLabels = ['midterm' => '중간', 'final' => '기말'];
 
-        return $rows->map(function ($row) use ($needPrefix, $typeLabels) {
+        return $rows->map(function ($row) use ($needPrefix, $typeLabels, $schoolNames) {
             $parts = [];
+            if ($row->school_id && isset($schoolNames[$row->school_id])) {
+                $parts[] = $schoolNames[$row->school_id];
+            }
+            if ($row->exam_grade) {
+                $parts[] = $row->exam_grade;
+            }
             if ($row->exam_year) {
                 $parts[] = $row->exam_year . '년';
             }
@@ -277,12 +318,14 @@ class ListTestSheets extends ListRecords
             $prefix = $needPrefix && !empty($parts) ? implode(' ', $parts) . ' ' : '';
             $label = $prefix . $row->exam_question_number . '번';
 
-            // 복합 key: 회차+번호 (selectExamQuestionsByNumber 에서 parse)
+            // 복합 key: grade_year_month_semester_type_school_number (parse 측과 형식 일치)
             $value = implode('_', [
+                $row->exam_grade ?? '',
                 $row->exam_year ?? '',
                 $row->exam_month ?? '',
                 $row->exam_semester ?? '',
                 $row->exam_type ?? '',
+                $row->school_id ?? '',
                 $row->exam_question_number,
             ]);
 
@@ -898,6 +941,11 @@ class ListTestSheets extends ListRecords
                         ->getOptionLabelUsing(fn($value): ?string =>
                             \App\Models\School::find($value)?->name
                         )
+                        // multiple Select 는 이미 선택된 값들의 라벨을 plural 메서드로 해석한다.
+                        // 이게 없으면 이전에 추가한 학교가 이름이 아닌 숫자(id)로 표시된다.
+                        ->getOptionLabelsUsing(fn(array $values): array =>
+                            \App\Models\School::whereIn('id', $values)->pluck('name', 'id')->toArray()
+                        )
                         ->columnSpanFull(),
 
                     Grid::make(5)
@@ -967,15 +1015,12 @@ class ListTestSheets extends ListRecords
                     Placeholder::make('available_count_preview_school')
                         ->label('')
                         ->content(function (Get $get) {
-                            $schoolIds = (array) ($get('school_id') ?? []);
-                            $schoolId = !empty($schoolIds) ? (int)($schoolIds[0]) : null;
-
                             $count = self::countAvailableExamQuestions(
                                 sourceType: 'school_exam',
                                 grades: (array) ($get('exam_grades') ?? []),
                                 years: (array) ($get('exam_years') ?? []),
                                 subjects: (array) ($get('exam_subjects') ?? []),
-                                schoolId: $schoolId,
+                                schoolIds: (array) ($get('school_id') ?? []),
                                 semesters: (array) ($get('exam_semesters') ?? []),
                                 types: (array) ($get('exam_types') ?? []),
                                 questionNumbers: (array) ($get('question_numbers') ?? []),
@@ -1004,16 +1049,13 @@ class ListTestSheets extends ListRecords
                         ->cols(10)
                         ->live()
                         ->items(function (Get $get) {
-                            $schoolIds = (array) ($get('school_id') ?? []);
-                            // 학교 검색 필드는 multiple이라서 배열로 옴 → 첫 번째 사용 (단일 학교 기준 fallback)
-                            $schoolId = !empty($schoolIds) ? (int)($schoolIds[0]) : null;
-
+                            // 학교 검색 필드는 multiple → 선택한 모든 학교의 번호를 학교별로 표시
                             return self::getAvailableQuestionNumbers(
                                 sourceType: 'school_exam',
                                 grades: (array) ($get('exam_grades') ?? []),
                                 years: (array) ($get('exam_years') ?? []),
                                 subjects: (array) ($get('exam_subjects') ?? []),
-                                schoolId: $schoolId,
+                                schoolIds: (array) ($get('school_id') ?? []),
                                 semesters: (array) ($get('exam_semesters') ?? []),
                                 types: (array) ($get('exam_types') ?? [])
                             );

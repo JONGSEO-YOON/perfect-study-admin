@@ -119,12 +119,33 @@ class UserWebController extends Controller implements HasMiddleware
   }
 
   /**
-   * 학생 본인의 계정만 반환.
-   * (cross-academy 매칭 비활성화: 학원별 데이터 격리 - 다른 학원 문제/시험지 노출 차단)
+   * 같은 사람(전화번호 기준)이 여러 학원에 등록된 경우, 모든 학원의 학생 레코드를 모은다.
+   * - availableFor() 가 각 레코드의 academy_id 로 시험지를 잠그므로, 타 학원 시험지 누수는 없다.
+   * - 빈/무효 번호("010--" 등)는 매칭하지 않는다 (번호 없는 학생끼리 무분별 매칭 방지).
    */
   protected function getRelatedStudents(Student $student)
   {
-    return collect([$student]);
+    $phone = $student->user?->phone;
+    $digits = preg_replace('/\D/', '', (string) $phone);
+
+    // 유효한 휴대폰 번호가 아니면 본인 학원만
+    if (strlen($digits) < 10) {
+      return collect([$student]);
+    }
+
+    $related = Student::query()
+      ->withoutGlobalScopes([AcademyScope::class])
+      ->whereHas('user', function ($q) use ($phone) {
+        $q->where('phone', $phone);
+      })
+      ->with('user')
+      ->get();
+
+    if (!$related->contains('id', $student->id)) {
+      $related->push($student);
+    }
+
+    return $related->unique('id')->values();
   }
 
   /**
@@ -148,8 +169,11 @@ class UserWebController extends Controller implements HasMiddleware
   {
     $relatedStudents = $this->getRelatedStudents($student);
 
-    // 학생 본인 user_id만 사용 (cross-academy 매칭 비활성화)
-    $relatedUserIds = [auth()->id()];
+    // 같은 사람의 모든 학원 계정 user_id (한 학원에서 완료한 시험지는 완료로 집계)
+    $relatedUserIds = $relatedStudents->map(fn($s) => $s->user?->id)->filter()->unique()->values()->all();
+    if (empty($relatedUserIds)) {
+      $relatedUserIds = [auth()->id()];
+    }
     $testSheetIds = $this->collectAvailableTestSheetIds($relatedStudents);
 
     $base_query = TestSheet::query()

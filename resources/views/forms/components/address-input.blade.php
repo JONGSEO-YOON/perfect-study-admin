@@ -12,29 +12,26 @@
             postal_code: `{{ $getRecord()?->postal_code ?? '' }}`,
         },
 
-        ensureScript() {
-            return new Promise((resolve, reject) => {
-                if (window.daum && window.daum.Postcode) { resolve(); return; }
-                let s = document.getElementById('daum-postcode-script');
-                if (s) {
-                    s.addEventListener('load', () => resolve());
-                    s.addEventListener('error', () => reject());
-                    return;
-                }
-                s = document.createElement('script');
-                s.id = 'daum-postcode-script';
-                s.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
-                s.onload = () => resolve();
-                s.onerror = () => reject();
-                document.head.appendChild(s);
-            });
+        init() {
+            // 팝업 차단(popup blocker) 방지를 위해 스크립트를 페이지 진입 시 미리 로드한다.
+            // (클릭 핸들러 안에서 await 후 open() 하면 사용자 제스처 컨텍스트를 벗어나 팝업이 차단됨)
+            this.loadScript();
         },
 
-        async goPopup() {
-            try {
-                await this.ensureScript();
-            } catch (e) {
-                alert('주소 검색 서비스를 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해주세요.');
+        loadScript() {
+            if (window.daum && window.daum.Postcode) return;
+            if (document.getElementById('daum-postcode-script')) return;
+            const s = document.createElement('script');
+            s.id = 'daum-postcode-script';
+            s.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
+            document.head.appendChild(s);
+        },
+
+        goPopup() {
+            // 동기적으로 open() 을 호출해야 팝업 차단을 피할 수 있다.
+            if (!(window.daum && window.daum.Postcode)) {
+                this.loadScript();
+                alert('주소 검색을 준비 중입니다. 잠시 후 다시 눌러주세요.');
                 return;
             }
             new window.daum.Postcode({

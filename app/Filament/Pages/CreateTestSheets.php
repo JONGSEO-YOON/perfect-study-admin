@@ -808,18 +808,33 @@ class CreateTestSheets extends Page implements HasForms, HasActions
         $questionNumbers = $params['question_numbers'] ?? [];
         $sourceType = $params['source_type'] ?? null;
 
-        // 복합 키 "year_month_semester_type_number" 와 단순 정수(레거시) 분리
+        // 복합 키 "grade_year_month_semester_type_school_number"(신형) 와
+        // "year_month_semester_type_number"(레거시) 및 단순 정수(레거시) 분리
         $composites = [];
         $simpleNumbers = [];
         foreach ($questionNumbers as $v) {
             if (is_string($v) && str_contains($v, '_')) {
                 $parts = explode('_', $v);
+                if (count($parts) >= 7) {
+                    $composites[] = [
+                        'grade' => $parts[0] !== '' ? $parts[0] : null,
+                        'year' => $parts[1] !== '' ? (int) $parts[1] : null,
+                        'month' => $parts[2] !== '' ? (int) $parts[2] : null,
+                        'semester' => $parts[3] !== '' ? (int) $parts[3] : null,
+                        'type' => $parts[4] !== '' ? $parts[4] : null,
+                        'school_id' => $parts[5] !== '' ? (int) $parts[5] : null,
+                        'number' => (int) $parts[6],
+                    ];
+                    continue;
+                }
                 if (count($parts) >= 5) {
                     $composites[] = [
+                        'grade' => null,
                         'year' => $parts[0] !== '' ? (int) $parts[0] : null,
                         'month' => $parts[1] !== '' ? (int) $parts[1] : null,
                         'semester' => $parts[2] !== '' ? (int) $parts[2] : null,
                         'type' => $parts[3] !== '' ? $parts[3] : null,
+                        'school_id' => null,
                         'number' => (int) $parts[4],
                     ];
                     continue;
@@ -839,6 +854,8 @@ class CreateTestSheets extends Page implements HasForms, HasActions
             $query->where(function ($q) use ($composites, $simpleNumbers) {
                 foreach ($composites as $combo) {
                     $q->orWhere(function ($qq) use ($combo) {
+                        if (!empty($combo['grade'])) $qq->where('exam_grade', $combo['grade']);
+                        if (!empty($combo['school_id'])) $qq->where('school_id', $combo['school_id']);
                         if ($combo['year'] !== null) $qq->where('exam_year', $combo['year']);
                         if ($combo['month'] !== null) $qq->where('exam_month', $combo['month']);
                         if ($combo['semester'] !== null) $qq->where('exam_semester', $combo['semester']);

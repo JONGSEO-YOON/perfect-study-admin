@@ -84,7 +84,16 @@ class StudentNoticeResource extends Resource
                                         $canViewAllStudents =
                                             !auth()->user()->userable instanceof \App\Models\Teacher ||
                                             auth()->user()->isRoleAbove('general');
+
+                                        // 현재 학원 학생만 (User 는 AcademyScope 가 없어 전 학원이 조회되므로 직접 필터).
+                                        // 그렇지 않으면 다른 학원 학생의 userable(학생) 이 스코프에 걸려 null 이 되어
+                                        // "Attempt to read property id on null" 오류가 난다.
+                                        $academyId = (app()->has('current_academy') && app('current_academy'))
+                                            ? app('current_academy')->id
+                                            : auth()->user()->academy_id;
+
                                         $query = User::where('userable_type', Student::class)
+                                            ->when($academyId, fn($q) => $q->where('academy_id', $academyId))
                                             ->with('userable');
                                         if (!$canViewAllStudents) {
                                             $query = $query->whereHas('student.classrooms', function ($q) {
@@ -93,7 +102,11 @@ class StudentNoticeResource extends Resource
                                         }
                                         return $query
                                             ->get()
-                                            ->mapWithKeys(fn($user) => [$user->userable->id => $user->name . ' (' . $user->birthed_at->format('Y-m-d') . ')'])
+                                            ->filter(fn($user) => $user->userable) // 스코프로 null 인 학생 제외 (안전 가드)
+                                            ->mapWithKeys(fn($user) => [
+                                                $user->userable->id => $user->name
+                                                    . ($user->birthed_at ? ' (' . $user->birthed_at->format('Y-m-d') . ')' : ''),
+                                            ])
                                             ->toArray();
                                     })
                                     ->required(fn(Get $get) => $get('target_type') === 'student')

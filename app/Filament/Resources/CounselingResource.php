@@ -217,11 +217,17 @@ class CounselingResource extends Resource
                                     ->schema([
                                         Grid::make(2)
                                             ->schema([
+                                                // 원장/관리자(manager 이상)만 확인 처리 가능.
+                                                // 일반 강사는 상태만 볼 수 있고 변경은 불가.
                                                 Toggle::make('confirmed')
-                                                    ->label('확인 여부'),
+                                                    ->label('확인 여부')
+                                                    ->disabled(fn() => !auth()->user()->isRoleAbove('general'))
+                                                    ->dehydrated(fn() => auth()->user()->isRoleAbove('general')),
                                                 Textarea::make('reply_message')
                                                     ->label('메시지')
                                                     ->rows(5)
+                                                    ->disabled(fn() => !auth()->user()->isRoleAbove('general'))
+                                                    ->dehydrated(fn() => auth()->user()->isRoleAbove('general'))
                                                     ->columnSpanFull(),
                                             ])
                                     ])
