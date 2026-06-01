@@ -45,16 +45,10 @@
 
         apply(address, postal_code) {
             this.state = { address, postal_code };
-            // form state 에 반영 (AddressInput 의 afterStateUpdated 가 hidden address/postal_code 에 set)
-            try {
-                this.$wire.set('{{ $getStatePath() }}', this.state);
-            } catch (e) {
-                // livewire 호출 실패 시 hidden field 들을 DOM 직접 조작으로 채워 저장이 동작하도록 fallback
-                const addrInput = document.querySelector('input[wire\\:model=\"data.address\"], input[name=\"address\"]');
-                const zipInput = document.querySelector('input[wire\\:model=\"data.postal_code\"], input[name=\"postal_code\"]');
-                if (addrInput) addrInput.value = this.state.address;
-                if (zipInput) zipInput.value = this.state.postal_code;
-            }
+            // Daum 은 세션을 건드리지 않으므로 $wire.set 이 안전하게 동작한다.
+            // 주의: x-data 속성 안에는 escape 된 큰따옴표를 절대 넣지 말 것
+            //       (HTML 속성이 조기 종료되어 Alpine 표현식 전체가 깨지고 버튼이 먹통이 됨).
+            this.$wire.set('{{ $getStatePath() }}', this.state);
         }
     }">
         <div class="space-y-2">
