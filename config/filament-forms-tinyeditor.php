@@ -19,8 +19,11 @@ return [
             'upload_directory' => null,
             'custom_configs' => [
                 'external_plugins' => [
-                    'tiny_mce_wiris' => 'https://www.wiris.net/demo/plugins/tiny_mce/plugin.js'
-                    // 'tiny_mce_wiris' => '/js/filament/filament/plugin.min.js'
+                    // 수식편집기(WIRIS)를 외부 데모서버(www.wiris.net/demo)에서 불러오면
+                    // 데모서버가 간헐적으로 느리거나 실패해 "플러그인 초기화 실패: tiny_mce_wiris" 가 뜬다.
+                    // → 우리 서버에 있는 파일을 직접 서빙해 안정화.
+                    'tiny_mce_wiris' => '/js/filament/filament/plugin.min.js'
+                    // 'tiny_mce_wiris' => 'https://www.wiris.net/demo/plugins/tiny_mce/plugin.js'
                 ]
             ]
         ],
