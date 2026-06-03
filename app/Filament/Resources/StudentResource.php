@@ -192,6 +192,7 @@ class StudentResource extends Resource
                         ]),
                     Hidden::make('address'),
                     Hidden::make('postal_code'),
+                    Hidden::make('address_detail'),
                     AddressInput::make('address-input')
                         ->label('주소')
                         ->columnSpanFull(),

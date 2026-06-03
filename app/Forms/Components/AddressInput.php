@@ -24,6 +24,7 @@ class AddressInput extends Field
             return [
                 'address' => $record?->address ?? '',
                 'postal_code' => $record?->postal_code ?? '',
+                'detail' => $record?->address_detail ?? '',
             ];
         });
 
@@ -33,6 +34,7 @@ class AddressInput extends Field
             }
             $set('address', $state['address'] ?? null);
             $set('postal_code', $state['postal_code'] ?? null);
+            $set('address_detail', $state['detail'] ?? null);
         });
     }
 }
