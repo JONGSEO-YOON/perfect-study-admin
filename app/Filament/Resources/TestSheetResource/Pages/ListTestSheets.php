@@ -931,6 +931,9 @@ class ListTestSheets extends ListRecords
                     Select::make('school_id')
                         ->label('학교 검색 (여러 학교 선택 가능)')
                         ->multiple()
+                        // 학교를 선택/변경하면 아래 '문제 번호' 그리드와 매치 개수가 즉시 갱신되도록 live.
+                        // (이게 없으면 학교를 골라도 번호가 안 떠 보임)
+                        ->live()
                         ->searchable()
                         ->getSearchResultsUsing(fn(string $search): array =>
                             \App\Models\School::where('name', 'like', "%{$search}%")
